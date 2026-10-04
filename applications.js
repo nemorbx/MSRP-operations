@@ -671,21 +671,49 @@ async function postStaffApplication(client, application) {
   });
 }
 
+function recoverStaffApplicationFromReviewMessage(interaction, applicationId) {
+  const components = interaction.message?.components || [];
+  const texts = [];
+
+  function walk(items) {
+    for (const item of items || []) {
+      if (typeof item.content === "string") texts.push(item.content);
+      if (Array.isArray(item.components)) walk(item.components);
+    }
+  }
+
+  walk(components);
+
+  const combined = texts.join("\n");
+  const userMatch = combined.match(/<@(\\d{17,20})>/);
+  if (!userMatch) return null;
+
+  const answers = [];
+  for (const text of texts) {
+    const match = text.match(/^\\*\\*(.+?)\\*\\*\\n([\\s\\S]*)$/);
+    if (match && !match[1].startsWith("Status:") && !match[1].startsWith("Applicant:")) {
+      answers.push(match[2].trim());
+    }
+  }
+
+  return {
+    id: applicationId,
+    type: "staff",
+    userId: userMatch[1],
+    status: "Pending",
+    createdAt: new Date().toISOString(),
+    answers,
+  };
+}
+
 async function handleStaffDecision(interaction, action, applicationId) {
-  // Acknowledge the button immediately. Role changes/DMs can take long enough
-  // to exceed Discord's interaction response window.
+  // Acknowledge immediately. All work below can safely take longer than
+  // Discord's initial interaction response window.
   if (!interaction.deferred && !interaction.replied) {
     await interaction.deferUpdate();
   }
 
-  if (action === "blacklist" && !interaction.member?.roles?.cache?.has(APPLICATION_READER_ROLE_ID)) {
-    await interaction.followUp({
-      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-      components: [v2Container("Only Application Readers can approve, deny, or blacklist staff applications.")],
-    });
-    return;
-  }
-  if (action !== "blacklist" && !interaction.member?.roles?.cache?.has(APPLICATION_READER_ROLE_ID)) {
+  if (!interaction.member?.roles?.cache?.has(APPLICATION_READER_ROLE_ID)) {
     await interaction.followUp({
       flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
       components: [v2Container("Only Application Readers can approve, deny, or blacklist staff applications.")],
@@ -694,14 +722,23 @@ async function handleStaffDecision(interaction, action, applicationId) {
   }
 
   const applications = readJson(APPLICATIONS_FILE, {});
-  const application = applications[applicationId];
+  let application = applications[applicationId];
+
+  // Review messages can survive a bot redeploy while the local data file does
+  // not. Recover the applicant and answers directly from the review message so
+  // old pending applications remain actionable instead of returning "not found".
   if (!application || application.type !== "staff") {
-    await interaction.followUp({
-      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-      components: [v2Container("That application could not be found.")],
-    });
-    return;
+    application = recoverStaffApplicationFromReviewMessage(interaction, applicationId);
+    if (!application) {
+      await interaction.followUp({
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        components: [v2Container("That application could not be found. Please have the applicant submit a new application.")],
+      });
+      return;
+    }
+    applications[applicationId] = application;
   }
+
   if (application.status !== "Pending") {
     await interaction.followUp({
       flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
@@ -717,7 +754,10 @@ async function handleStaffDecision(interaction, action, applicationId) {
     application.reviewedBy = interaction.user.id;
     application.reviewedAt = new Date().toISOString();
     if (member) await member.roles.add(AWAITING_TRAINING_ROLE_ID).catch(() => {});
-    await safeDM(application.userId, "## Staff Application\nYour Missouri State Roleplay staff application has been accepted. You have been placed in Awaiting Training. A member of the staff team will provide your next steps.");
+    await safeDM(
+      application.userId,
+      "## Staff Application\\nYour Missouri State Roleplay staff application has been accepted. You have been placed in Awaiting Training. A member of the staff team will provide your next steps."
+    );
   } else if (action === "deny") {
     application.status = "Denied";
     application.reviewedBy = interaction.user.id;
@@ -725,7 +765,10 @@ async function handleStaffDecision(interaction, action, applicationId) {
     const cooldowns = readJson(COOLDOWNS_FILE, {});
     cooldowns[application.userId] = Date.now() + 3 * 24 * 60 * 60 * 1000;
     writeJson(COOLDOWNS_FILE, cooldowns);
-    await safeDM(application.userId, "## Staff Application\nYour Missouri State Roleplay staff application has been denied. You must wait 3 days before submitting another staff application.");
+    await safeDM(
+      application.userId,
+      "## Staff Application\\nYour Missouri State Roleplay staff application has been denied. You must wait 3 days before submitting another staff application."
+    );
   } else if (action === "blacklist") {
     application.status = "Blacklisted";
     application.reviewedBy = interaction.user.id;
@@ -734,14 +777,21 @@ async function handleStaffDecision(interaction, action, applicationId) {
     if (!blacklist.includes(application.userId)) blacklist.push(application.userId);
     writeJson(BLACKLIST_FILE, blacklist);
     if (member) await member.roles.add(STAFF_BLACKLIST_ROLE_ID).catch(() => {});
-    await safeDM(application.userId, "## Staff Application\nYour Missouri State Roleplay staff application has been blacklisted. You are no longer eligible to submit staff applications.");
+    await safeDM(
+      application.userId,
+      "## Staff Application\\nYour Missouri State Roleplay staff application has been blacklisted. You are no longer eligible to submit staff applications."
+    );
   }
 
   writeJson(APPLICATIONS_FILE, applications);
-  await interaction.update({
-    flags: MessageFlags.IsComponentsV2,
+
+  // We already deferred the interaction, so edit the original review message
+  // instead of calling interaction.update() a second time.
+  await interaction.message.edit({
     components: [buildStaffReviewContainer(application, false)],
     allowedMentions: { users: [application.userId, interaction.user.id] },
+  }).catch(error => {
+    console.error("Failed to update staff application review message:", error);
   });
 }
 
