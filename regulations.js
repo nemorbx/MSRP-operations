@@ -105,8 +105,8 @@ function mainPanel(guild) {
 
   // MAIN TITLE — state logo + Rules
   container.addTextDisplayComponents(
-    display(`## ${emoji(guild, "stateLogo")} Rules`),
-    display("*Missouri State Roleplay*"),
+    display("## Rules"),
+    display(`${emoji(guild, "info")} *Missouri State Roleplay*`),
     display(
       "Our regulations apply to both the MSRP Discord community and our ER:LC roleplay server. All members are expected to read and follow the applicable regulations while participating in Missouri State Roleplay."
     )
@@ -115,8 +115,8 @@ function mainPanel(guild) {
   // RULES & STANDARDS
   container.addSeparatorComponents(divider());
   container.addTextDisplayComponents(
-    display(`## ${emoji(guild, "stateLogo")} Rules & Standards`),
-    display("*Standards that apply to members while participating in MSRP.*")
+    display("## Rules & Standards"),
+    display(`${emoji(guild, "board")} *Standards that apply to members while participating in MSRP.*`)
   );
 
   container.addTextDisplayComponents(
@@ -139,8 +139,8 @@ function mainPanel(guild) {
   // RESTRICTIONS
   container.addSeparatorComponents(divider());
   container.addTextDisplayComponents(
-    display(`## ${emoji(guild, "shield")} Restrictions`),
-    display("*Reference information for jurisdiction, vehicles, departments, and roleplay restrictions.*"),
+    display("## Restrictions"),
+    display(`${emoji(guild, "shield")} *Reference information for jurisdiction, vehicles, departments, and roleplay restrictions.*`),
     display(`${emoji(guild, "info")} **Jurisdiction**`),
     display("*Official Missouri State Roleplay jurisdiction information.*"),
     display(`${emoji(guild, "police")} **Vehicles**`),
