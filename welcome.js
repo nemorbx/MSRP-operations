@@ -1,0 +1,155 @@
+const fs = require("fs");
+const path = require("path");
+const {
+  SlashCommandBuilder,
+  MessageFlags,
+} = require("discord.js");
+
+const DATA_DIR = path.join(__dirname, "data");
+const DATA_FILE = path.join(DATA_DIR, "welcome.json");
+
+const WELCOME_MESSAGES = [
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Welcome to Missouri State Roleplay!",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Your ER:LC journey starts here.",
+  "<:msrpwhite:1552141993768132668> Welcome to MSRP, {member}!",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Get ready to roleplay.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! We're glad to have you in MSRP.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Your next scene starts here.",
+  "<:msrpwhite:1552141993768132668> Welcome to Missouri State Roleplay, {member}!",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Enjoy your time in MSRP.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Time to hit the roads of Missouri.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! We hope you enjoy our ER:LC community.",
+  "<:msrpwhite:1552141993768132668> Welcome to the community, {member}!",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Your roleplay adventure begins now.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! We're happy to have you here.",
+  "<:msrpwhite:1552141993768132668> Welcome to MSRP, {member}! Have fun roleplaying.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Get familiar with the community and enjoy ER:LC.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! We look forward to seeing you in-game.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Thanks for joining Missouri State Roleplay.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Your Missouri roleplay experience starts here.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Glad to have another member of MSRP with us.",
+  "<:msrpwhite:1552141993768132668> Welcome, {member}! Enjoy Missouri with us!",
+];
+
+function ensureData() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(DATA_FILE)) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify({ channelId: null }, null, 2), "utf8");
+  }
+}
+
+function loadData() {
+  ensureData();
+  try {
+    const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+    return { channelId: data.channelId ?? null };
+  } catch {
+    return { channelId: null };
+  }
+}
+
+function saveData(data) {
+  ensureData();
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+async function isBotOwner(interaction) {
+  try {
+    const application = await interaction.client.application.fetch();
+    const owner = application.owner;
+
+    if (!owner) return false;
+
+    if (owner.members) {
+      return owner.members.has(interaction.user.id);
+    }
+
+    return owner.id === interaction.user.id;
+  } catch (error) {
+    console.error("Unable to verify bot owner:", error);
+    return false;
+  }
+}
+
+const command = new SlashCommandBuilder()
+  .setName("welcome")
+  .setDescription("Configure the server welcome channel.")
+  .addChannelOption(option =>
+    option
+      .setName("channel")
+      .setDescription("The channel where new members will be welcomed.")
+      .setRequired(true)
+  );
+
+function setupWelcome(client) {
+  client.welcomeData = loadData();
+
+  client.on("interactionCreate", async interaction => {
+    if (!interaction.isChatInputCommand() || interaction.commandName !== "welcome") {
+      return;
+    }
+
+    if (!(await isBotOwner(interaction))) {
+      await interaction.reply({
+        content: "You don't have permission to use this command.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const channel = interaction.options.getChannel("channel", true);
+
+    if (!channel.isTextBased() || !channel.send) {
+      await interaction.reply({
+        content: "Please choose a text channel.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    client.welcomeData.channelId = channel.id;
+    saveData(client.welcomeData);
+
+    await interaction.reply({
+      content: `Welcome messages will now be sent in <#${channel.id}>.`,
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  client.on("guildMemberAdd", async member => {
+    try {
+      const channelId = client.welcomeData?.channelId;
+      if (!channelId) return;
+
+      const channel = await member.guild.channels.fetch(channelId).catch(() => null);
+      if (!channel || !channel.isTextBased() || !channel.send) return;
+
+      const template =
+        WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)];
+
+      const content = template.replaceAll("{member}", `<@${member.id}>`);
+
+      await channel.send({
+        content,
+        allowedMentions: {
+          users: [member.id],
+        },
+      });
+    } catch (error) {
+      console.error("Welcome message error:", error);
+    }
+  });
+}
+
+function setWelcomeChannel(client, channelId) {
+  client.welcomeData = client.welcomeData || loadData();
+  client.welcomeData.channelId = channelId;
+  saveData(client.welcomeData);
+}
+
+module.exports = {
+  setup: setupWelcome,
+  command,
+  commands: [command.toJSON()],
+  setWelcomeChannel,
+};
