@@ -61,7 +61,7 @@ function privateTextPage(title, body) {
   const container = new ContainerBuilder();
   container.addTextDisplayComponents(
     display(`# ${title}`),
-    display("*Missouri State Roleplay*"),
+    display("*Missouri State Roleplay • Official Regulations*"),
   );
   container.addSeparatorComponents(divider());
   container.addTextDisplayComponents(display(body));
