@@ -843,4 +843,4 @@ async function setup(client) {
   });
 }
 
-module.exports = { setup };
+module.exports = { setup, ensureSupportPanel };
