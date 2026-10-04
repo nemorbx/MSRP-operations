@@ -49,6 +49,7 @@ client.once("clientReady", async () => {
   console.log("========================================");
   console.log(`Logged in as ${client.user.tag}`);
   console.log("Missouri State Roleplay Operations is online.");
+  console.log("GitHub deployment test: successful.");
   console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations");
   console.log("========================================");
 
