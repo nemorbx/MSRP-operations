@@ -268,9 +268,8 @@ async function ensureApplicationPanel(client) {
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) return;
 
-  // The Application Center panel is persistent. Do not replace it on every
-  // restart/deploy. Keep the existing panel and only remove extra copies if
-  // more than one already exists.
+  // Keep exactly one current Application Center panel. Replace old copies on startup
+  // so the latest panel design is always posted.
   const existingPanels = messages.filter(message =>
     message.author?.id === client.user.id &&
     (
@@ -284,17 +283,9 @@ async function ensureApplicationPanel(client) {
     )
   );
 
-  if (existingPanels.size > 0) {
-    const panels = [...existingPanels.values()];
-    for (const duplicate of panels.slice(1)) {
-      await duplicate.delete().catch(() => {});
-    }
-    console.log(
-      panels.length > 1
-        ? `Kept existing Application Center panel and removed ${panels.length - 1} duplicate(s).`
-        : "Existing Application Center panel kept."
-    );
-    return;
+  const panels = [...existingPanels.values()];
+  for (const panel of panels) {
+    await panel.delete().catch(() => {});
   }
 
   const appBannerPath = path.join(__dirname, "apps.png");
@@ -309,7 +300,7 @@ async function ensureApplicationPanel(client) {
     ],
   });
 
-  console.log("Application Center panel created.");
+  console.log(panels.length ? "Application Center panel replaced." : "Application Center panel created.");
 }
 
 function buildEligibilityContainer(remaining, ready = false) {
@@ -1133,4 +1124,4 @@ function setup(client) {
   });
 }
 
-module.exports = { setup };
+module.exports = { setup, ensureApplicationPanel };
