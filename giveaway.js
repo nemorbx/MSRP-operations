@@ -70,8 +70,17 @@ function parseDuration(input) {
   return milliseconds;
 }
 
-function giveawayContainer(giveaway, ended = false, winners = []) {
+function customEmoji(client, name) {
+  const emoji = client.emojis.cache.find(item => item.name === name);
+  return emoji ? "<:" + emoji.name + ":" + emoji.id + ">" : "";
+}
+
+function giveawayContainer(client, giveaway, ended = false, winners = []) {
   const container = new ContainerBuilder();
+  const gift = customEmoji(client, "gift");
+  const trophy = customEmoji(client, "trophy");
+  const people = customEmoji(client, "people");
+  const bulletin = customEmoji(client, "bulletin");
 
   if (ended) {
     const winnerText = winners.length
@@ -80,10 +89,10 @@ function giveawayContainer(giveaway, ended = false, winners = []) {
 
     container.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        "## 🎁 Giveaway Ended\n" +
-        "**🎁 Prize:** " + giveaway.prize + "\n" +
-        "**🏆 Winner(s):** " + winnerText + "\n" +
-        "**👥 Entries:** " + giveaway.entries.length
+        "## " + gift + " Giveaway Ended\n" +
+        "**" + gift + " Prize:** " + giveaway.prize + "\n" +
+        "**" + trophy + " Winner(s):** " + winnerText + "\n" +
+        "**" + people + " Entries:** " + giveaway.entries.length
       )
     );
 
@@ -94,11 +103,11 @@ function giveawayContainer(giveaway, ended = false, winners = []) {
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "## 🎁 Giveaway\n" +
-      "**🎁 Prize:** " + giveaway.prize + "\n" +
-      "**⏰ Ends:** <t:" + endUnix + ":F> (<t:" + endUnix + ":R>)\n" +
-      "**🏆 Winners:** " + giveaway.winners + "\n" +
-      "**👥 Entries:** " + giveaway.entries.length
+      "## " + gift + " Giveaway\n" +
+      "**" + gift + " Prize:** " + giveaway.prize + "\n" +
+      "**" + bulletin + " Ends:** <t:" + endUnix + ":F> (<t:" + endUnix + ":R>)\n" +
+      "**" + trophy + " Winners:** " + giveaway.winners + "\n" +
+      "**" + people + " Entries:** " + giveaway.entries.length
     )
   );
 
@@ -106,7 +115,7 @@ function giveawayContainer(giveaway, ended = false, winners = []) {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("giveaway_enter:" + giveaway.id)
-        .setLabel("🎁 Enter Giveaway")
+        .setLabel("Enter Giveaway")
         .setStyle(ButtonStyle.Primary)
     )
   );
@@ -144,7 +153,7 @@ async function endGiveaway(client, giveawayId) {
 
   if (message) {
     await message.edit({
-      components: [giveawayContainer(giveaway, true, winners)],
+      components: [giveawayContainer(client, giveaway, true, winners)],
       flags: MessageFlags.IsComponentsV2
     }).catch(() => {});
   }
@@ -155,8 +164,8 @@ async function endGiveaway(client, giveawayId) {
 
   await channel.send({
     content: winners.length
-      ? "🎉 Congratulations " + winnerText + "! You won **" + giveaway.prize + "**!"
-      : "🎁 The giveaway for **" + giveaway.prize + "** ended with no eligible winners.",
+      ? "Congratulations " + winnerText + "! You won **" + giveaway.prize + "**!"
+      : "The giveaway for **" + giveaway.prize + "** ended with no eligible winners.",
     allowedMentions: { users: winners }
   }).catch(() => {});
 }
@@ -224,7 +233,7 @@ function setup(client) {
         writeGiveaways(stored);
 
         await interaction.reply({
-          components: [giveawayContainer(giveaway)],
+          components: [giveawayContainer(client, giveaway)],
           flags: MessageFlags.IsComponentsV2
         });
 
@@ -266,12 +275,12 @@ function setup(client) {
         writeGiveaways(giveaways);
 
         await interaction.reply({
-          content: "🎁 You have entered the giveaway!",
+          content: "You have entered the giveaway!",
           ephemeral: true
         });
 
         await interaction.message.edit({
-          components: [giveawayContainer(giveaway)],
+          components: [giveawayContainer(client, giveaway)],
           flags: MessageFlags.IsComponentsV2
         }).catch(() => {});
       }
