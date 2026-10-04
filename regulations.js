@@ -524,13 +524,8 @@ async function postOrRefreshPanel(client) {
 }
 
 function setup(client) {
-  client.once("clientReady", async () => {
-    try {
-      await postOrRefreshPanel(client);
-    } catch (error) {
-      console.error("Failed to automatically post the regulations panel:", error);
-    }
-  });
+  // The Regulations panel is persistent and is intentionally not recreated
+  // during bot startup. This prevents duplicate panels and speeds up deployments.
 
   client.on("interactionCreate", async interaction => {
     if (!interaction.isButton() || !interaction.customId.startsWith("msrp_reg_")) return;
