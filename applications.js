@@ -1063,9 +1063,9 @@ function setup(client) {
   ensureDataFiles();
   globalThis.__msrpClient = client;
 
-  client.once("clientReady", () => {
-    ensureApplicationPanel(client).catch(error => console.error("Failed to ensure application panel:", error));
-  });
+  // The Application Center panel is persistent and is intentionally not
+  // recreated during bot startup. This prevents duplicate panels and speeds up
+  // deployments.
 
   client.on("interactionCreate", async interaction => {
     try {
