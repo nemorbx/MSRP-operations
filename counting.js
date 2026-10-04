@@ -10,7 +10,6 @@ const DATA_FILE = path.join(DATA_DIR, "counting.json");
 
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const MAX_COUNT = 5000;
-const MIN_ACCOUNT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function ensureData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -207,6 +206,11 @@ const commands = [
 
 function setupCounting(client) {
   client.countingData = loadData();
+  console.log(
+    client.countingData.channelId
+      ? `Counting system ready in channel ${client.countingData.channelId}; next number: ${client.countingData.current}`
+      : "Counting system loaded, but no counting channel is configured. Use /count set."
+  );
   let messageQueue = Promise.resolve();
 
   client.on("interactionCreate", async interaction => {
@@ -272,9 +276,6 @@ function setupCounting(client) {
         if (message.author.bot || !message.guild) return;
         if (!client.countingData.channelId || message.channel.id !== client.countingData.channelId) return;
 
-        const accountAge = Date.now() - message.author.createdTimestamp;
-        if (accountAge < MIN_ACCOUNT_AGE_MS) return;
-
         // 5,000 is the maximum. A Senior High Rank+ member must reset before
         // another sequence can begin.
         if (client.countingData.current > MAX_COUNT) return;
@@ -304,7 +305,7 @@ function setupCounting(client) {
         let result = null;
 
         try {
-          result = evaluateExpression(message.content);
+          result = evaluateExpression(message.content.trim());
         } catch {
           result = null;
         }
