@@ -1,23 +1,20 @@
 require("dotenv").config();
 
-const { Client, GatewayIntentBits, REST, Routes, Partials, PermissionsBitField } = require("discord.js");
+const { Client, GatewayIntentBits, Partials, PermissionsBitField } = require("discord.js");
 
-const { setup: setupInfractions, commands: infractionCommands } = require("./infractions");
-const { setup: setupPromotions, promoteCommand } = require("./promotions");
+const { setup: setupInfractions } = require("./infractions");
+const { setup: setupPromotions } = require("./promotions");
 const { setup: setupApplications } = require("./applications");
 const { setup: setupSupport } = require("./support");
-const { setup: setupCounting, commands: countingCommands } = require("./counting");
-const { setup: setupAFK, commands: afkCommands } = require("./afk");
-const { setup: setupStaffFeedback, feedbackCommand, staffRatingCommand } = require("./staff-feedback");
+const { setup: setupCounting } = require("./counting");
+const { setup: setupAFK } = require("./afk");
+const { setup: setupStaffFeedback } = require("./staff-feedback");
 const { setup: setupRegulations } = require("./regulations");
 const { purgeMessages } = require("./purge");
 const { setup: setupMessageLogs } = require("./message-logs");
 
 const TOKEN = process.env.DISCORD_TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
-
-if (!TOKEN) throw new Error("DISCORD_TOKEN is missing from .env");
-if (!CLIENT_ID) throw new Error("CLIENT_ID is missing from .env");
+if (!TOKEN) throw new Error("DISCORD_TOKEN is missing from environment");
 
 const client = new Client({
   intents: [
@@ -38,15 +35,6 @@ setupAFK(client);
 setupStaffFeedback(client);
 setupRegulations(client);
 setupMessageLogs(client);
-
-const commands = [
-  ...infractionCommands,
-  promoteCommand.toJSON(),
-  ...countingCommands,
-  ...afkCommands,
-  feedbackCommand.toJSON(),
-  staffRatingCommand.toJSON(),
-];
 
 client.on("messageCreate", async message => {
   if (message.author.bot || !message.guild) return;
@@ -100,13 +88,7 @@ client.once("clientReady", async () => {
   console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Purge");
   console.log("========================================");
 
-  try {
-    const rest = new REST({ version: "10" }).setToken(TOKEN);
-    await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
-    console.log("All slash commands registered.");
-  } catch (error) {
-    console.error("Failed to register slash commands:", error);
-  }
+  console.log("Slash commands are already registered; skipping registration during startup.");
 });
 
 client.on("error", error => console.error("Discord client error:", error));
