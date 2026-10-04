@@ -12,6 +12,7 @@ const {
 
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const DATA_FILE = path.join(__dirname, "giveaways.json");
+let clearingGiveaways = false;
 
 const giveawayCommand = new SlashCommandBuilder()
   .setName("giveaway")
@@ -193,6 +194,7 @@ function scheduleGiveawayEnd(client, giveaway) {
 
 async function clearAllGiveaways(client) {
   const giveaways = readGiveaways();
+  clearingGiveaways = true;
 
   for (const giveaway of Object.values(giveaways)) {
     if (!giveaway.channelId || !giveaway.messageId) continue;
@@ -205,6 +207,7 @@ async function clearAllGiveaways(client) {
   }
 
   writeGiveaways({});
+  clearingGiveaways = false;
   console.log("All giveaways cleared.");
 }
 
@@ -216,7 +219,7 @@ function setup(client) {
       const stored = readGiveaways();
       const giveaway = Object.values(stored).find(item => item.messageId === message.id);
 
-      if (!giveaway || giveaway.ended) return;
+      if (clearingGiveaways || !giveaway || giveaway.ended) return;
 
       console.log("Giveaway message deleted; ending giveaway " + giveaway.id);
       await endGiveaway(client, giveaway.id);
