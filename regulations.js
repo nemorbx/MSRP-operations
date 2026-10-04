@@ -493,13 +493,25 @@ async function postOrRefreshPanel(client) {
     flags: MessageFlags.IsComponentsV2,
   };
 
-  if (existing) {
-    await existing.edit(payload);
-    console.log(`Regulations panel refreshed in #${channel.name}.`);
-  } else {
-    await channel.send(payload);
-    console.log(`Regulations panel posted in #${channel.name}.`);
+  const existingPanels = messages.filter(message =>
+    message.author?.id === client.user.id &&
+    message.components?.some(component =>
+      component.components?.some(child => child.customId?.startsWith("msrp_reg_"))
+    )
+  );
+
+  // Keep exactly one Regulations panel. Delete every old copy, then post the
+  // current version so updates are applied without accumulating panels.
+  for (const panel of existingPanels) {
+    await panel.delete().catch(() => {});
   }
+
+  await channel.send(payload);
+  console.log(
+    existingPanels.length
+      ? `Regulations panel replaced in #${channel.name}.`
+      : `Regulations panel posted in #${channel.name}.`
+  );
 }
 
 function setup(client) {
