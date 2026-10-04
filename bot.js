@@ -12,6 +12,7 @@ const { setup: setupStaffFeedback } = require("./staff-feedback");
 const { setup: setupRegulations } = require("./regulations");
 const { purgeMessages } = require("./purge");
 const { setup: setupMessageLogs } = require("./message-logs");
+const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
 
 const TOKEN = process.env.DISCORD_TOKEN;
 if (!TOKEN) throw new Error("DISCORD_TOKEN is missing from environment");
@@ -36,6 +37,7 @@ setupAFK(client);
 setupStaffFeedback(client);
 setupRegulations(client);
 setupMessageLogs(client);
+setupGiveaway(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
@@ -114,7 +116,22 @@ client.once("clientReady", async () => {
   console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Purge");
   console.log("========================================");
 
-  console.log("Slash commands are already registered; skipping registration during startup.");
+  try {
+    for (const guild of client.guilds.cache.values()) {
+      const commands = await guild.commands.fetch();
+      const existing = commands.find(command => command.name === giveawayCommand.name);
+
+      if (existing) {
+        await existing.edit(giveawayCommand.toJSON());
+      } else {
+        await guild.commands.create(giveawayCommand.toJSON());
+      }
+    }
+
+    console.log("Giveaway slash command registered.");
+  } catch (error) {
+    console.error("Failed to register giveaway slash command:", error);
+  }
 });
 
 client.on("error", error => console.error("Discord client error:", error));
