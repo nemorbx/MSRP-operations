@@ -13,6 +13,8 @@ const {
   SeparatorBuilder,
   SectionBuilder,
   ThumbnailBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   MessageFlags,
 } = require('discord.js');
 
@@ -87,27 +89,30 @@ function buildRatingButtons(guild, id, disabled = false) {
 
 function buildFeedbackCard({ reviewer, target, rating, feedback, createdAt, id }) {
   const stars = renderStars(target.guild, rating);
-  const thumb = target.displayAvatarURL({ extension: 'png', size: 128 });
+  const bannerPath = path.join(__dirname, 'banner.png');
+
   const container = new ContainerBuilder();
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(`### Staff Feedback\nFeedback by ${reviewer}`)
+    new TextDisplayBuilder().setContent(
+      [
+        '## Staff Review',
+        '',
+        `**Staff Member:** ${target}`,
+        `**Rating:** ${stars}`,
+        `**Reason:** ${feedback}`,
+        `Reviewed by ${reviewer}`,
+      ].join('\\n')
+    )
   );
-  container.addSeparatorComponents(new SeparatorBuilder());
-  container.addSectionComponents(
-    new SectionBuilder()
-      .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(`**Staff**\n${target}\n\n**Rating**\n${stars}`)
+
+  if (fs.existsSync(bannerPath)) {
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder().setURL('attachment://banner.png')
       )
-      .setThumbnailAccessory(new ThumbnailBuilder({ media: { url: thumb } }))
-  );
-  container.addSeparatorComponents(new SeparatorBuilder());
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(`**Feedback**\n${feedback}`)
-  );
-  container.addSeparatorComponents(new SeparatorBuilder());
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(`-# Feedback ID: ${id} • <t:${Math.floor(createdAt / 1000)}:f>`)
-  );
+    );
+  }
+
   return container;
 }
 
@@ -247,7 +252,13 @@ function setup(client) {
         const channel = interaction.guild.channels.cache.get(FEEDBACK_CHANNEL_ID);
         if (!channel || !channel.isTextBased()) return interaction.reply({ content: 'Feedback was saved, but the configured staff feedback channel could not be found.', flags: MessageFlags.Ephemeral });
         const card = buildFeedbackCard({ reviewer: reviewer.user.username, target, rating: data.rating, feedback: reason, createdAt: now, id });
-        await channel.send({ components: [card], flags: MessageFlags.IsComponentsV2 });
+        await channel.send({
+          components: [card],
+          files: fs.existsSync(path.join(__dirname, 'banner.png'))
+            ? [{ attachment: path.join(__dirname, 'banner.png'), name: 'banner.png' }]
+            : [],
+          flags: MessageFlags.IsComponentsV2
+        });
         return interaction.reply({ content: 'Your staff feedback has been submitted.', flags: MessageFlags.Ephemeral });
       }
 
