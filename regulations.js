@@ -466,61 +466,39 @@ async function postOrRefreshPanel(client) {
 
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) {
-    console.error("Could not read the regulations channel to post the panel.");
+    console.error("Could not read the regulations channel to refresh the panel.");
     return;
   }
 
-  // Components V2 panels are not always exposed with their nested button
-  // custom IDs when messages are fetched. Use the unique regulations.png
-  // attachment as a reliable fallback so old panels are found and removed.
-  const existing = messages.find(message =>
-    message.author.id === client.user.id &&
-    (
-      message.components?.some(component =>
-        component.components?.some(child => child.customId?.startsWith("msrp_reg_"))
-      ) ||
-      message.attachments?.some(attachment => attachment.name === "regulations.png")
-    )
-  );
-
-  const bannerPath = path.join(__dirname, BANNER_NAME);
   const regulationsBannerPath = path.join(__dirname, REGULATIONS_BANNER_NAME);
+  const bannerPath = path.join(__dirname, BANNER_NAME);
+
   if (!fs.existsSync(regulationsBannerPath)) {
     console.error(`Missing ${REGULATIONS_BANNER_NAME}. The regulations panel requires this top image.`);
     return;
   }
 
+  // This is the dedicated Regulations panel channel. Remove every message
+  // sent by this bot before posting the new panel. This is more reliable for
+  // Components V2 than inspecting nested component IDs.
+  const oldPanels = messages.filter(message => message.author?.id === client.user.id);
+
+  for (const panel of oldPanels.values()) {
+    await panel.delete().catch(error => {
+      console.error("Failed to delete old Regulations panel:", error);
+    });
+  }
+
   const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
   if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
 
-  const payload = {
+  await channel.send({
     components: [mainPanel(guild)],
     files,
     flags: MessageFlags.IsComponentsV2,
-  };
+  });
 
-  const existingPanels = messages.filter(message =>
-    message.author?.id === client.user.id &&
-    (
-      message.components?.some(component =>
-        component.components?.some(child => child.customId?.startsWith("msrp_reg_"))
-      ) ||
-      message.attachments?.some(attachment => attachment.name === "regulations.png")
-    )
-  );
-
-  // Keep exactly one Regulations panel. Delete every old copy, then post the
-  // current version so updates are applied without accumulating panels.
-  for (const panel of existingPanels) {
-    await panel.delete().catch(() => {});
-  }
-
-  await channel.send(payload);
-  console.log(
-    existingPanels.length
-      ? `Regulations panel replaced in #${channel.name}.`
-      : `Regulations panel posted in #${channel.name}.`
-  );
+  console.log(`Regulations panel refreshed. Deleted ${oldPanels.size} old bot message(s).`);
 }
 
 function setup(client) {
