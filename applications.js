@@ -186,7 +186,12 @@ function questionText(question) {
   return `## **${question}**`;
 }
 
-function buildApplicationPanel() {
+function customEmoji(guild, name) {
+  const found = guild?.emojis.cache.find(e => e.name === name);
+  return found ? `<:${found.name}:${found.id}>` : "";
+}
+
+function buildApplicationPanel(guild) {
   const container = new ContainerBuilder();
 
   container.addMediaGalleryComponents(
@@ -198,13 +203,13 @@ function buildApplicationPanel() {
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       "## Staff Application\n" +
-      "Apply to join the Missouri State Roleplay staff team. Please make sure all information you provide is accurate and honest."
+      customEmoji(guild, "letter") + " Apply to join the Missouri State Roleplay staff team. Please make sure all information you provide is accurate and honest."
     )
   );
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "Please review all requirements before starting. By submitting an application, you agree that the information you provide must be truthful and complete."
+      customEmoji(guild, "info") + " Please review all requirements before starting. By submitting an application, you agree that the information you provide must be truthful and complete."
     )
   );
 
@@ -215,19 +220,19 @@ function buildApplicationPanel() {
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       "## Ban Appeal\n" +
-      "Submit an appeal for a Roblox or community ban. Please provide accurate information so our team can review your appeal."
+      customEmoji(guild, "shield") + " Submit an appeal for a Roblox or community ban. Please provide accurate information so our team can review your appeal."
     )
   );
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "Please explain your situation clearly and provide the information requested in the appeal form."
+      customEmoji(guild, "bulletin") + " Please explain your situation clearly and provide the information requested in the appeal form."
     )
   );
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "You can review your available moderation logs [here](https://melody.xyz/my/logs) before submitting your appeal."
+      customEmoji(guild, "board") + " You can review your available moderation logs [here](https://melody.xyz/my/logs) before submitting your appeal."
     )
   );
 
@@ -292,7 +297,7 @@ async function ensureApplicationPanel(client) {
   const bottomBannerPath = path.join(__dirname, "banner.png");
 
   await channel.send({
-    components: [buildApplicationPanel()],
+    components: [buildApplicationPanel(client.guilds.cache.first())],
     flags: MessageFlags.IsComponentsV2,
     files: [
       { attachment: appBannerPath, name: "apps.png" },
