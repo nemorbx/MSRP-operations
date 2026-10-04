@@ -4,12 +4,12 @@ const { Client, GatewayIntentBits, Partials, PermissionsBitField } = require("di
 
 const { setup: setupInfractions } = require("./infractions");
 const { setup: setupPromotions } = require("./promotions");
-const { setup: setupApplications } = require("./applications");
-const { setup: setupSupport } = require("./support");
+const { setup: setupApplications, ensureApplicationPanel } = require("./applications");
+const { setup: setupSupport, ensureSupportPanel } = require("./support");
 const { setup: setupCounting } = require("./counting");
 const { setup: setupAFK } = require("./afk");
 const { setup: setupStaffFeedback } = require("./staff-feedback");
-const { setup: setupRegulations } = require("./regulations");
+const { setup: setupRegulations, postOrRefreshPanel } = require("./regulations");
 const { purgeMessages } = require("./purge");
 const { setup: setupMessageLogs } = require("./message-logs");
 const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
@@ -117,6 +117,10 @@ client.once("clientReady", async () => {
   console.log("========================================");
 
   try {
+    await ensureApplicationPanel(client);
+    await ensureSupportPanel(client);
+    await postOrRefreshPanel(client);
+
     for (const guild of client.guilds.cache.values()) {
       const commands = await guild.commands.fetch();
       const existing = commands.find(command => command.name === giveawayCommand.name);
@@ -130,7 +134,7 @@ client.once("clientReady", async () => {
 
     console.log("Giveaway slash command registered.");
   } catch (error) {
-    console.error("Failed to register giveaway slash command:", error);
+    console.error("Startup panel/command refresh error:", error);
   }
 });
 
