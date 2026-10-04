@@ -10,6 +10,7 @@ const DATA_FILE = path.join(DATA_DIR, "counting.json");
 
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const MAX_COUNT = 5000;
+const DEFAULT_COUNTING_CHANNEL_ID = "1527298583613669458";
 
 function ensureData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -17,8 +18,8 @@ function ensureData() {
     fs.writeFileSync(
       DATA_FILE,
       JSON.stringify({
-        channelId: null,
-        current: 1,
+        channelId: DEFAULT_COUNTING_CHANNEL_ID,
+        current: 5,
         highest: 0,
         lastUserId: null,
         processedMessages: {},
@@ -33,8 +34,8 @@ function loadData() {
   try {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
     return {
-      channelId: data.channelId ?? null,
-      current: Number.isInteger(data.current) && data.current >= 1 ? data.current : 1,
+      channelId: data.channelId ?? DEFAULT_COUNTING_CHANNEL_ID,
+      current: Number.isInteger(data.current) && data.current >= 1 ? data.current : 5,
       highest: Number.isInteger(data.highest) && data.highest >= 0 ? data.highest : 0,
       lastUserId: data.lastUserId ?? null,
       processedMessages: data.processedMessages && typeof data.processedMessages === "object"
@@ -43,8 +44,8 @@ function loadData() {
     };
   } catch {
     return {
-      channelId: null,
-      current: 1,
+      channelId: DEFAULT_COUNTING_CHANNEL_ID,
+      current: 5,
       highest: 0,
       lastUserId: null,
       processedMessages: {},
