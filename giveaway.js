@@ -100,7 +100,7 @@ function giveawayContainer(client, giveaway, ended = false, winners = []) {
 
     container.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        "## " + gift + " Giveaway Ended\n" +
+        "## Giveaway Ended\n" +
         "**" + gift + " Prize:** " + giveaway.prize + "\n" +
         "**" + trophy + " Winner(s):** " + winnerText + "\n" +
         "**" + people + " Entries:** " + giveaway.entries.length
@@ -114,7 +114,7 @@ function giveawayContainer(client, giveaway, ended = false, winners = []) {
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "## " + gift + " Giveaway\n" +
+      "## Giveaway\n" +
       "**" + gift + " Prize:** " + giveaway.prize + "\n" +
       "**" + bulletin + " Ends:** <t:" + endUnix + ":F> (<t:" + endUnix + ":R>)\n" +
       "**" + trophy + " Winners:** " + giveaway.winners + "\n" +
