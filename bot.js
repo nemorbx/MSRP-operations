@@ -19,6 +19,7 @@ if (!TOKEN) throw new Error("DISCORD_TOKEN is missing from environment");
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
@@ -35,6 +36,31 @@ setupAFK(client);
 setupStaffFeedback(client);
 setupRegulations(client);
 setupMessageLogs(client);
+
+const MEMBER_ROLE_ID = "1527373127422709862";
+
+client.on("guildMemberAdd", async member => {
+  try {
+    const role = member.guild.roles.cache.get(MEMBER_ROLE_ID);
+
+    if (!role) {
+      console.error("Member role not found in " + member.guild.name + " (" + MEMBER_ROLE_ID + ")");
+      return;
+    }
+
+    if (role.position >= member.guild.members.me.roles.highest.position) {
+      console.error("Member role is not below the bot's highest role in " + member.guild.name);
+      return;
+    }
+
+    if (member.roles.cache.has(MEMBER_ROLE_ID)) return;
+
+    await member.roles.add(role, "Automatic Member role on server join");
+    console.log("Automatically assigned Member role to " + member.user.tag);
+  } catch (error) {
+    console.error("Failed to assign Member role to " + member.user.tag + ":", error);
+  }
+});
 
 client.on("messageCreate", async message => {
   if (message.author.bot || !message.guild) return;
