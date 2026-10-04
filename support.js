@@ -754,9 +754,8 @@ async function handleCloseConfirmation(interaction, ticket, confirm) {
 async function setup(client) {
   ensureData();
 
-  client.once("clientReady", () => {
-    setTimeout(() => ensureSupportPanel(client), 2000);
-  });
+  // The Support panel is persistent and is intentionally not recreated
+  // during bot startup. This prevents duplicate panels and speeds up deployments.
 
   client.on("threadDelete", async (thread) => {
     try {
