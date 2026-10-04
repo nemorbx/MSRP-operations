@@ -15,25 +15,35 @@ const DATA_FILE = path.join(__dirname, "giveaways.json");
 
 const giveawayCommand = new SlashCommandBuilder()
   .setName("giveaway")
-  .setDescription("Start a giveaway. Senior HR only.")
-  .addStringOption(option =>
-    option.setName("prize")
-      .setDescription("What is being given away?")
-      .setRequired(true)
-      .setMaxLength(200)
+  .setDescription("Manage giveaways. Senior HR only.")
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName("start")
+      .setDescription("Start a giveaway.")
+      .addStringOption(option =>
+        option.setName("prize")
+          .setDescription("What is being given away?")
+          .setRequired(true)
+          .setMaxLength(200)
+      )
+      .addStringOption(option =>
+        option.setName("duration")
+          .setDescription("Examples: 30m, 2h, 1d")
+          .setRequired(true)
+          .setMaxLength(20)
+      )
+      .addIntegerOption(option =>
+        option.setName("winners")
+          .setDescription("Number of winners")
+          .setRequired(true)
+          .setMinValue(1)
+          .setMaxValue(20)
+      )
   )
-  .addStringOption(option =>
-    option.setName("duration")
-      .setDescription("Examples: 30m, 2h, 1d")
-      .setRequired(true)
-      .setMaxLength(20)
-  )
-  .addIntegerOption(option =>
-    option.setName("winners")
-      .setDescription("Number of winners")
-      .setRequired(true)
-      .setMinValue(1)
-      .setMaxValue(20)
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName("clear")
+      .setDescription("Clear all active and stored giveaways.")
   );
 
 function readGiveaways() {
@@ -181,8 +191,39 @@ function scheduleGiveawayEnd(client, giveaway) {
   setTimeout(() => endGiveaway(client, giveaway.id), delay);
 }
 
+async function clearAllGiveaways(client) {
+  const giveaways = readGiveaways();
+
+  for (const giveaway of Object.values(giveaways)) {
+    if (!giveaway.channelId || !giveaway.messageId) continue;
+
+    const channel = await client.channels.fetch(giveaway.channelId).catch(() => null);
+    if (!channel) continue;
+
+    const message = await channel.messages.fetch(giveaway.messageId).catch(() => null);
+    if (message) await message.delete().catch(() => {});
+  }
+
+  writeGiveaways({});
+  console.log("All giveaways cleared.");
+}
+
 function setup(client) {
   const giveaways = readGiveaways();
+
+  client.on("messageDelete", async message => {
+    try {
+      const stored = readGiveaways();
+      const giveaway = Object.values(stored).find(item => item.messageId === message.id);
+
+      if (!giveaway || giveaway.ended) return;
+
+      console.log("Giveaway message deleted; ending giveaway " + giveaway.id);
+      await endGiveaway(client, giveaway.id);
+    } catch (error) {
+      console.error("Giveaway message deletion handler error:", error);
+    }
+  });
 
   for (const giveaway of Object.values(giveaways)) {
     if (!giveaway.ended) scheduleGiveawayEnd(client, giveaway);
@@ -194,6 +235,17 @@ function setup(client) {
         if (!interaction.member.roles.cache.has(SENIOR_HR_ROLE_ID)) {
           await interaction.reply({
             content: "Only Senior HR can use the giveaway command.",
+            ephemeral: true
+          });
+          return;
+        }
+
+        const subcommand = interaction.options.getSubcommand();
+
+        if (subcommand === "clear") {
+          await clearAllGiveaways(client);
+          await interaction.reply({
+            content: "All giveaways have been cleared.",
             ephemeral: true
           });
           return;
