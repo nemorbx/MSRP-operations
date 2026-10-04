@@ -91,7 +91,12 @@ function separator() {
   return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small);
 }
 
-function buildSupportPanel() {
+function customEmoji(guild, name) {
+  const found = guild?.emojis.cache.find(e => e.name === name);
+  return found ? `<:${found.name}:${found.id}>` : "";
+}
+
+function buildSupportPanel(guild) {
   const container = new ContainerBuilder();
   const banner = assetPath([ROOT_SUPPORT_BANNER, ASSET_SUPPORT_BANNER]);
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
@@ -102,7 +107,7 @@ function buildSupportPanel() {
   // Main Support heading and description.
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "## Support\nNeed assistance? Use this support center to contact the appropriate team for questions, concerns, server assistance, staff-related matters, partnerships, and other community inquiries. Select the category that best matches what you need so your request can be directed to the right team."
+      "## Support\n" + customEmoji(guild, "info") + " Need assistance? Use this support center to contact the appropriate team for questions, concerns, server assistance, staff-related matters, partnerships, and other community inquiries. Select the category that best matches what you need so your request can be directed to the right team."
     )
   );
 
@@ -112,7 +117,7 @@ function buildSupportPanel() {
   // Keep the three category sections compact with no dividers between them.
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "### General Support\nUse General Support for questions, server issues, Discord assistance, member concerns, technical problems, or other requests that do not specifically require Internal Affairs or Management. If you are unsure where your question belongs, this is the general place to start.\n### Internal Affairs Support\nUse Internal Affairs Support to report staff misconduct, raise concerns about staff behavior, or request a review of a recent moderation action taken by a staff member. Please provide relevant details and evidence when available so the Internal Affairs Team can properly review your concern.\n### Management Support\nUse Management Support for partnerships, community collaborations, management-level concerns, department or leadership matters, business inquiries, and other requests that require assistance from Management. This category is intended for matters that go beyond normal General Support."
+      "### General Support\n" + customEmoji(guild, "ticket") + " Use General Support for questions, server issues, Discord assistance, member concerns, technical problems, or other requests that do not specifically require Internal Affairs or Management. If you are unsure where your question belongs, this is the general place to start.\n### Internal Affairs Support\n" + customEmoji(guild, "shield") + " Use Internal Affairs Support to report staff misconduct, raise concerns about staff behavior, or request a review of a recent moderation action taken by a staff member. Please provide relevant details and evidence when available so the Internal Affairs Team can properly review your concern.\n### Management Support\n" + customEmoji(guild, "people") + " Use Management Support for partnerships, community collaborations, management-level concerns, department or leadership matters, business inquiries, and other requests that require assistance from Management. This category is intended for matters that go beyond normal General Support."
     )
   );
 
@@ -314,7 +319,7 @@ async function sendPanel(channel) {
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
   const files = [banner, footer].filter(Boolean);
   await channel.send({
-    components: [buildSupportPanel()],
+    components: [buildSupportPanel(client.guilds.cache.first())],
     files,
     flags: MessageFlags.IsComponentsV2,
   });
