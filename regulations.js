@@ -597,4 +597,4 @@ function setup(client) {
   });
 }
 
-module.exports = { setup };
+module.exports = { setup, postOrRefreshPanel };
