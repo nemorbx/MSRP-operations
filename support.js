@@ -332,30 +332,24 @@ async function ensureSupportPanel(client) {
     return;
   }
 
-  const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
-  const existingPanels = messages?.filter(message =>
-    message.author?.id === client.user.id &&
-    message.components?.some(component =>
-      component.components?.some(child => child.customId === "support:create")
-    )
-  ) || [];
-
-  try {
-    // Keep exactly one Support panel. Delete old copies before posting the
-    // current version so changes are applied without accumulating panels.
-    for (const panel of existingPanels) {
-      await panel.delete().catch(() => {});
-    }
-
-    await sendPanel(channel);
-    console.log(
-      existingPanels.length
-        ? "Support panel replaced."
-        : "Support panel created."
-    );
-  } catch (error) {
-    console.error("Failed to replace support panel:", error);
+  const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
+  if (!messages) {
+    console.error("Could not read the support channel to refresh the panel.");
+    return;
   }
+
+  // The Support channel is the dedicated support panel channel. Remove every
+  // message sent by this bot, then post exactly one fresh panel.
+  const oldPanels = messages.filter(message => message.author?.id === client.user.id);
+
+  for (const panel of oldPanels.values()) {
+    await panel.delete().catch(error => {
+      console.error("Failed to delete old Support panel:", error);
+    });
+  }
+
+  await sendPanel(channel);
+  console.log(`Support panel refreshed. Deleted ${oldPanels.size} old bot message(s).`);
 }
 
 async function addRoleMembersToPrivateThread(thread, guild, roleId) {
