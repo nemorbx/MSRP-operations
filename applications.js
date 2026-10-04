@@ -265,18 +265,21 @@ async function ensureApplicationPanel(client) {
   const channel = await client.channels.fetch(APPLICATION_CHANNEL_ID).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
 
-  const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+  const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
 
-  // Keep exactly one Application Center panel. On every bot restart/deploy,
-  // remove any old copies and post one fresh panel so code/content changes
-  // are always reflected without creating duplicates.
+  // Components V2 panels are not always exposed with their nested button
+  // custom IDs when messages are fetched. Use the unique apps.png attachment
+  // as a reliable fallback so old panels are found and removed.
   const existingPanels = messages?.filter(message =>
     message.author?.id === client.user.id &&
-    message.components?.some(component =>
-      component.components?.some(child =>
-        child.customId === "staff_application_start" ||
-        child.customId === "ban_appeal_start"
-      )
+    (
+      message.components?.some(component =>
+        component.components?.some(child =>
+          child.customId === "staff_application_start" ||
+          child.customId === "ban_appeal_start"
+        )
+      ) ||
+      message.attachments?.some(attachment => attachment.name === "apps.png")
     )
   ) || [];
 
