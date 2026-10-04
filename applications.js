@@ -265,22 +265,23 @@ async function ensureApplicationPanel(client) {
   const channel = await client.channels.fetch(APPLICATION_CHANNEL_ID).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
 
-  // Match the support-system behavior: keep the existing panel and only
-  // create a new one when the Application Center does not already have it.
   const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
 
-  // Match the support system: if our Components V2 application panel already
-  // exists in the Application Center, leave it alone. Only create a panel when
-  // none exists. This makes restarting with `node bot.js` idempotent.
-  const alreadyExists = messages?.some(message =>
+  // Keep exactly one Application Center panel. On every bot restart/deploy,
+  // remove any old copies and post one fresh panel so code/content changes
+  // are always reflected without creating duplicates.
+  const existingPanels = messages?.filter(message =>
     message.author?.id === client.user.id &&
-    message.components?.length &&
-    message.components[0]?.type === 17
-  );
+    message.components?.some(component =>
+      component.components?.some(child =>
+        child.customId === "staff_application_start" ||
+        child.customId === "ban_appeal_start"
+      )
+    )
+  ) || [];
 
-  if (alreadyExists) {
-    console.log("Application Center panel already exists. Skipping panel creation.");
-    return;
+  for (const panel of existingPanels) {
+    await panel.delete().catch(() => {});
   }
 
   const appBannerPath = path.join(__dirname, "apps.png");
@@ -295,7 +296,11 @@ async function ensureApplicationPanel(client) {
     ],
   });
 
-  console.log("Application Center Components V2 panel created.");
+  console.log(
+    existingPanels.length
+      ? "Application Center panel replaced."
+      : "Application Center panel created."
+  );
 }
 
 function buildEligibilityContainer(remaining, ready = false) {
