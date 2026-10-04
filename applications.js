@@ -266,11 +266,12 @@ async function ensureApplicationPanel(client) {
   if (!channel || !channel.isTextBased()) return;
 
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
+  if (!messages) return;
 
-  // Components V2 panels are not always exposed with their nested button
-  // custom IDs when messages are fetched. Use the unique apps.png attachment
-  // as a reliable fallback so old panels are found and removed.
-  const existingPanels = messages?.filter(message =>
+  // The Application Center panel is persistent. Do not replace it on every
+  // restart/deploy. Keep the existing panel and only remove extra copies if
+  // more than one already exists.
+  const existingPanels = messages.filter(message =>
     message.author?.id === client.user.id &&
     (
       message.components?.some(component =>
@@ -281,10 +282,19 @@ async function ensureApplicationPanel(client) {
       ) ||
       message.attachments?.some(attachment => attachment.name === "apps.png")
     )
-  ) || [];
+  );
 
-  for (const panel of existingPanels) {
-    await panel.delete().catch(() => {});
+  if (existingPanels.size > 0) {
+    const panels = [...existingPanels.values()];
+    for (const duplicate of panels.slice(1)) {
+      await duplicate.delete().catch(() => {});
+    }
+    console.log(
+      panels.length > 1
+        ? `Kept existing Application Center panel and removed ${panels.length - 1} duplicate(s).`
+        : "Existing Application Center panel kept."
+    );
+    return;
   }
 
   const appBannerPath = path.join(__dirname, "apps.png");
@@ -299,11 +309,7 @@ async function ensureApplicationPanel(client) {
     ],
   });
 
-  console.log(
-    existingPanels.length
-      ? "Application Center panel replaced."
-      : "Application Center panel created."
-  );
+  console.log("Application Center panel created.");
 }
 
 function buildEligibilityContainer(remaining, ready = false) {
