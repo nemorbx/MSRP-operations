@@ -101,7 +101,7 @@ function buildFeedbackCard({ reviewer, target, rating, feedback, createdAt, id }
         `**Rating:** ${stars}`,
         `**Reason:** ${feedback}`,
         `Reviewed by ${reviewer}`,
-      ].join('\\n')
+      ].join('\n')
     )
   );
 
@@ -219,29 +219,32 @@ function setup(client) {
       }
 
       if (interaction.isModalSubmit() && interaction.customId.startsWith('stafffeedback:reason:')) {
+        // Acknowledge the modal immediately so the Discord interaction does not
+        // time out while the bot saves the feedback and posts the review card.
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const id = interaction.customId.split(':')[2];
         const data = pending.get(id);
-        if (!data) return interaction.reply({ content: 'This feedback request has expired. Please run `/feedback @user` again.', flags: MessageFlags.Ephemeral });
-        if (data.reviewerId !== interaction.user.id) return interaction.reply({ content: 'Only the member who started this feedback can submit it.', flags: MessageFlags.Ephemeral });
+        if (!data) return interaction.editReply({ content: 'This feedback request has expired. Please run `/feedback @user` again.' });
+        if (data.reviewerId !== interaction.user.id) return interaction.editReply({ content: 'Only the member who started this feedback can submit it.' });
 
         const reason = interaction.fields.getTextInputValue('reason').trim();
-        if (!reason) return interaction.reply({ content: 'A reason is required.', flags: MessageFlags.Ephemeral });
+        if (!reason) return interaction.editReply({ content: 'A reason is required.' });
 
         const reviewer = await interaction.guild.members.fetch(data.reviewerId);
         const target = await interaction.guild.members.fetch(data.targetId).catch(() => null);
         if (!target || target.user.bot || !target.roles.cache.has(STAFF_TEAM_ROLE_ID)) {
           pending.delete(id);
-          return interaction.reply({ content: 'That staff member is no longer eligible to receive feedback.', flags: MessageFlags.Ephemeral });
+          return interaction.editReply({ content: 'That staff member is no longer eligible to receive feedback.' });
         }
         const now = Date.now();
         const all = loadFeedback();
         if (all.some(x => x.reviewerId === reviewer.id && x.createdAt >= startOfDay(now))) {
           pending.delete(id);
-          return interaction.reply({ content: 'You already submitted a staff rating today.', flags: MessageFlags.Ephemeral });
+          return interaction.editReply({ content: 'You already submitted a staff rating today.' });
         }
         if (all.some(x => x.reviewerId === reviewer.id && x.targetId === target.id && x.createdAt >= monthsAgo(now, 1))) {
           pending.delete(id);
-          return interaction.reply({ content: 'You already rated this staff member within the last month.', flags: MessageFlags.Ephemeral });
+          return interaction.editReply({ content: 'You already rated this staff member within the last month.' });
         }
 
         const record = { id, reviewerId: reviewer.id, targetId: target.id, rating: data.rating, feedback: reason, createdAt: now };
@@ -250,7 +253,7 @@ function setup(client) {
         pending.delete(id);
 
         const channel = interaction.guild.channels.cache.get(FEEDBACK_CHANNEL_ID);
-        if (!channel || !channel.isTextBased()) return interaction.reply({ content: 'Feedback was saved, but the configured staff feedback channel could not be found.', flags: MessageFlags.Ephemeral });
+        if (!channel || !channel.isTextBased()) return interaction.editReply({ content: 'Feedback was saved, but the configured staff feedback channel could not be found.' });
         const card = buildFeedbackCard({ reviewer: reviewer.user.username, target, rating: data.rating, feedback: reason, createdAt: now, id });
         await channel.send({
           components: [card],
@@ -259,7 +262,7 @@ function setup(client) {
             : [],
           flags: MessageFlags.IsComponentsV2
         });
-        return interaction.reply({ content: 'Your staff feedback has been submitted.', flags: MessageFlags.Ephemeral });
+        return interaction.editReply({ content: 'Your staff feedback has been submitted.' });
       }
 
       if (interaction.isButton() && interaction.customId.startsWith('stafffeedback:rate:')) {
