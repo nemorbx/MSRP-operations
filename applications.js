@@ -273,24 +273,16 @@ async function ensureApplicationPanel(client) {
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) return;
 
-  // Keep exactly one current Application Center panel. Replace old copies on startup
-  // so the latest panel design is always posted.
-  const existingPanels = messages.filter(message =>
-    message.author?.id === client.user.id &&
-    (
-      message.components?.some(component =>
-        component.components?.some(child =>
-          child.customId === "staff_application_start" ||
-          child.customId === "ban_appeal_start"
-        )
-      ) ||
-      message.attachments?.some(attachment => attachment.name === "apps.png")
-    )
-  );
+  // This channel is the dedicated Application Center. Remove every message
+  // sent by this bot before posting the refreshed panel. Components V2 can
+  // hide nested button IDs from the normal message component inspection, so
+  // deleting by bot author is more reliable than looking for custom IDs.
+  const oldPanels = messages.filter(message => message.author?.id === client.user.id);
 
-  const panels = [...existingPanels.values()];
-  for (const panel of panels) {
-    await panel.delete().catch(() => {});
+  for (const panel of oldPanels.values()) {
+    await panel.delete().catch(error => {
+      console.error("Failed to delete old Application Center panel:", error);
+    });
   }
 
   const appBannerPath = path.join(__dirname, "apps.png");
@@ -305,7 +297,7 @@ async function ensureApplicationPanel(client) {
     ],
   });
 
-  console.log(panels.length ? "Application Center panel replaced." : "Application Center panel created.");
+  console.log(`Application Center panel refreshed. Deleted ${oldPanels.size} old bot message(s).`);
 }
 
 function buildEligibilityContainer(remaining, ready = false) {
