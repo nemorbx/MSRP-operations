@@ -464,16 +464,22 @@ async function postOrRefreshPanel(client) {
     return;
   }
 
-  const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+  const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) {
     console.error("Could not read the regulations channel to post the panel.");
     return;
   }
 
+  // Components V2 panels are not always exposed with their nested button
+  // custom IDs when messages are fetched. Use the unique regulations.png
+  // attachment as a reliable fallback so old panels are found and removed.
   const existing = messages.find(message =>
     message.author.id === client.user.id &&
-    message.components?.some(component =>
-      component.components?.some(child => child.customId?.startsWith("msrp_reg_"))
+    (
+      message.components?.some(component =>
+        component.components?.some(child => child.customId?.startsWith("msrp_reg_"))
+      ) ||
+      message.attachments?.some(attachment => attachment.name === "regulations.png")
     )
   );
 
@@ -495,8 +501,11 @@ async function postOrRefreshPanel(client) {
 
   const existingPanels = messages.filter(message =>
     message.author?.id === client.user.id &&
-    message.components?.some(component =>
-      component.components?.some(child => child.customId?.startsWith("msrp_reg_"))
+    (
+      message.components?.some(component =>
+        component.components?.some(child => child.customId?.startsWith("msrp_reg_"))
+      ) ||
+      message.attachments?.some(attachment => attachment.name === "regulations.png")
     )
   );
 
