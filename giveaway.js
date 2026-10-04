@@ -233,8 +233,10 @@ function setup(client) {
         writeGiveaways(stored);
 
         await interaction.reply({
+          content: "<@&1527904721669460100>",
           components: [giveawayContainer(client, giveaway)],
-          flags: MessageFlags.IsComponentsV2
+          flags: MessageFlags.IsComponentsV2,
+          allowedMentions: { roles: ["1527904721669460100"] }
         });
 
         const message = await interaction.fetchReply();
