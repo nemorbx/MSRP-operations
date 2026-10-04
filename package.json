@@ -1,13 +1,13 @@
 {
   "name": "msrp-bot",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Missouri State Roleplay Operations Discord bot",
+  "main": "bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node bot.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["discord", "roblox", "er:lc", "msrp"],
+  "author": "Missouri State Roleplay",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
