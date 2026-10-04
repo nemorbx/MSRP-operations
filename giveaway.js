@@ -2,10 +2,12 @@ const fs = require("fs");
 const path = require("path");
 const {
   SlashCommandBuilder,
-  EmbedBuilder,
+  ContainerBuilder,
+  TextDisplayBuilder,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  MessageFlags
 } = require("discord.js");
 
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
@@ -15,22 +17,19 @@ const giveawayCommand = new SlashCommandBuilder()
   .setName("giveaway")
   .setDescription("Start a giveaway. Senior HR only.")
   .addStringOption(option =>
-    option
-      .setName("prize")
+    option.setName("prize")
       .setDescription("What is being given away?")
       .setRequired(true)
       .setMaxLength(200)
   )
   .addStringOption(option =>
-    option
-      .setName("duration")
+    option.setName("duration")
       .setDescription("Examples: 30m, 2h, 1d")
       .setRequired(true)
       .setMaxLength(20)
   )
   .addIntegerOption(option =>
-    option
-      .setName("winners")
+    option.setName("winners")
       .setDescription("Number of winners")
       .setRequired(true)
       .setMinValue(1)
@@ -64,7 +63,6 @@ function parseDuration(input) {
   };
 
   const milliseconds = Number(match[1]) * multipliers[match[2]];
-
   if (!Number.isFinite(milliseconds) || milliseconds < 10000 || milliseconds > 30 * 86400000) {
     return null;
   }
@@ -72,36 +70,48 @@ function parseDuration(input) {
   return milliseconds;
 }
 
-function createGiveawayEmbed(giveaway, ended = false, winners = []) {
-  const embed = new EmbedBuilder()
-    .setTitle(ended ? "Giveaway Ended" : "Giveaway")
-    .setDescription(
-      ended
-        ? "**Prize:** " + giveaway.prize +
-          "\n**Winner(s):** " +
-          (winners.length ? winners.map(id => "<@" + id + ">").join(", ") : "No eligible entries.") +
-          "\n**Entries:** " + giveaway.entries.length
-        : "**Prize:** " + giveaway.prize +
-          "\n**Ends:** <t:" + Math.floor(giveaway.endsAt / 1000) + ":F> (<t:" +
-          Math.floor(giveaway.endsAt / 1000) + ":R>)" +
-          "\n**Winners:** " + giveaway.winners +
-          "\n**Entries:** " + giveaway.entries.length
+function giveawayContainer(giveaway, ended = false, winners = []) {
+  const container = new ContainerBuilder();
+
+  if (ended) {
+    const winnerText = winners.length
+      ? winners.map(id => "<@" + id + ">").join(", ")
+      : "No eligible winners.";
+
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        "## 🎁 Giveaway Ended\n" +
+        "**🎁 Prize:** " + giveaway.prize + "\n" +
+        "**🏆 Winner(s):** " + winnerText + "\n" +
+        "**👥 Entries:** " + giveaway.entries.length
+      )
     );
 
-  if (!ended) {
-    embed.setFooter({ text: "Click Enter Giveaway to participate." });
+    return container;
   }
 
-  return embed;
-}
+  const endUnix = Math.floor(giveaway.endsAt / 1000);
 
-function createGiveawayRow(giveaway) {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("giveaway_enter:" + giveaway.id)
-      .setLabel("Enter Giveaway")
-      .setStyle(ButtonStyle.Primary)
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      "## 🎁 Giveaway\n" +
+      "**🎁 Prize:** " + giveaway.prize + "\n" +
+      "**⏰ Ends:** <t:" + endUnix + ":F> (<t:" + endUnix + ":R>)\n" +
+      "**🏆 Winners:** " + giveaway.winners + "\n" +
+      "**👥 Entries:** " + giveaway.entries.length
+    )
   );
+
+  container.addActionRowComponents(
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("giveaway_enter:" + giveaway.id)
+        .setLabel("🎁 Enter Giveaway")
+        .setStyle(ButtonStyle.Primary)
+    )
+  );
+
+  return container;
 }
 
 async function endGiveaway(client, giveawayId) {
@@ -134,8 +144,8 @@ async function endGiveaway(client, giveawayId) {
 
   if (message) {
     await message.edit({
-      embeds: [createGiveawayEmbed(giveaway, true, winners)],
-      components: []
+      components: [giveawayContainer(giveaway, true, winners)],
+      flags: MessageFlags.IsComponentsV2
     }).catch(() => {});
   }
 
@@ -145,8 +155,8 @@ async function endGiveaway(client, giveawayId) {
 
   await channel.send({
     content: winners.length
-      ? "Congratulations " + winnerText + "! You won **" + giveaway.prize + "**!"
-      : "The giveaway for **" + giveaway.prize + "** ended with no eligible winners.",
+      ? "🎉 Congratulations " + winnerText + "! You won **" + giveaway.prize + "**!"
+      : "🎁 The giveaway for **" + giveaway.prize + "** ended with no eligible winners.",
     allowedMentions: { users: winners }
   }).catch(() => {});
 }
@@ -214,8 +224,8 @@ function setup(client) {
         writeGiveaways(stored);
 
         await interaction.reply({
-          embeds: [createGiveawayEmbed(giveaway)],
-          components: [createGiveawayRow(giveaway)]
+          components: [giveawayContainer(giveaway)],
+          flags: MessageFlags.IsComponentsV2
         });
 
         const message = await interaction.fetchReply();
@@ -256,13 +266,13 @@ function setup(client) {
         writeGiveaways(giveaways);
 
         await interaction.reply({
-          content: "You have entered the giveaway!",
+          content: "🎁 You have entered the giveaway!",
           ephemeral: true
         });
 
         await interaction.message.edit({
-          embeds: [createGiveawayEmbed(giveaway)],
-          components: [createGiveawayRow(giveaway)]
+          components: [giveawayContainer(giveaway)],
+          flags: MessageFlags.IsComponentsV2
         }).catch(() => {});
       }
     } catch (error) {
