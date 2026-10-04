@@ -115,3 +115,5 @@ process.on("uncaughtException", error => console.error("Uncaught exception:", er
 
 console.log("Starting Missouri State Roleplay Operations...");
 client.login(TOKEN).catch(error => console.error("Discord login failed:", error));
+
+// FadeHost auto-deploy trigger test.
