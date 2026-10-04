@@ -328,22 +328,28 @@ async function ensureSupportPanel(client) {
   }
 
   const messages = await channel.messages.fetch({ limit: 50 }).catch(() => null);
-  if (
-    messages?.some(
-      (m) =>
-        m.author?.id === client.user.id &&
-        m.components?.length &&
-        m.components[0]?.type === 17
+  const existingPanels = messages?.filter(message =>
+    message.author?.id === client.user.id &&
+    message.components?.some(component =>
+      component.components?.some(child => child.customId === "support:create")
     )
-  ) {
-    return;
-  }
+  ) || [];
 
   try {
+    // Keep exactly one Support panel. Delete old copies before posting the
+    // current version so changes are applied without accumulating panels.
+    for (const panel of existingPanels) {
+      await panel.delete().catch(() => {});
+    }
+
     await sendPanel(channel);
-    console.log("Support panel is ready.");
+    console.log(
+      existingPanels.length
+        ? "Support panel replaced."
+        : "Support panel created."
+    );
   } catch (error) {
-    console.error("Failed to create support panel:", error);
+    console.error("Failed to replace support panel:", error);
   }
 }
 
