@@ -43,7 +43,24 @@ setupInformation(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
+function updateBotStatus() {
+  const guild = client.guilds.cache.first();
+  const memberCount = guild?.memberCount ?? 0;
+
+  client.user.setPresence({
+    activities: [
+      {
+        name: `Powering ${memberCount} Members`,
+        type: ActivityType.Playing,
+      },
+    ],
+    status: "online",
+  });
+}
+
 client.on("guildMemberAdd", async member => {
+  updateBotStatus();
+
   try {
     const role = member.guild.roles.cache.get(MEMBER_ROLE_ID);
 
@@ -64,6 +81,10 @@ client.on("guildMemberAdd", async member => {
   } catch (error) {
     console.error("Failed to assign Member role to " + member.user.tag + ":", error);
   }
+});
+
+client.on("guildMemberRemove", () => {
+  updateBotStatus();
 });
 
 client.on("messageCreate", async message => {
@@ -111,15 +132,7 @@ client.on("messageCreate", async message => {
 });
 
 client.once("clientReady", async () => {
-  client.user.setPresence({
-    activities: [
-      {
-        name: "discord.gg/msrp1",
-        type: ActivityType.Playing,
-      },
-    ],
-    status: "online",
-  });
+  updateBotStatus();
 
   console.log("========================================");
   console.log("Logged in as " + client.user.tag);
@@ -168,6 +181,9 @@ client.once("clientReady", async () => {
   } catch (error) {
     console.error("Giveaway slash command registration error:", error);
   }
+
+  // Refresh periodically so the displayed member count stays accurate.
+  setInterval(updateBotStatus, 60 * 1000);
 });
 
 
