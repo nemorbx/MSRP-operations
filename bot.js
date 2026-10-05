@@ -120,10 +120,29 @@ client.once("clientReady", async () => {
 
   try {
     await ensureApplicationPanel(client);
-    await ensureSupportPanel(client);
-    await ensureRegulationsPanel(client);
-    await postOrRefreshInformationPanel(client);
+  } catch (error) {
+    console.error("Application panel refresh error:", error);
+  }
 
+  try {
+    await ensureSupportPanel(client);
+  } catch (error) {
+    console.error("Support panel refresh error:", error);
+  }
+
+  try {
+    await ensureRegulationsPanel(client);
+  } catch (error) {
+    console.error("Regulations panel refresh error:", error);
+  }
+
+  try {
+    await postOrRefreshInformationPanel(client);
+  } catch (error) {
+    console.error("Information panel refresh error:", error);
+  }
+
+  try {
     for (const guild of client.guilds.cache.values()) {
       const commands = await guild.commands.fetch();
       const existing = commands.find(command => command.name === giveawayCommand.name);
@@ -137,7 +156,7 @@ client.once("clientReady", async () => {
 
     console.log("Giveaway slash command registered.");
   } catch (error) {
-    console.error("Startup panel/command refresh error:", error);
+    console.error("Giveaway slash command registration error:", error);
   }
 });
 
