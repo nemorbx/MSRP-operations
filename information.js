@@ -11,7 +11,7 @@ const {
 const INFORMATION_CHANNEL_ID = "1527394530427666452";
 const INFORMATION_IMAGE_SOURCE = "Banner (1).png";
 const INFORMATION_IMAGE_NAME = "information.png";
-const INFORMATION_PANEL_VERSION = 3;
+const INFORMATION_PANEL_VERSION = 4;
 const INFORMATION_PANEL_MARKER = "\u200B".repeat(INFORMATION_PANEL_VERSION);
 
 const CHANNELS = {
@@ -25,11 +25,20 @@ function display(content) {
   return new TextDisplayBuilder().setContent(content);
 }
 
+function findEmoji(guild, name) {
+  return guild?.emojis.cache.find(e => e.name === name) || null;
+}
+
+function emoji(guild, name) {
+  const found = findEmoji(guild, name);
+  return found ? `<:${found.name}:${found.id}>` : "";
+}
+
 function divider() {
   return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small);
 }
 
-function informationPanel() {
+function informationPanel(guild) {
   const container = new ContainerBuilder();
 
   // Main Information banner. No description is supplied so Discord does not
@@ -43,10 +52,13 @@ function informationPanel() {
 
   container.addTextDisplayComponents(
     display(
-      "<:msrpwhite:1552141993768132668> **Founded August 10th, 2026**, Missouri State Roleplay (MSRP) provides a fun, realistic, and immersive ERLC experience based in Missouri. Players can take on roles such as police officers, firefighters, medics, or civilians while creating realistic scenarios and experiences."
+      `${emoji(guild, "msrpwhite")} **Founded August 10th, 2026**`
     ),
     display(
-      "Whether you're responding to emergencies, patrolling the streets, or simply enjoying the game as a civilian, there is something for everyone. Our goal is to provide a welcoming and organized community where players can enjoy realistic roleplay and make their own experiences."
+      "*Missouri State Roleplay is a fun, realistic, and immersive ERLC community based in Missouri. Players can take on roles such as police officers, firefighters, medics, or civilians while creating realistic scenarios and experiences.*"
+    ),
+    display(
+      "*Whether you're responding to emergencies, patrolling the streets, or simply enjoying the game as a civilian, there is something for everyone. Our goal is to provide a welcoming and organized community where players can enjoy realistic roleplay and create their own experiences.*"
     ),
     display("**Missouri State Roleplay — Experience Missouri With Us.**")
   );
@@ -54,13 +66,14 @@ function informationPanel() {
   container.addSeparatorComponents(divider());
 
   container.addTextDisplayComponents(
-    display("## 📌 Important Channels"),
+    display(`## ${emoji(guild, "letter")} Important Channels`),
+    display("*Quick access to the channels you will use most throughout MSRP.*"),
     display(
       [
-        `<#${CHANNELS.shouts}>`,
-        `<#${CHANNELS.sessions}>`,
-        `<#${CHANNELS.regulations}>`,
-        `<#${CHANNELS.applications}>`,
+        `${emoji(guild, "bulletin")} <#${CHANNELS.shouts}>`,
+        `${emoji(guild, "bulletin")} <#${CHANNELS.sessions}>`,
+        `${emoji(guild, "bulletin")} <#${CHANNELS.regulations}>`,
+        `${emoji(guild, "bulletin")} <#${CHANNELS.applications}>`,
       ].join("\n")
     )
   );
@@ -68,11 +81,12 @@ function informationPanel() {
   container.addSeparatorComponents(divider());
 
   container.addTextDisplayComponents(
-    display("## 🔗 Important Links"),
+    display(`## ${emoji(guild, "info")} Important Links`),
+    display("*Official resources and community access points for MSRP.*"),
     display([
-      "📋 Moderation Logs",
-      "🏛️ Main Group",
-      "🛡️ Whitelisted Group",
+      `${emoji(guild, "board")} Moderation Logs`,
+      `${emoji(guild, "roblox")} Main Group`,
+      `${emoji(guild, "shield")} Whitelisted Group`,
     ].join("\n"))
   );
 
@@ -140,7 +154,7 @@ async function postOrRefreshInformationPanel(client) {
   }
 
   await channel.send({
-    components: [informationPanel()],
+    components: [informationPanel(channel.guild)],
     files: [
       {
         attachment: imagePath,
