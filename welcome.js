@@ -7,6 +7,7 @@ const {
 
 const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "welcome.json");
+const ARRIVALS_CHANNEL_ID = "1527178537600286914";
 
 const WELCOME_MESSAGES = [
   "<:msrpwhite:1552141993768132668> Welcome, {member}! Welcome to Missouri State Roleplay!",
@@ -42,7 +43,7 @@ function loadData() {
   ensureData();
   try {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    return { channelId: data.channelId ?? null };
+    return { channelId: data.channelId ?? ARRIVALS_CHANNEL_ID };
   } catch {
     return { channelId: null };
   }
@@ -83,6 +84,7 @@ const command = new SlashCommandBuilder()
 
 function setupWelcome(client) {
   client.welcomeData = loadData();
+  // MSRP arrivals channel: always use the designated channel unless explicitly changed by the owner.
 
   client.on("interactionCreate", async interaction => {
     if (!interaction.isChatInputCommand() || interaction.commandName !== "welcome") {
@@ -118,8 +120,7 @@ function setupWelcome(client) {
 
   client.on("guildMemberAdd", async member => {
     try {
-      const channelId = client.welcomeData?.channelId;
-      if (!channelId) return;
+      const channelId = ARRIVALS_CHANNEL_ID;
 
       const channel = await member.guild.channels.fetch(channelId).catch(() => null);
       if (!channel || !channel.isTextBased() || !channel.send) return;
