@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const { Client, GatewayIntentBits, Partials, PermissionsBitField } = require("discord.js");
+const { Client, GatewayIntentBits, Partials, PermissionsBitField, ActivityType } = require("discord.js");
 
 const { setup: setupInfractions } = require("./infractions");
 const { setup: setupPromotions } = require("./promotions");
@@ -111,6 +111,16 @@ client.on("messageCreate", async message => {
 });
 
 client.once("clientReady", async () => {
+  client.user.setPresence({
+    activities: [
+      {
+        name: "discord.gg/msrp1",
+        type: ActivityType.Playing,
+      },
+    ],
+    status: "online",
+  });
+
   console.log("========================================");
   console.log("Logged in as " + client.user.tag);
   console.log("Missouri State Roleplay Operations is online.");
@@ -166,7 +176,7 @@ client.on("messageCreate", async message => {
   if (message.content.trim().toLowerCase() !== "!update-regulations") return;
 
   if (!message.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-    await message.reply("You need the Manage Server permission to update the Regulations panel.").catch(() => {});
+    await message.reply("You need the Manage Server permission to update the Regulations panel.");
     return;
   }
 
