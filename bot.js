@@ -13,6 +13,7 @@ const { setup: setupRegulations, ensureRegulationsPanel, postOrRefreshPanel } = 
 const { purgeMessages } = require("./purge");
 const { setup: setupMessageLogs } = require("./message-logs");
 const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
+const { setup: setupInformation, postOrRefreshInformationPanel } = require("./information");
 
 const TOKEN = process.env.DISCORD_TOKEN;
 if (!TOKEN) throw new Error("DISCORD_TOKEN is missing from environment");
@@ -38,6 +39,7 @@ setupStaffFeedback(client);
 setupRegulations(client);
 setupMessageLogs(client);
 setupGiveaway(client);
+setupInformation(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
@@ -113,13 +115,14 @@ client.once("clientReady", async () => {
   console.log("Logged in as " + client.user.tag);
   console.log("Missouri State Roleplay Operations is online.");
   console.log("GitHub deployment test: successful.");
-  console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Purge");
+  console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Purge");
   console.log("========================================");
 
   try {
     await ensureApplicationPanel(client);
     await ensureSupportPanel(client);
     await ensureRegulationsPanel(client);
+    await postOrRefreshInformationPanel(client);
 
     for (const guild of client.guilds.cache.values()) {
       const commands = await guild.commands.fetch();
