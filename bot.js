@@ -9,7 +9,7 @@ const { setup: setupSupport, ensureSupportPanel } = require("./support");
 const { setup: setupCounting } = require("./counting");
 const { setup: setupAFK } = require("./afk");
 const { setup: setupStaffFeedback } = require("./staff-feedback");
-const { setup: setupRegulations, postOrRefreshPanel } = require("./regulations");
+const { setup: setupRegulations, ensureRegulationsPanel, postOrRefreshPanel } = require("./regulations");
 const { purgeMessages } = require("./purge");
 const { setup: setupMessageLogs } = require("./message-logs");
 const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
@@ -119,7 +119,7 @@ client.once("clientReady", async () => {
   try {
     await ensureApplicationPanel(client);
     await ensureSupportPanel(client);
-    await postOrRefreshPanel(client);
+    await ensureRegulationsPanel(client);
 
     for (const guild of client.guilds.cache.values()) {
       const commands = await guild.commands.fetch();
@@ -135,6 +135,26 @@ client.once("clientReady", async () => {
     console.log("Giveaway slash command registered.");
   } catch (error) {
     console.error("Startup panel/command refresh error:", error);
+  }
+});
+
+
+client.on("messageCreate", async message => {
+  if (message.author.bot || !message.guild) return;
+  if (message.content.trim().toLowerCase() !== "!update-regulations") return;
+
+  if (!message.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+    await message.reply("You need the Manage Server permission to update the Regulations panel.").catch(() => {});
+    return;
+  }
+
+  try {
+    await postOrRefreshPanel(client);
+    const confirmation = await message.reply("Regulations panel updated.").catch(() => null);
+    if (confirmation) setTimeout(() => confirmation.delete().catch(() => {}), 3000);
+  } catch (error) {
+    console.error("Regulations update command error:", error);
+    await message.reply("I could not update the Regulations panel.").catch(() => {});
   }
 });
 
