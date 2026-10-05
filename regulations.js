@@ -34,6 +34,8 @@ const EMOJIS = {
   discord: "discord",
   police: "police",
   stateLogo: "state_logo",
+  trophy: "trophy",
+  rocket: "rocket",
 };
 
 function findEmoji(guild, name) {
@@ -235,38 +237,157 @@ function getPage(guild, id) {
       return privatePage(
         guild,
         "IN-GAME REGULATIONS",
-        "While playing ER:LC with Missouri State Roleplay, you are required to follow the regulations below. Failure to follow them may result in in-game moderation or server discipline.",
+        "These rules apply to all members participating in MSRP roleplay. They are intended to keep roleplay realistic, fair, organized, and enjoyable.",
         [
           {
-            title: "General Regulations",
+            title: "Fail Roleplay (FRP)",
             emoji: "roblox",
             body: arrows(guild, [
-              "Random Deathmatch (RDM) and Vehicle Deathmatch (VDM) are prohibited.",
-              "FearRP and realistic roleplay are required.",
-              "Every member is expected to have a legitimate roleplay intention.",
-              "Do not intentionally disrupt, troll, or ruin another member's roleplay.",
-              "Tool abuse, exploiting, and intentionally abusing glitches are prohibited.",
-              "Follow realistic traffic laws and driving practices while roleplaying.",
+              "All actions taken by your character must remain realistic and appropriate for the situation.",
+              "Ignoring injuries, crashes, or realistic consequences may be considered Fail Roleplay.",
             ]),
           },
           {
-            title: "Law Enforcement",
+            title: "Random Deathmatch (RDM)",
             emoji: "shield",
             body: arrows(guild, [
-              "Missouri State Highway Patrol and St. Louis County Police must remain within their authorized jurisdiction and duties.",
-              "Traffic stops, pursuits, arrests, and emergency responses must remain realistic.",
-              "Do not use law-enforcement privileges for personal advantage or unnecessary disruption.",
-              "Follow department-specific procedures and authorized staff direction.",
+              "Do not intentionally injure or kill another player without a valid roleplay reason.",
+              "Randomly attacking players without legitimate roleplay intent is prohibited.",
             ]),
           },
           {
-            title: "Staff Regulations",
+            title: "Vehicle Deathmatch (VDM)",
+            emoji: "police",
+            body: arrows(guild, [
+              "Do not intentionally use a vehicle to damage, ram, or run over another player or vehicle without a valid roleplay reason.",
+            ]),
+          },
+          {
+            title: "Metagaming",
+            emoji: "info",
+            body: arrows(guild, [
+              "Do not use information obtained outside of roleplay to gain an in-game advantage.",
+            ]),
+          },
+          {
+            title: "Cop Baiting",
+            emoji: "police",
+            body: arrows(guild, [
+              "Do not intentionally provoke law enforcement into an interaction or pursuit without a legitimate roleplay reason.",
+            ]),
+          },
+          {
+            title: "Unrealistic Driving",
+            emoji: "roblox",
+            body: arrows(guild, [
+              "Vehicles must be driven realistically.",
+              "Do not drive erratically, recklessly, or unrealistically unless you have a valid roleplay reason.",
+            ]),
+          },
+          {
+            title: "New Life Rule (NLR)",
+            emoji: "info",
+            body: arrows(guild, [
+              "After your character dies, you must forget the events leading up to their death.",
+              "You may not immediately return to the scene where you died or use your previous knowledge to influence the scene.",
+            ]),
+          },
+          {
+            title: "Fear Roleplay",
+            emoji: "shield",
+            body: arrows(guild, [
+              "When your character's life is reasonably threatened, you must act as though you value your life.",
+            ]),
+          },
+          {
+            title: "No Intent To Roleplay (NITRP)",
+            emoji: "board",
+            body: arrows(guild, [
+              "Players who intentionally troll, disrupt, or show a complete disregard for the roleplay environment may be punished.",
+              "Repeated RDM, VDM, unrealistic driving, or other disruptive behavior may be treated as NITRP.",
+            ]),
+          },
+          {
+            title: "Pointless Pursuits",
+            emoji: "police",
+            body: arrows(guild, [
+              "You must have a valid roleplay reason to flee from law enforcement.",
+              "Do not start or extend pursuits simply to create a chase.",
+            ]),
+          },
+          {
+            title: "Group Sizes",
             emoji: "people",
             body: arrows(guild, [
-              "Staff instructions during active moderation situations must be followed.",
-              "Staff permissions may only be used for authorized staff duties.",
-              "Staff members are expected to remain professional and impartial.",
-              "Abuse of staff permissions may result in disciplinary action.",
+              "Groups must remain within reasonable limits for the situation.",
+              "Large-scale or organized scenarios may require prior staff approval.",
+            ]),
+          },
+          {
+            title: "Roleplay Scenario Requirements",
+            emoji: "ticket",
+            body: arrows(guild, [
+              "Major scenarios may require approval from an in-game staff member before they begin.",
+              "This may include hostage situations, kidnappings, jewelry store robberies, bank robberies, and other large-scale scenarios.",
+              "Fire and EMS personnel may not be kidnapped or taken hostage unless a specific scenario has been approved by staff.",
+            ]),
+          },
+          {
+            title: "Priorities & Peacetimes",
+            emoji: "pin",
+            body: arrows(guild, [
+              "Follow all active priority and peacetime restrictions.",
+              "Do not start a restricted scenario during an active priority timer or peacetime.",
+              "If you are planning to start a priority, review the applicable priority rules first.",
+            ]),
+          },
+          {
+            title: "Safe Zones",
+            emoji: "shield",
+            body: arrows(guild, [
+              "Violent or criminal roleplay is prohibited within designated safe zones.",
+              "Safe zones may include police stations, fire stations, hospitals, courthouses, jails, civilian spawn areas, and other areas designated by staff.",
+            ]),
+          },
+          {
+            title: "Alternate Agencies & Impersonation",
+            emoji: "people",
+            body: arrows(guild, [
+              "Do not roleplay as an agency or department that is not represented in MSRP.",
+              "Do not impersonate law enforcement, fire, EMS, DOT, or other official personnel without authorization.",
+              "Legitimate civilian businesses and civilian roleplays are permitted when they follow MSRP rules.",
+            ]),
+          },
+          {
+            title: "Unrealistic Avatars",
+            emoji: "people",
+            body: arrows(guild, [
+              "Avatars must remain reasonably realistic for the roleplay environment.",
+              "Civilians may not use excessive tactical equipment unless their civilian roleplay reasonably requires it.",
+              "Unrealistic accessories, appearances, and animal/furry avatars are prohibited.",
+            ]),
+          },
+          {
+            title: "Restricted Communications",
+            emoji: "bell",
+            body: arrows(guild, [
+              "Civilians may not intentionally listen to restricted law-enforcement communications.",
+              "Restricted communications may not be used to gain an in-game roleplay advantage.",
+            ]),
+          },
+          {
+            title: "Leaving To Avoid Punishment (LTAP)",
+            emoji: "arrow",
+            body: arrows(guild, [
+              "Leaving the game to avoid a moderator interaction, punishment, arrest, or roleplay consequence is prohibited.",
+            ]),
+          },
+          {
+            title: "Common Sense",
+            emoji: "info",
+            body: arrows(guild, [
+              "Use common sense in all roleplay situations.",
+              "If an action would not realistically occur in real life, do not do it in MSRP.",
             ]),
           },
         ]
@@ -305,24 +426,72 @@ function getPage(guild, id) {
       return privatePage(
         guild,
         "VEHICLE RESTRICTIONS",
-        "Vehicles may be restricted by department, role, rank, staff authorization, or server policy. Do not use a restricted vehicle without the required authorization.",
+        "This section outlines vehicles that are restricted within MSRP. Restrictions may be based on department, rank, assignment, VIP/Premium membership, Server Booster status, or staff authorization.",
         [
           {
-            title: "Restricted Vehicles",
+            title: "Law Enforcement Restrictions",
             emoji: "shield",
             body: arrows(guild, [
-              "Only use vehicles authorized for your department and role.",
-              "Do not use restricted vehicles to gain an unfair roleplay advantage.",
-              "Do not use department-only vehicles while roleplaying as an unauthorized civilian.",
-              "Follow any vehicle-specific restrictions published by MSRP staff.",
+              "Unmarked / Undercover Vehicles",
+              "Slicktop Vehicles",
+              "Supervisor Vehicles",
+              "Command Vehicles",
+              "SWAT / Tactical Vehicles",
+              "Specialty Unit Vehicles",
+              "Mobile Command Vehicles",
+              "ATVs / Utility Vehicles",
+              "Marine Vehicles",
+              "Any vehicle designated RANKED is restricted to authorized ranked members.",
             ]),
           },
           {
-            title: "Authorization",
+            title: "Fire & EMS Restrictions",
+            emoji: "bell",
+            body: arrows(guild, [
+              "Specialty / Critical Care Ambulances",
+              "Rescue Vehicles",
+              "Heavy Rescue",
+              "Ladder / Aerial Vehicles",
+              "Command Vehicles",
+              "Hazmat Vehicles",
+              "Brush / Wildland Vehicles",
+              "Special Operations Vehicles",
+              "Marine Rescue Vehicles",
+              "Any vehicle designated RANKED is restricted to authorized ranked members.",
+            ]),
+          },
+          {
+            title: "DOT Restrictions",
+            emoji: "board",
+            body: arrows(guild, [
+              "Heavy Tow Trucks",
+              "Flatbed Trucks",
+              "Specialty Tow Vehicles",
+              "Traffic Control Vehicles",
+              "Maintenance Vehicles",
+              "Utility Vehicles",
+              "HAZMAT / Specialty Vehicles",
+              "Any vehicle designated RANKED is restricted to authorized ranked members.",
+            ]),
+          },
+          {
+            title: "Civilian Restrictions",
+            emoji: "people",
+            body: [
+              `${emoji(guild, "trophy")} **VIP / Premium Members** — Vehicles marked with the Trophy emoji may only be used by members with an active VIP / Premium membership.`,
+              `${emoji(guild, "rocket")} **Server Boosters** — Vehicles marked with the Rocket emoji may only be used by members who are actively boosting the MSRP Discord server.`,
+              `${emoji(guild, "trophy")} ${emoji(guild, "rocket")} **VIP / Premium + Server Booster** — Vehicles displaying both emojis require both requirements to be met.`,
+            ].join("\\n")
+          },
+          {
+            title: "Vehicle Usage",
             emoji: "info",
             body: arrows(guild, [
-              "If a vehicle requires staff, department, rank, or other authorization, obtain permission before using it.",
-              "Authorization may be revoked if the vehicle is misused or used outside its intended roleplay purpose.",
+              "Do not use a restricted vehicle without meeting its requirements.",
+              "Restricted vehicles may not be used to gain an unfair roleplay advantage.",
+              "Do not use department-only or specialty vehicles while roleplaying as an unauthorized civilian.",
+              "Access to a restricted vehicle does not exempt you from any MSRP rule or staff instruction.",
+              "Vehicle access may be revoked if a vehicle is misused or used outside its intended purpose.",
             ]),
           },
         ]
