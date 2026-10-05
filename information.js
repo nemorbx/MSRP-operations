@@ -11,6 +11,8 @@ const {
 const INFORMATION_CHANNEL_ID = "1527394530427666452";
 const INFORMATION_IMAGE_SOURCE = "Banner (1).png";
 const INFORMATION_IMAGE_NAME = "information.png";
+const INFORMATION_PANEL_VERSION = 2;
+const INFORMATION_PANEL_MARKER = "\u200B".repeat(INFORMATION_PANEL_VERSION);
 
 const CHANNELS = {
   shouts: "1527178204299788389",
@@ -89,17 +91,29 @@ async function postOrRefreshInformationPanel(client) {
 
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) {
-    console.error("Could not read the Information channel to refresh the panel.");
+    console.error("Could not read the Information channel to check the panel.");
     return;
   }
 
-  const oldPanels = messages.filter(
-    message =>
-      message.author?.id === client.user.id &&
-      message.components?.length
+  const botPanels = messages.filter(
+    message => message.author?.id === client.user.id && message.components?.length
   );
 
-  for (const panel of oldPanels.values()) {
+  const currentPanel = botPanels.find(message =>
+    JSON.stringify(message.components || []).includes(INFORMATION_PANEL_MARKER)
+  );
+
+  if (currentPanel) {
+    for (const duplicate of botPanels.values()) {
+      if (duplicate.id !== currentPanel.id) {
+        await duplicate.delete().catch(() => {});
+      }
+    }
+    console.log("Information panel is current. Leaving it unchanged.");
+    return;
+  }
+
+  for (const panel of botPanels.values()) {
     await panel.delete().catch(error => {
       console.error("Failed to delete old Information panel:", error);
     });
@@ -116,9 +130,7 @@ async function postOrRefreshInformationPanel(client) {
     flags: MessageFlags.IsComponentsV2,
   });
 
-  console.log(
-    `Information panel refreshed. Deleted ${oldPanels.size} existing panel(s) and posted one replacement.`
-  );
+  console.log("Information panel updated because its panel version changed or no current panel existed.");
 }
 
 function setup(client) {}
