@@ -25,6 +25,8 @@ const INTERNAL_AFFAIRS_TEAM_ROLE_ID = "1527381477975789668";
 const MANAGEMENT_TEAM_ROLE_ID = "1528426569012609106";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const SUPPORT_LOGS_CHANNEL_ID = "1552509962910171176";
+const SUPPORT_PANEL_VERSION = 2;
+const SUPPORT_PANEL_MARKER = "\u200B".repeat(SUPPORT_PANEL_VERSION);
 
 const DATA_DIR = path.join(__dirname, "data");
 const TICKETS_FILE = path.join(DATA_DIR, "tickets.json");
@@ -107,7 +109,7 @@ function buildSupportPanel(guild) {
   // Main Support heading and description.
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "## Support\n" + customEmoji(guild, "info") + " Need assistance? Use this support center to contact the appropriate team for questions, concerns, server assistance, staff-related matters, partnerships, and other community inquiries. Select the category that best matches what you need so your request can be directed to the right team."
+      "## Support\n" + customEmoji(guild, "info") + " Need assistance? Use this support center to contact the appropriate team for questions, concerns, server assistance, staff-related matters, partnerships, and other community inquiries. Select the category that best matches what you need so your request can be directed to the right team." + SUPPORT_PANEL_MARKER
     )
   );
 
@@ -334,22 +336,33 @@ async function ensureSupportPanel(client) {
 
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) {
-    console.error("Could not read the support channel to refresh the panel.");
+    console.error("Could not read the support channel to check the panel.");
     return;
   }
 
-  // The Support channel is the dedicated support panel channel. Remove every
-  // message sent by this bot, then post exactly one fresh panel.
-  const oldPanels = messages.filter(message => message.author?.id === client.user.id);
+  const botPanels = messages.filter(message => message.author?.id === client.user.id);
+  const currentPanel = botPanels.find(message =>
+    JSON.stringify(message.components || []).includes(SUPPORT_PANEL_MARKER)
+  );
 
-  for (const panel of oldPanels.values()) {
+  if (currentPanel) {
+    for (const duplicate of botPanels.values()) {
+      if (duplicate.id !== currentPanel.id) {
+        await duplicate.delete().catch(() => {});
+      }
+    }
+    console.log("Support panel is current. Leaving it unchanged.");
+    return;
+  }
+
+  for (const panel of botPanels.values()) {
     await panel.delete().catch(error => {
       console.error("Failed to delete old Support panel:", error);
     });
   }
 
   await sendPanel(channel);
-  console.log(`Support panel refreshed. Deleted ${oldPanels.size} old bot message(s).`);
+  console.log("Support panel updated because its panel version changed or no current panel existed.");
 }
 
 async function addRoleMembersToPrivateThread(thread, guild, roleId) {
