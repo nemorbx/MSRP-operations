@@ -53,7 +53,7 @@ function informationPanel() {
   container.addTextDisplayComponents(
     display("## Important Channels:"),
     display(
-      `<#${CHANNELS.shouts}>\\n<#${CHANNELS.sessions}>\\n<#${CHANNELS.regulations}>\\n<#${CHANNELS.applications}>`
+      ["<#${CHANNELS.shouts}>", "<#${CHANNELS.sessions}>", "<#${CHANNELS.regulations}>", "<#${CHANNELS.applications}>"].join("\n")
     )
   );
 
@@ -61,17 +61,14 @@ function informationPanel() {
 
   container.addTextDisplayComponents(
     display("## Important Links:"),
-    display("Moderation Logs\\nMain Group\\nWhitelisted Group")
+    display(["Moderation Logs", "Main Group", "Whitelisted Group"].join("\n"))
   );
 
   return container;
 }
 
 async function postOrRefreshInformationPanel(client) {
-  const guild = client.guilds.cache.first();
-  if (!guild) return;
-
-  const channel = await guild.channels.fetch(INFORMATION_CHANNEL_ID).catch(() => null);
+  const channel = await client.channels.fetch(INFORMATION_CHANNEL_ID).catch(() => null);
   if (!channel || !channel.isTextBased()) {
     console.error(`Information channel ${INFORMATION_CHANNEL_ID} could not be found or is not text-based.`);
     return;
