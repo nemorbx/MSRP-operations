@@ -14,6 +14,7 @@ const { purgeMessages } = require("./purge");
 const { setup: setupMessageLogs } = require("./message-logs");
 const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
 const { setup: setupInformation, postOrRefreshInformationPanel } = require("./information");
+const { setup: setupWelcome } = require("./welcome");
 
 const TOKEN = process.env.DISCORD_TOKEN;
 if (!TOKEN) throw new Error("DISCORD_TOKEN is missing from environment");
@@ -40,6 +41,7 @@ setupRegulations(client);
 setupMessageLogs(client);
 setupGiveaway(client);
 setupInformation(client);
+setupWelcome(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
