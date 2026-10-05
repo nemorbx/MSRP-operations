@@ -632,6 +632,46 @@ async function sendJurisdiction(interaction) {
   });
 }
 
+async function ensureRegulationsPanel(client) {
+  const guild = client.guilds.cache.first();
+  if (!guild) return;
+
+  const channel = await guild.channels.fetch(REGULATIONS_CHANNEL_ID).catch(() => null);
+  if (!channel || !channel.isTextBased()) return;
+
+  const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
+  if (!messages) return;
+
+  // Startup check only: never delete or repost an existing panel.
+  const existingPanel = messages.find(
+    message => message.author?.id === client.user.id && message.components?.length
+  );
+
+  if (existingPanel) {
+    console.log("Regulations panel already exists. Leaving it unchanged.");
+    return;
+  }
+
+  const regulationsBannerPath = path.join(__dirname, REGULATIONS_BANNER_NAME);
+  const bannerPath = path.join(__dirname, BANNER_NAME);
+
+  if (!fs.existsSync(regulationsBannerPath)) {
+    console.error(`Missing ${REGULATIONS_BANNER_NAME}. The regulations panel requires this top image.`);
+    return;
+  }
+
+  const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
+  if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
+
+  await channel.send({
+    components: [mainPanel(guild)],
+    files,
+    flags: MessageFlags.IsComponentsV2,
+  });
+
+  console.log("Regulations panel created because no existing panel was found.");
+}
+
 async function postOrRefreshPanel(client) {
   const guild = client.guilds.cache.first();
   if (!guild) return;
@@ -644,7 +684,7 @@ async function postOrRefreshPanel(client) {
 
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) {
-    console.error("Could not read the regulations channel to refresh the panel.");
+    console.error("Could not read the regulations channel to update the panel.");
     return;
   }
 
@@ -656,10 +696,11 @@ async function postOrRefreshPanel(client) {
     return;
   }
 
-  // This is the dedicated Regulations panel channel. Remove every message
-  // sent by this bot before posting the new panel. This is more reliable for
-  // Components V2 than inspecting nested component IDs.
-  const oldPanels = messages.filter(message => message.author?.id === client.user.id);
+  // THIS FUNCTION IS ONLY FOR AN EXPLICIT REGULATIONS UPDATE.
+  // When updating, remove the existing bot panel(s), then post exactly one replacement.
+  const oldPanels = messages.filter(
+    message => message.author?.id === client.user.id && message.components?.length
+  );
 
   for (const panel of oldPanels.values()) {
     await panel.delete().catch(error => {
@@ -676,7 +717,7 @@ async function postOrRefreshPanel(client) {
     flags: MessageFlags.IsComponentsV2,
   });
 
-  console.log(`Regulations panel refreshed. Deleted ${oldPanels.size} old bot message(s).`);
+  console.log(`Regulations panel updated. Deleted ${oldPanels.size} existing panel(s) and posted one replacement.`);
 }
 
 function setup(client) {
@@ -753,4 +794,4 @@ function setup(client) {
   });
 }
 
-module.exports = { setup, postOrRefreshPanel };
+module.exports = { setup, ensureRegulationsPanel, postOrRefreshPanel };
