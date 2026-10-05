@@ -16,7 +16,8 @@ let clearingGiveaways = false;
 
 const giveawayCommand = new SlashCommandBuilder()
   .setName("giveaway")
-  .setDescription("Manage giveaways. Senior HR only.")
+  .setDescription("Manage giveaways. Senior High Rank only.")
+  .setDMPermission(false)
   .addSubcommand(subcommand =>
     subcommand
       .setName("start")
