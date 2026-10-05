@@ -133,12 +133,22 @@ async function postOrRefreshInformationPanel(client) {
     });
   }
 
+  const footerPath = require("path").join(__dirname, "banner.png");
+  if (!fs.existsSync(footerPath)) {
+    console.error("Missing banner.png. The Information panel requires the bottom banner.");
+    return;
+  }
+
   await channel.send({
     components: [informationPanel()],
     files: [
       {
         attachment: imagePath,
         name: INFORMATION_IMAGE_NAME,
+      },
+      {
+        attachment: footerPath,
+        name: "banner.png",
       },
     ],
     flags: MessageFlags.IsComponentsV2,
