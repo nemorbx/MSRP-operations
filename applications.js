@@ -27,6 +27,9 @@ const AWAITING_TRAINING_ROLE_ID = "1551985353802518588";
 const APPLICATION_READER_ROLE_ID = "1551993755026858084";
 const BAN_APPEAL_READER_ROLE_ID = "1551993820743335976";
 
+const APPLICATION_PANEL_VERSION = 2;
+const APPLICATION_PANEL_MARKER = "\u200B".repeat(APPLICATION_PANEL_VERSION);
+
 const DATA_DIR = path.join(__dirname, "data");
 const APPLICATIONS_FILE = path.join(DATA_DIR, "applications.json");
 const COOLDOWNS_FILE = path.join(DATA_DIR, "application-cooldowns.json");
@@ -203,7 +206,7 @@ function buildApplicationPanel(guild) {
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       "## Staff Application\n" +
-      customEmoji(guild, "letter") + " Apply to join the Missouri State Roleplay staff team. Please make sure all information you provide is accurate and honest."
+      customEmoji(guild, "letter") + " Apply to join the Missouri State Roleplay staff team. Please make sure all information you provide is accurate and honest." + APPLICATION_PANEL_MARKER
     )
   );
 
@@ -273,13 +276,20 @@ async function ensureApplicationPanel(client) {
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) return;
 
-  // This channel is the dedicated Application Center. Remove every message
-  // sent by this bot before posting the refreshed panel. Components V2 can
-  // hide nested button IDs from the normal message component inspection, so
-  // deleting by bot author is more reliable than looking for custom IDs.
-  const oldPanels = messages.filter(message => message.author?.id === client.user.id);
+  const botPanels = messages.filter(message => message.author?.id === client.user.id);
+  const currentPanel = botPanels.find(message => JSON.stringify(message.components || []).includes(APPLICATION_PANEL_MARKER));
 
-  for (const panel of oldPanels.values()) {
+  if (currentPanel) {
+    for (const duplicate of botPanels.values()) {
+      if (duplicate.id !== currentPanel.id) {
+        await duplicate.delete().catch(() => {});
+      }
+    }
+    console.log("Application Center panel is current. Leaving it unchanged.");
+    return;
+  }
+
+  for (const panel of botPanels.values()) {
     await panel.delete().catch(error => {
       console.error("Failed to delete old Application Center panel:", error);
     });
@@ -297,7 +307,7 @@ async function ensureApplicationPanel(client) {
     ],
   });
 
-  console.log(`Application Center panel refreshed. Deleted ${oldPanels.size} old bot message(s).`);
+  console.log("Application Center panel updated because its panel version changed or no current panel existed.");
 }
 
 function buildEligibilityContainer(remaining, ready = false) {
