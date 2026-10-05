@@ -40,7 +40,7 @@ function informationPanel() {
 
   container.addTextDisplayComponents(
     display(
-      "<:unknown:1552141993768132668> Founded on **August 10th, 2026**, **Missouri State Roleplay (MSRP)** provides a fun, realistic, and immersive ERLC experience based in Missouri. Players can take on roles such as police officers, firefighters, medics, or civilians while creating realistic scenarios and experiences."
+      "<:msrpwhite:1552141993768132668> Founded on **August 10th, 2026**, **Missouri State Roleplay (MSRP)** provides a fun, realistic, and immersive ERLC experience based in Missouri. Players can take on roles such as police officers, firefighters, medics, or civilians while creating realistic scenarios and experiences."
     ),
     display(
       "Whether you're responding to emergencies, patrolling the streets, or simply enjoying the game as a civilian, there is something for everyone. Our goal is to provide a welcoming and organized community where players can enjoy realistic roleplay and make their own experiences."
@@ -53,7 +53,12 @@ function informationPanel() {
   container.addTextDisplayComponents(
     display("## Important Channels:"),
     display(
-      ["<#${CHANNELS.shouts}>", "<#${CHANNELS.sessions}>", "<#${CHANNELS.regulations}>", "<#${CHANNELS.applications}>"].join("\n")
+      [
+        `<#${CHANNELS.shouts}>`,
+        `<#${CHANNELS.sessions}>`,
+        `<#${CHANNELS.regulations}>`,
+        `<#${CHANNELS.applications}>`,
+      ].join("\n")
     )
   );
 
