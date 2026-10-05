@@ -480,8 +480,17 @@ function getPage(guild, id) {
             body: [
               `${emoji(guild, "trophy")} **VIP / Premium Members** — Vehicles marked with the Trophy emoji may only be used by members with an active VIP / Premium membership.`,
               `${emoji(guild, "rocket")} **Server Boosters** — Vehicles marked with the Rocket emoji may only be used by members who are actively boosting the MSRP Discord server.`,
-              `${emoji(guild, "trophy")} ${emoji(guild, "rocket")} **VIP / Premium + Server Booster** — Vehicles displaying both emojis require both requirements to be met.`,
-            ].join("\\n")
+              "",
+              "**Restricted Vehicles**",
+              `${emoji(guild, "trophy")} **Strugatti Ettore**`,
+              `${emoji(guild, "trophy")} **Kovac Helladara**`,
+              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Falcon Heritage**`,
+              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Falcon Heritage Track**`,
+              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Takao Experience**`,
+              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Navarra Horizon**`,
+              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Averon LMR 2020**`,
+              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Surrey 650S**`,
+            ].join("\n")
           },
           {
             title: "Vehicle Usage",
