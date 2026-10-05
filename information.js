@@ -11,7 +11,7 @@ const {
 const INFORMATION_CHANNEL_ID = "1527394530427666452";
 const INFORMATION_IMAGE_SOURCE = "Banner (1).png";
 const INFORMATION_IMAGE_NAME = "information.png";
-const INFORMATION_PANEL_VERSION = 2;
+const INFORMATION_PANEL_VERSION = 3;
 const INFORMATION_PANEL_MARKER = "\u200B".repeat(INFORMATION_PANEL_VERSION);
 
 const CHANNELS = {
@@ -32,17 +32,18 @@ function divider() {
 function informationPanel() {
   const container = new ContainerBuilder();
 
+  // Main Information banner. No description is supplied so Discord does not
+  // display an ALT badge over the image.
   container.addMediaGalleryComponents(
     new MediaGalleryBuilder().addItems(
       new MediaGalleryItemBuilder()
         .setURL(`attachment://${INFORMATION_IMAGE_NAME}`)
-        .setDescription("Missouri State Roleplay Information")
     )
   );
 
   container.addTextDisplayComponents(
     display(
-      "<:msrpwhite:1552141993768132668> Founded on **August 10th, 2026**, **Missouri State Roleplay (MSRP)** provides a fun, realistic, and immersive ERLC experience based in Missouri. Players can take on roles such as police officers, firefighters, medics, or civilians while creating realistic scenarios and experiences."
+      "<:msrpwhite:1552141993768132668> **Founded August 10th, 2026**, Missouri State Roleplay (MSRP) provides a fun, realistic, and immersive ERLC experience based in Missouri. Players can take on roles such as police officers, firefighters, medics, or civilians while creating realistic scenarios and experiences."
     ),
     display(
       "Whether you're responding to emergencies, patrolling the streets, or simply enjoying the game as a civilian, there is something for everyone. Our goal is to provide a welcoming and organized community where players can enjoy realistic roleplay and make their own experiences."
@@ -53,7 +54,7 @@ function informationPanel() {
   container.addSeparatorComponents(divider());
 
   container.addTextDisplayComponents(
-    display("## Important Channels:"),
+    display("## 📌 Important Channels"),
     display(
       [
         `<#${CHANNELS.shouts}>`,
@@ -67,8 +68,21 @@ function informationPanel() {
   container.addSeparatorComponents(divider());
 
   container.addTextDisplayComponents(
-    display("## Important Links:"),
-    display(["Moderation Logs", "Main Group", "Whitelisted Group"].join("\n"))
+    display("## 🔗 Important Links"),
+    display([
+      "📋 Moderation Logs",
+      "🏛️ Main Group",
+      "🛡️ Whitelisted Group",
+    ].join("\n"))
+  );
+
+  // Thin MSRP footer/banner at the bottom of the panel.
+  container.addSeparatorComponents(divider());
+  container.addMediaGalleryComponents(
+    new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder()
+        .setURL("attachment://banner.png")
+    )
   );
 
   return container;
