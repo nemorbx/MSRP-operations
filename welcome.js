@@ -152,7 +152,7 @@ function setupWelcome(client) {
     if (message.author.bot || !message.guild) return;
 
     const content = message.content.trim();
-    const parts = content.split(/\\s+/);
+    const parts = content.split(/\s+/);
     if (parts[0].toLowerCase() !== "!autonickname") return;
 
     if (!message.member.roles.cache.has("1551704056991318191")) {
