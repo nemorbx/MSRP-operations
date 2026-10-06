@@ -60,7 +60,7 @@ function informationPanel(guild) {
     display(
       "*Whether you're responding to emergencies, patrolling the streets, or simply enjoying the game as a civilian, there is something for everyone. Our goal is to provide a welcoming and organized community where players can enjoy realistic roleplay and create their own experiences.*"
     ),
-    display("**Missouri State Roleplay — Experience Missouri With Us.**")
+    display(`**Missouri State Roleplay — Experience Missouri With Us.**${INFORMATION_PANEL_MARKER}`)
   );
 
   container.addSeparatorComponents(divider());
