@@ -9,6 +9,28 @@ const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "welcome.json");
 const ARRIVALS_CHANNEL_ID = "1527178537600286914";
 
+const PREFIX = "!nickname";
+
+const NICKNAME_FIRST_WORDS = [
+  "Green", "Soft", "Crispy", "Sleepy", "Frozen", "Purple", "Tiny", "Lucky",
+  "Cosmic", "Pixel", "Turbo", "Golden", "Misty", "Sneaky", "Waffle", "Spicy",
+  "Cloudy", "Fuzzy", "Chill", "Bouncy", "Neon", "Silent", "Swift", "Dusty",
+  "Blue", "Sunny", "Shadow", "Happy", "Fluffy", "Salty", "Cheesy", "Rocket"
+];
+
+const NICKNAME_SECOND_WORDS = [
+  "Goblin", "Muffin", "Tomato", "Juice", "Pickle", "Noodle", "Waffle", "Penguin",
+  "Potato", "Toast", "Biscuit", "Pancake", "Taco", "Cookie", "Dino", "Otter",
+  "Mango", "Donut", "Peanut", "Cactus", "Lemon", "Pigeon", "Dragon", "Fox",
+  "Bean", "Bunny", "Koala", "Panda", "Wizard", "Rocket", "Comet", "Spoon"
+];
+
+function generateNickname() {
+  const first = NICKNAME_FIRST_WORDS[Math.floor(Math.random() * NICKNAME_FIRST_WORDS.length)];
+  const second = NICKNAME_SECOND_WORDS[Math.floor(Math.random() * NICKNAME_SECOND_WORDS.length)];
+  return first + second;
+}
+
 const WELCOME_MESSAGES = [
   "<:msrpwhite:1552141993768132668> Welcome, {member}! Welcome to Missouri State Roleplay!",
   "<:msrpwhite:1552141993768132668> Welcome, {member}! Your ER:LC journey starts here.",
@@ -116,6 +138,37 @@ function setupWelcome(client) {
       content: `Welcome messages will now be sent in <#${channel.id}>.`,
       flags: MessageFlags.Ephemeral,
     });
+  });
+
+  client.on("messageCreate", async message => {
+    if (message.author.bot || !message.guild) return;
+
+    const content = message.content.trim();
+    if (!content.toLowerCase().startsWith(PREFIX)) return;
+
+    const parts = content.split(/\s+/);
+    if (parts[0].toLowerCase() !== PREFIX) return;
+
+    const target = message.mentions.members.first();
+    if (!target) {
+      await message.reply("Please mention a member to give them a random server nickname.").catch(() => {});
+      return;
+    }
+
+    if (!target.manageable) {
+      await message.reply("I can't change that member's nickname because of my role hierarchy.").catch(() => {});
+      return;
+    }
+
+    const nickname = generateNickname();
+
+    try {
+      await target.setNickname(nickname, `Random MSRP nickname assigned by ${message.author.tag}`);
+      await message.reply(`<:msrpwhite:1552141993768132668> Assigned \`${nickname}\` to <@${target.id}>.`).catch(() => {});
+    } catch (error) {
+      console.error("Random nickname error:", error);
+      await message.reply("I couldn't change that member's nickname. Please check my permissions.").catch(() => {});
+    }
   });
 
   client.on("guildMemberAdd", async member => {
