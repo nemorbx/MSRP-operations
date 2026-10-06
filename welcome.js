@@ -11,23 +11,28 @@ const ARRIVALS_CHANNEL_ID = "1527178537600286914";
 
 const PREFIX = "!nickname";
 
-const NICKNAME_FIRST_WORDS = [
-  "Green", "Soft", "Crispy", "Sleepy", "Frozen", "Purple", "Tiny", "Lucky",
-  "Cosmic", "Pixel", "Turbo", "Golden", "Misty", "Sneaky", "Waffle", "Spicy",
-  "Cloudy", "Fuzzy", "Chill", "Bouncy", "Neon", "Silent", "Swift", "Dusty",
-  "Blue", "Sunny", "Shadow", "Happy", "Fluffy", "Salty", "Cheesy", "Rocket"
-];
-
-const NICKNAME_SECOND_WORDS = [
-  "Goblin", "Muffin", "Tomato", "Juice", "Pickle", "Noodle", "Waffle", "Penguin",
-  "Potato", "Toast", "Biscuit", "Pancake", "Taco", "Cookie", "Dino", "Otter",
-  "Mango", "Donut", "Peanut", "Cactus", "Lemon", "Pigeon", "Dragon", "Fox",
-  "Bean", "Bunny", "Koala", "Panda", "Wizard", "Rocket", "Comet", "Spoon"
+const NICKNAME_WORDS = [
+  "Green", "Soft", "Crispy", "Sleepy", "Frozen", "Purple", "Tiny", "Lucky", "Cosmic", "Pixel",
+  "Turbo", "Golden", "Misty", "Sneaky", "Waffle", "Spicy", "Cloudy", "Fuzzy", "Chill", "Bouncy",
+  "Neon", "Silent", "Swift", "Dusty", "Blue", "Sunny", "Shadow", "Happy", "Fluffy", "Salty",
+  "Cheesy", "Rocket", "Velvet", "Midnight", "Silver", "Electric", "Wild", "Quiet", "Rapid",
+  "Little", "Big", "Cool", "Warm", "Frosty", "Stormy", "Mellow", "Lucky", "Magic", "Ninja",
+  "Pixel", "Retro", "Cyber", "Glitch", "Nova", "Orbit", "Solar", "Lunar", "Atomic", "Hyper",
+  "Mega", "Mini", "Rapid", "Thunder", "River", "Forest", "Ocean", "Desert", "Cocoa", "Cherry",
+  "Mint", "Peach", "Lime", "Berry", "Bubble", "Marble", "Paper", "Rubber", "Copper", "Platinum",
+  "Shadow", "Ghost", "Phantom", "Mystic", "Royal", "Lucky", "Fancy", "Simple", "Random", "Secret",
+  "Hidden", "Brave", "Swift", "Slick", "Fresh", "Smooth", "Funny", "Goofy", "Sneaky"
 ];
 
 function generateNickname() {
-  const first = NICKNAME_FIRST_WORDS[Math.floor(Math.random() * NICKNAME_FIRST_WORDS.length)];
-  const second = NICKNAME_SECOND_WORDS[Math.floor(Math.random() * NICKNAME_SECOND_WORDS.length)];
+  const first = NICKNAME_WORDS[Math.floor(Math.random() * NICKNAME_WORDS.length)];
+  let second = NICKNAME_WORDS[Math.floor(Math.random() * NICKNAME_WORDS.length)];
+
+  // Avoid identical words so names stay varied.
+  while (second === first) {
+    second = NICKNAME_WORDS[Math.floor(Math.random() * NICKNAME_WORDS.length)];
+  }
+
   return first + second;
 }
 
