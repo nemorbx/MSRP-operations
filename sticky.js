@@ -96,6 +96,9 @@ function setupSticky(client) {
   client.on("messageCreate", async message => {
     if (message.author.bot || !message.guild) return;
 
+    // The command handler already manages !sticky messages.
+    if (message.content.trim().toLowerCase().startsWith("!sticky")) return;
+
     const entry = data.channels[message.channel.id];
     if (!entry?.messageId) return;
 
