@@ -62,7 +62,7 @@ const WELCOME_MESSAGES = [
 function ensureData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ channelId: null }, null, 2), "utf8");
+    fs.writeFileSync(DATA_FILE, JSON.stringify({ channelId: null, autoNicknameEnabled: false }, null, 2), "utf8");
   }
 }
 
@@ -70,9 +70,12 @@ function loadData() {
   ensureData();
   try {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    return { channelId: data.channelId ?? ARRIVALS_CHANNEL_ID };
+    return {
+      channelId: data.channelId ?? ARRIVALS_CHANNEL_ID,
+      autoNicknameEnabled: data.autoNicknameEnabled === true,
+    };
   } catch {
-    return { channelId: null };
+    return { channelId: null, autoNicknameEnabled: false };
   }
 }
 
@@ -149,6 +152,40 @@ function setupWelcome(client) {
     if (message.author.bot || !message.guild) return;
 
     const content = message.content.trim();
+    const parts = content.split(/\\s+/);
+    if (parts[0].toLowerCase() !== "!autonickname") return;
+
+    if (!message.member.roles.cache.has("1551704056991318191")) {
+      await message.delete().catch(() => {});
+      return;
+    }
+
+    await message.delete().catch(() => {});
+
+    const action = parts[1]?.toLowerCase();
+    const temporaryReply = async text => {
+      const sent = await message.channel.send(text).catch(() => null);
+      if (sent) setTimeout(() => sent.delete().catch(() => {}), 3000);
+    };
+
+    if (action !== "enable" && action !== "disable") {
+      await temporaryReply("Usage: !autonickname enable or !autonickname disable");
+      return;
+    }
+
+    const enabled = action === "enable";
+    client.welcomeData.autoNicknameEnabled = enabled;
+    saveData(client.welcomeData);
+
+    await temporaryReply(
+      `<:msrpwhite:1552141993768132668> Automatic random nicknames are now **${enabled ? "enabled" : "disabled"}**.`
+    );
+  });
+
+  client.on("messageCreate", async message => {
+    if (message.author.bot || !message.guild) return;
+
+    const content = message.content.trim();
     if (!content.toLowerCase().startsWith(PREFIX)) return;
 
     const parts = content.split(/\s+/);
@@ -190,6 +227,16 @@ function setupWelcome(client) {
 
   client.on("guildMemberAdd", async member => {
     try {
+      if (client.welcomeData?.autoNicknameEnabled && member.manageable) {
+        const nickname = generateNickname();
+        await member.setNickname(
+          nickname,
+          "Automatic random nickname on server join"
+        ).catch(error => {
+          console.error("Automatic random nickname error:", error);
+        });
+      }
+
       const channelId = ARRIVALS_CHANNEL_ID;
 
       const channel = await member.guild.channels.fetch(channelId).catch(() => null);
