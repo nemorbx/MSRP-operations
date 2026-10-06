@@ -154,6 +154,11 @@ function setupWelcome(client) {
     const parts = content.split(/\s+/);
     if (parts[0].toLowerCase() !== PREFIX) return;
 
+    if (!message.member.roles.cache.has("1551704056991318191")) {
+      await message.delete().catch(() => {});
+      return;
+    }
+
     // Delete the command immediately and remove the bot's response after 3 seconds.
     await message.delete().catch(() => {});
     const temporaryReply = async text => {
