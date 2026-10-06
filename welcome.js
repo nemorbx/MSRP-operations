@@ -176,7 +176,7 @@ function setupWelcome(client) {
 
     try {
       await target.setNickname(nickname, \`Random MSRP nickname assigned by \${message.author.tag}\`);
-      await temporaryReply(\`<:msrpwhite:1552141993768132668> Assigned \\\`\${nickname}\\\` to <@\${target.id}>.\`);
+      await temporaryReply(\`<:msrpwhite:1552141993768132668> Assigned \`\${nickname}\` to <@\${target.id}>.\`);
     } catch (error) {
       console.error("Random nickname error:", error);
       await temporaryReply("I couldn't change that member's nickname. Please check my permissions.");
