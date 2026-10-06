@@ -154,25 +154,32 @@ function setupWelcome(client) {
     const parts = content.split(/\s+/);
     if (parts[0].toLowerCase() !== PREFIX) return;
 
+    // Delete the command immediately and remove the bot's response after 3 seconds.
+    await message.delete().catch(() => {});
+    const temporaryReply = async text => {
+      const sent = await message.channel.send(text).catch(() => null);
+      if (sent) setTimeout(() => sent.delete().catch(() => {}), 3000);
+    };
+
     const target = message.mentions.members.first();
     if (!target) {
-      await message.reply("Please mention a member to give them a random server nickname.").catch(() => {});
+      await temporaryReply("Please mention a member to give them a random server nickname.");
       return;
     }
 
     if (!target.manageable) {
-      await message.reply("I can't change that member's nickname because of my role hierarchy.").catch(() => {});
+      await temporaryReply("I can't change that member's nickname because of my role hierarchy.");
       return;
     }
 
     const nickname = generateNickname();
 
     try {
-      await target.setNickname(nickname, `Random MSRP nickname assigned by ${message.author.tag}`);
-      await message.reply(`<:msrpwhite:1552141993768132668> Assigned \`${nickname}\` to <@${target.id}>.`).catch(() => {});
+      await target.setNickname(nickname, \`Random MSRP nickname assigned by \${message.author.tag}\`);
+      await temporaryReply(\`<:msrpwhite:1552141993768132668> Assigned \\\`\${nickname}\\\` to <@\${target.id}>.\`);
     } catch (error) {
       console.error("Random nickname error:", error);
-      await message.reply("I couldn't change that member's nickname. Please check my permissions.").catch(() => {});
+      await temporaryReply("I couldn't change that member's nickname. Please check my permissions.");
     }
   });
 
