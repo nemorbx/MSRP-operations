@@ -173,9 +173,8 @@ client.on("interactionCreate", async interaction => {
         // ==========================================
 
         if (
-            target.id !== issuer.id &&
-            target.roles.highest.position >=
-            issuer.roles.highest.position
+            target.id === issuer.id ||
+            target.roles.highest.position >= issuer.roles.highest.position
         ) {
             return interaction.reply({
                 content:
