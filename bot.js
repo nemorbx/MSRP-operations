@@ -15,7 +15,17 @@ const { setup: setupMessageLogs } = require("./message-logs");
 const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
 const { setup: setupInformation, postOrRefreshInformationPanel } = require("./information");
 const { setup: setupWelcome, commands: welcomeCommands } = require("./welcome");
+const { setup: setupBooster } = require("./booster");
+const { setup: setupSay, command: sayCommand } = require("./say");
+const { setup: setupSuggestions, commands: suggestionCommands } = require("./suggestions");
 const { setup: setupSticky } = require("./sticky");
+
+const afkModule = require("./afk");
+const infractionsModule = require("./infractions");
+const promotionsModule = require("./promotions");
+const countingModule = require("./counting");
+const giveawayModule = require("./giveaway");
+const staffFeedbackModule = require("./staff-feedback");
 
 const TOKEN = process.env.DISCORD_TOKEN;
 if (!TOKEN) throw new Error("DISCORD_TOKEN is missing from environment");
@@ -44,6 +54,9 @@ setupGiveaway(client);
 setupInformation(client);
 setupWelcome(client);
 setupSticky(client);
+setupBooster(client);
+setupSay(client);
+setupSuggestions(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
@@ -89,6 +102,31 @@ client.on("guildMemberAdd", async member => {
 
 client.on("guildMemberRemove", () => {
   updateBotStatus();
+});
+
+async function isBotOwner(userId) {
+  try {
+    await client.application.fetch();
+    const owner = client.application.owner;
+    if (!owner) return false;
+    if (owner.members) return owner.members.has(userId);
+    return owner.id === userId;
+  } catch (error) {
+    console.error("Unable to verify bot owner:", error);
+    return false;
+  }
+}
+
+client.on("messageCreate", async message => {
+  if (message.author.bot || !message.guild) return;
+
+  const parts = message.content.trim().split(/\\s+/);
+  if (parts[0]?.toLowerCase() === "!afk" && parts[1]?.toLowerCase() === "remove") {
+    const owner = await isBotOwner(message.author.id);
+    if (owner && typeof afkModule.handlePrefixCommand === "function") {
+      await afkModule.handlePrefixCommand(client, message, parts.slice(1), true);
+    }
+  }
 });
 
 client.on("messageCreate", async message => {
@@ -170,29 +208,39 @@ client.once("clientReady", async () => {
   }
 
   try {
+    const rawCommands = [
+      ...(infractionsModule.commands || []),
+      ...(promotionsModule.promoteCommand ? [promotionsModule.promoteCommand] : []),
+      ...(afkModule.commands || []),
+      ...(countingModule.commands || []),
+      ...(giveawayModule.giveawayCommand ? [giveawayModule.giveawayCommand] : []),
+      ...(staffFeedbackModule.feedbackCommand ? [staffFeedbackModule.feedbackCommand] : []),
+      ...(staffFeedbackModule.staffRatingCommand ? [staffFeedbackModule.staffRatingCommand] : []),
+      ...(suggestionCommands || []),
+      ...(sayCommand ? [sayCommand] : []),
+      ...(welcomeCommands || []),
+    ];
+
+    const commandDefinitions = rawCommands.map(command =>
+      typeof command?.toJSON === "function" ? command.toJSON() : command
+    );
+
+    const seen = new Set();
+    const uniqueCommands = commandDefinitions.filter(command => {
+      if (!command?.name || seen.has(command.name)) return false;
+      seen.add(command.name);
+      return true;
+    }).map(command => ({
+      ...command,
+      dm_permission: false,
+    }));
+
     for (const guild of client.guilds.cache.values()) {
-      const commands = await guild.commands.fetch();
-
-      for (const welcomeCommand of welcomeCommands) {
-        const existingWelcome = commands.find(command => command.name === welcomeCommand.name);
-        if (existingWelcome) {
-          await existingWelcome.edit(welcomeCommand);
-        } else {
-          await guild.commands.create(welcomeCommand);
-        }
-      }
-      const existing = commands.find(command => command.name === giveawayCommand.name);
-
-      if (existing) {
-        await existing.edit(giveawayCommand.toJSON());
-      } else {
-        await guild.commands.create(giveawayCommand.toJSON());
-      }
+      await guild.commands.set(uniqueCommands);
+      console.log("Registered " + uniqueCommands.length + " MSRP slash commands in " + guild.name + ": " + uniqueCommands.map(command => "/" + command.name).join(", "));
     }
-
-    console.log("Giveaway slash command registered.");
   } catch (error) {
-    console.error("Giveaway slash command registration error:", error);
+    console.error("Slash command registration error:", error);
   }
 
   // Refresh periodically so the displayed member count stays accurate.
