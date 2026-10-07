@@ -25,7 +25,7 @@ const INTERNAL_AFFAIRS_TEAM_ROLE_ID = "1527381477975789668";
 const MANAGEMENT_TEAM_ROLE_ID = "1528426569012609106";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const SUPPORT_LOGS_CHANNEL_ID = "1552509962910171176";
-const SUPPORT_PANEL_VERSION = 2;
+const SUPPORT_PANEL_VERSION = 3;
 const SUPPORT_PANEL_MARKER = "\u200B".repeat(SUPPORT_PANEL_VERSION);
 
 const DATA_DIR = path.join(__dirname, "data");
@@ -766,8 +766,12 @@ async function handleCloseConfirmation(interaction, ticket, confirm) {
 async function setup(client) {
   ensureData();
 
-  // The Support panel is persistent and is intentionally not recreated
-  // during bot startup. This prevents duplicate panels and speeds up deployments.
+  // Ensure the Support panel is present and refresh it when the panel version changes.
+  try {
+    await ensureSupportPanel(client);
+  } catch (error) {
+    console.error("Support panel refresh error:", error);
+  }
 
   client.on("threadDelete", async (thread) => {
     try {
