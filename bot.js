@@ -120,7 +120,7 @@ async function isBotOwner(userId) {
 client.on("messageCreate", async message => {
   if (message.author.bot || !message.guild) return;
 
-  const parts = message.content.trim().split(/\\s+/);
+  const parts = message.content.trim().split(/\s+/);
   if (parts[0]?.toLowerCase() === "!afk" && parts[1]?.toLowerCase() === "remove") {
     const owner = await isBotOwner(message.author.id);
     if (owner && typeof afkModule.handlePrefixCommand === "function") {
@@ -180,7 +180,7 @@ client.once("clientReady", async () => {
   console.log("Logged in as " + client.user.tag);
   console.log("Missouri State Roleplay Operations is online.");
   console.log("GitHub deployment test: successful.");
-  console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Purge");
+  console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Purge, Booster, Say, Suggestions, Sticky, Welcome");
   console.log("========================================");
 
   try {
