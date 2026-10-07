@@ -124,7 +124,7 @@ client.on("messageCreate", async message => {
   if (parts[0]?.toLowerCase() === "!afk" && parts[1]?.toLowerCase() === "remove") {
     const owner = await isBotOwner(message.author.id);
     if (owner && typeof afkModule.handlePrefixCommand === "function") {
-      await afkModule.handlePrefixCommand(client, message, parts.slice(1), true);
+      await afkModule.handlePrefixCommand(client, message, ["afk", "remove"], true);
     }
   }
 });
