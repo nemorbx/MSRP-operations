@@ -102,6 +102,21 @@ async function isBotOwner(interaction) {
   }
 }
 
+
+const autoNicknameCommand = new SlashCommandBuilder()
+  .setName("autonickname")
+  .setDescription("Enable or disable automatic random nicknames for new members.")
+  .addStringOption(option =>
+    option
+      .setName("action")
+      .setDescription("Choose whether automatic random nicknames are enabled or disabled.")
+      .setRequired(true)
+      .addChoices(
+        { name: "Enable", value: "enable" },
+        { name: "Disable", value: "disable" }
+      )
+  );
+
 const command = new SlashCommandBuilder()
   .setName("welcome")
   .setDescription("Configure the server welcome channel.")
@@ -117,6 +132,27 @@ function setupWelcome(client) {
   // MSRP arrivals channel: always use the designated channel unless explicitly changed by the owner.
 
   client.on("interactionCreate", async interaction => {
+    if (interaction.isChatInputCommand() && interaction.commandName === "autonickname") {
+      if (!interaction.member?.roles?.cache?.has("1551704056991318191")) {
+        await interaction.reply({
+          content: "You need the Senior High Rank role to use this command.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      const action = interaction.options.getString("action", true);
+      const enabled = action === "enable";
+      client.welcomeData.autoNicknameEnabled = enabled;
+      saveData(client.welcomeData);
+
+      await interaction.reply({
+        content: "<:msrpwhite:1552141993768132668> Automatic random nicknames are now **" +
+          (enabled ? "enabled" : "disabled") + "**.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
     if (!interaction.isChatInputCommand() || interaction.commandName !== "welcome") {
       return;
     }
@@ -268,6 +304,6 @@ function setWelcomeChannel(client, channelId) {
 module.exports = {
   setup: setupWelcome,
   command,
-  commands: [command.toJSON()],
+  commands: [command.toJSON(), autoNicknameCommand.toJSON()],
   setWelcomeChannel,
 };
