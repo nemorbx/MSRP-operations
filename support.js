@@ -490,6 +490,7 @@ async function submitTicket(interaction, typeKey) {
       name: `${type.label} • ${interaction.user.username}`.slice(0, 100),
       autoArchiveDuration: 1440,
       type: 12,
+      invitable: false,
       reason: `Support ticket created by ${interaction.user.tag}`,
     })
     .catch(() => null);
