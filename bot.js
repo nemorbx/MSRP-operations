@@ -14,7 +14,7 @@ const { purgeMessages } = require("./purge");
 const { setup: setupMessageLogs } = require("./message-logs");
 const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
 const { setup: setupInformation, postOrRefreshInformationPanel } = require("./information");
-const { setup: setupWelcome } = require("./welcome");
+const { setup: setupWelcome, commands: welcomeCommands } = require("./welcome");
 const { setup: setupSticky } = require("./sticky");
 
 const TOKEN = process.env.DISCORD_TOKEN;
@@ -172,6 +172,15 @@ client.once("clientReady", async () => {
   try {
     for (const guild of client.guilds.cache.values()) {
       const commands = await guild.commands.fetch();
+
+      for (const welcomeCommand of welcomeCommands) {
+        const existingWelcome = commands.find(command => command.name === welcomeCommand.name);
+        if (existingWelcome) {
+          await existingWelcome.edit(welcomeCommand);
+        } else {
+          await guild.commands.create(welcomeCommand);
+        }
+      }
       const existing = commands.find(command => command.name === giveawayCommand.name);
 
       if (existing) {
