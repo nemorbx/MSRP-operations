@@ -423,8 +423,8 @@ client.on("interactionCreate", async interaction => {
 
         if (
             !hrRole ||
-            issuer.roles.highest.position <
-            hrRole.position
+            (!issuer.roles.cache.has(HR_ROLE_ID) &&
+             !issuer.roles.cache.has("1551704056991318191"))
         ) {
             return interaction.editReply(
                 "You don't have permission to use this command. High Rank (Internal Affairs Supervisor+) or Senior HR only."
