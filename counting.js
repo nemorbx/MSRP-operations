@@ -11,6 +11,7 @@ const DATA_FILE = path.join(DATA_DIR, "counting.json");
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const MAX_COUNT = 5000;
 const DEFAULT_COUNTING_CHANNEL_ID = "1527298583613669458";
+const MIN_ACCOUNT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 function ensureData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -303,6 +304,21 @@ function setupCounting(client) {
 
         const data = client.countingData;
         const expected = data.current;
+
+        if (
+          !message.author.createdTimestamp ||
+          Date.now() - message.author.createdTimestamp < MIN_ACCOUNT_AGE_MS
+        ) {
+          await message.delete().catch(() => {});
+          const warning = await message.channel.send({
+            content: "<:msrpwhite:1552141993768132668> Your Discord account must be at least 7 days old to participate in counting.",
+            allowedMentions: { parse: [] },
+          }).catch(() => null);
+          if (warning) {
+            setTimeout(() => warning.delete().catch(() => {}), 5000);
+          }
+          return;
+        }
         let result = null;
 
         try {
