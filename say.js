@@ -36,9 +36,10 @@ async function setup(client) {
   // !say is a bot-owner-only prefix command.
   client.on("messageCreate", async message => {
     if (message.author.bot || !message.guild) return;
-    if (!message.content.toLowerCase().startsWith("!say")) return;
+    const parts = message.content.trim().split(/\s+/);
+    if (parts[0].toLowerCase() !== "!say") return;
 
-    const content = message.content.slice(4).trim();
+    const content = message.content.trim().slice(parts[0].length).trim();
     if (!content) return;
 
     const isOwner = await isBotOwner(client, message.author.id);
