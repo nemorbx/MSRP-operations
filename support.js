@@ -328,12 +328,12 @@ async function sendTicketLog(client, ticket, thread, reason, closedById = null) 
   });
 }
 
-async function sendPanel(channel) {
+async function sendPanel(channel, client) {
   const banner = assetPath([ROOT_SUPPORT_BANNER, ASSET_SUPPORT_BANNER]);
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
   const files = [banner, footer].filter(Boolean);
   await channel.send({
-    components: [buildSupportPanel(client.guilds.cache.first())],
+    components: [buildSupportPanel(channel.guild)],
     files,
     flags: MessageFlags.IsComponentsV2,
   });
@@ -374,7 +374,7 @@ async function ensureSupportPanel(client) {
     });
   }
 
-  await sendPanel(channel);
+  await sendPanel(channel, client);
   console.log("Support panel updated because its panel version changed or no current panel existed.");
 }
 
