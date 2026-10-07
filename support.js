@@ -25,7 +25,7 @@ const INTERNAL_AFFAIRS_TEAM_ROLE_ID = "1527381477975789668";
 const MANAGEMENT_TEAM_ROLE_ID = "1528426569012609106";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const SUPPORT_LOGS_CHANNEL_ID = "1552509962910171176";
-const SUPPORT_PANEL_VERSION = 3;
+const SUPPORT_PANEL_VERSION = 4;
 const SUPPORT_PANEL_MARKER = "\u200B".repeat(SUPPORT_PANEL_VERSION);
 
 const DATA_DIR = path.join(__dirname, "data");
@@ -53,6 +53,18 @@ const TYPES = {
     roleId: MANAGEMENT_TEAM_ROLE_ID,
   },
 };
+
+
+async function getSupportChannel(guild) {
+  const configured = await guild.channels.fetch(SUPPORT_CHANNEL_ID).catch(() => null);
+  if (configured && configured.isTextBased()) return configured;
+
+  return guild.channels.cache.find(
+    channel =>
+      channel.isTextBased() &&
+      ["assistance", "support"].includes(channel.name.toLowerCase())
+  ) || null;
+}
 
 function ensureData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -328,7 +340,8 @@ async function sendPanel(channel) {
 }
 
 async function ensureSupportPanel(client) {
-  const channel = await client.channels.fetch(SUPPORT_CHANNEL_ID).catch(() => null);
+  const guild = client.guilds.cache.first();
+  const channel = guild ? await getSupportChannel(guild) : null;
   if (!channel || !channel.isTextBased()) {
     console.error("Support channel could not be found or is not text-based.");
     return;
@@ -462,9 +475,7 @@ async function submitTicket(interaction, typeKey) {
 
   await interaction.deferReply({ ephemeral: true });
 
-  const parent =
-    interaction.guild.channels.cache.get(SUPPORT_CHANNEL_ID) ||
-    (await interaction.guild.channels.fetch(SUPPORT_CHANNEL_ID).catch(() => null));
+  const parent = await getSupportChannel(interaction.guild);
   if (
     !parent ||
     !parent.isTextBased() ||
