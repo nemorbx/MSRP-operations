@@ -68,6 +68,23 @@ const RANKS = [
     { name: "Lead Management", id: "1528425622047821875" }
 ];
 
+// Team roles automatically synchronized by /promote.
+const STAFF_TEAM_ROLE_ID = "1528242210871447672";
+const TEAM_ROLE_IDS = {
+    moderation: "1527381803617222676",
+    administration: "1527381747791040522",
+    internalAffairs: "1527381477975789668",
+    management: "1528426569012609106"
+};
+
+function getTeamRoleId(rankName) {
+    if (rankName.includes("Mod")) return TEAM_ROLE_IDS.moderation;
+    if (rankName.includes("Admin")) return TEAM_ROLE_IDS.administration;
+    if (rankName.includes("Internal Affairs")) return TEAM_ROLE_IDS.internalAffairs;
+    if (rankName.includes("Management")) return TEAM_ROLE_IDS.management;
+    return null;
+}
+
 // ==========================================
 // /PROMOTE COMMAND
 // ==========================================
@@ -467,18 +484,65 @@ client.on("interactionCreate", async interaction => {
         }
 
         // ==========================================
-        // REMOVE OLD ROLE
+        // SYNCHRONIZE STAFF AND TEAM ROLES
         // ==========================================
 
-        if (oldRole) {
-            await target.roles.remove(oldRole);
+        const teamRoleId = getTeamRoleId(newRank.name);
+        const teamRoleIds = Object.values(TEAM_ROLE_IDS);
+        const requiredRoleIds = [
+            newRole.id,
+            STAFF_TEAM_ROLE_ID,
+            ...(teamRoleId ? [teamRoleId] : [])
+        ];
+        const requiredRoles = requiredRoleIds.map(id =>
+            interaction.guild.roles.cache.get(id)
+        );
+
+        if (requiredRoles.some(role => !role)) {
+            return interaction.editReply(
+                "Promotion stopped: one or more required staff/team roles could not be found. No roles were changed."
+            );
         }
 
-        // ==========================================
-        // GIVE NEW ROLE
-        // ==========================================
+        if (requiredRoles.some(role =>
+            role.position >= botMember.roles.highest.position
+        )) {
+            return interaction.editReply(
+                "Promotion stopped: my bot role is not high enough to assign the rank, Staff Team, or required team role. No roles were changed."
+            );
+        }
 
-        await target.roles.add(newRole);
+        try {
+            // Add the new rank and shared staff membership before removing old roles.
+            const rolesToAdd = requiredRoles
+                .filter(role => !target.roles.cache.has(role.id))
+                .map(role => role.id);
+            if (rolesToAdd.length) {
+                await target.roles.add(rolesToAdd, "MSRP promotion: assign rank and team roles");
+            }
+
+            // Remove the previous rank and any mismatched team roles.
+            const rolesToRemove = [];
+            if (oldRole && oldRole.id !== newRole.id) {
+                rolesToRemove.push(oldRole.id);
+            }
+            for (const roleId of teamRoleIds) {
+                if (roleId !== teamRoleId && target.roles.cache.has(roleId)) {
+                    rolesToRemove.push(roleId);
+                }
+            }
+            if (rolesToRemove.length) {
+                await target.roles.remove(
+                    [...new Set(rolesToRemove)],
+                    "MSRP promotion: synchronize team membership"
+                );
+            }
+        } catch (error) {
+            console.error("[Promotions] Failed to synchronize promotion roles:", error);
+            return interaction.editReply(
+                "I couldn't finish updating the rank and team roles. Please check my role permissions and hierarchy, then review the member's roles before retrying."
+            );
+        }
 
         // ==========================================
         // NOTES
