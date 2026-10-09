@@ -375,7 +375,13 @@ client.on("interactionCreate", async interaction => {
         const targetId = parts[2];
         const newRoleId = parts[3];
 
-        const issuer = interaction.member;
+        const issuer = await interaction.guild.members
+            .fetch(interaction.user.id)
+            .catch(() => null);
+
+        if (!issuer) {
+            return interaction.editReply("Your server member profile could not be loaded. Please try again.");
+        }
 
         const target =
             await interaction.guild.members
@@ -638,14 +644,21 @@ client.on("interactionCreate", async interaction => {
         );
 
         // ONE V2 MESSAGE — no legacy content/embed fields
-        await channel.send({
-            flags: MessageFlags.IsComponentsV2,
-            components: [container],
-            files: [
-                new AttachmentBuilder(HEADER_PATH, { name: HEADER_NAME }),
-                new AttachmentBuilder(BANNER_PATH, { name: BANNER_NAME })
-            ]
-        });
+        try {
+            await channel.send({
+                flags: MessageFlags.IsComponentsV2,
+                components: [container],
+                files: [
+                    new AttachmentBuilder(HEADER_PATH, { name: HEADER_NAME }),
+                    new AttachmentBuilder(BANNER_PATH, { name: BANNER_NAME })
+                ]
+            });
+        } catch (error) {
+            console.error("[Promotions] Role update succeeded but announcement failed:", error);
+            return interaction.editReply(
+                `The promotion roles were updated, but I couldn't post the announcement. Check the promotion channel permissions and bot logs.`
+            );
+        }
 
         // ==========================================
         // DONE
