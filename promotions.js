@@ -399,6 +399,12 @@ client.on("interactionCreate", async interaction => {
                 ? oldRoleData.role
                 : null;
 
+        if (oldRole && newRole.position <= oldRole.position) {
+            return interaction.editReply(
+                "The selected rank is not a promotion from the member's current rank. Please run /promote again."
+            );
+        }
+
         // ==========================================
         // PERMISSION CHECKS
         // ==========================================
@@ -410,8 +416,10 @@ client.on("interactionCreate", async interaction => {
 
         if (
             !hrRole ||
-            (!issuer.roles.cache.has(HR_ROLE_ID) &&
-             !issuer.roles.cache.has("1551704056991318191"))
+            (
+                issuer.roles.highest.position < hrRole.position &&
+                !issuer.roles.cache.has("1551704056991318191")
+            )
         ) {
             return interaction.editReply(
                 "You don't have permission to use this command. High Rank (Internal Affairs Supervisor+) or Senior HR only."
@@ -419,7 +427,7 @@ client.on("interactionCreate", async interaction => {
         }
 
         if (
-            target.id !== issuer.id &&
+            target.id === issuer.id ||
             target.roles.highest.position >=
             issuer.roles.highest.position
         ) {
