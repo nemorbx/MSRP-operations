@@ -110,6 +110,7 @@ function setup(client) {
 // ==========================================
 
 client.on("interactionCreate", async interaction => {
+  try {
 
     // ==========================================
     // /PROMOTE
@@ -313,18 +314,7 @@ client.on("interactionCreate", async interaction => {
             new ActionRowBuilder().addComponents(notesInput)
         );
 
-        try {
-            await interaction.showModal(modal);
-        } catch (error) {
-            console.error("[Promotions] showModal failed:", {
-                code: error?.code,
-                message: error?.message,
-                targetId,
-                newRoleId
-            });
-            // Do not try a second acknowledgement if Discord has already
-            // accepted the interaction callback.
-        }
+        await interaction.showModal(modal);
     }
 
     // ==========================================
@@ -642,6 +632,32 @@ client.on("interactionCreate", async interaction => {
             `Successfully promoted ${target} to ${newRole.name}.`
         );
     }
+  } catch (error) {
+    console.error("[Promotions] Interaction handler failed:", {
+      commandName: interaction.commandName,
+      customId: interaction.customId,
+      code: error?.code,
+      message: error?.message,
+      stack: error?.stack
+    });
+
+    const response = {
+      content: "The promotion could not be completed because an unexpected error occurred. The error has been logged. Please check the member's roles before retrying.",
+      flags: MessageFlags.Ephemeral
+    };
+
+    try {
+      if (interaction.deferred) {
+        await interaction.editReply({ content: response.content });
+      } else if (interaction.replied) {
+        await interaction.followUp(response);
+      } else if (interaction.isRepliable()) {
+        await interaction.reply(response);
+      }
+    } catch (responseError) {
+      console.error("[Promotions] Failed to send interaction error response:", responseError);
+    }
+  }
 });
 }
 
