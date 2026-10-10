@@ -282,86 +282,48 @@ client.on("interactionCreate", async interaction => {
 
     if (
         interaction.isStringSelectMenu() &&
-        interaction.customId.startsWith(
-            "promotion_rank_"
-        )
+        interaction.customId.startsWith("promotion_rank_")
     ) {
+        // Acknowledge the component immediately by opening the modal. Do not
+        // perform lookups or other work before this response.
+        const targetId = interaction.customId.slice("promotion_rank_".length);
+        const newRoleId = interaction.values?.[0];
 
-        const targetId =
-            interaction.customId.replace(
-                "promotion_rank_",
-                ""
-            );
-
-        // Do not fetch the target before opening the modal. Discord requires
-        // this component interaction to be acknowledged within a few seconds;
-        // the network fetch could make the UI spin indefinitely.
-        if (!/^\d{17,20}$/.test(targetId)) {
+        if (!/^\d{17,20}$/.test(targetId) ||
+            !RANKS.some(rank => rank.id === newRoleId)) {
             return interaction.update({
-                content: "That promotion request is invalid.",
+                content: "That promotion request is invalid. Please run /promote again.",
                 components: []
             });
         }
 
-        const newRoleId =
-            interaction.values[0];
+        const modal = new ModalBuilder()
+            .setCustomId(`promotion_notes_${targetId}_${newRoleId}`)
+            .setTitle("Staff Promotion");
 
-        const newRank =
-            RANKS.find(
-                rank => rank.id === newRoleId
-            );
-
-        if (!newRank) {
-            return interaction.update({
-                content:
-                    "That promotion rank is invalid.",
-                components: []
-            });
-        }
-
-        // ==========================================
-        // NOTES MODAL
-        // ==========================================
-
-        const modal =
-            new ModalBuilder()
-                .setCustomId(
-                    `promotion_notes_${targetId}_${newRoleId}`
-                )
-                .setTitle("Staff Promotion");
-
-        const notesInput =
-            new TextInputBuilder()
-                .setCustomId("promotion_notes")
-                .setLabel("Extra Notes")
-                .setStyle(
-                    TextInputStyle.Paragraph
-                )
-                .setPlaceholder(
-                    "Optional promotion notes..."
-                )
-                .setRequired(false)
-                .setMaxLength(1000);
+        const notesInput = new TextInputBuilder()
+            .setCustomId("promotion_notes")
+            .setLabel("Extra Notes")
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder("Optional promotion notes...")
+            .setRequired(false)
+            .setMaxLength(1000);
 
         modal.addComponents(
-            new ActionRowBuilder()
-                .addComponents(notesInput)
+            new ActionRowBuilder().addComponents(notesInput)
         );
 
         try {
-            // A modal is the acknowledgement for this select-menu interaction.
-            // Keep this path free of network calls so Discord receives it in time.
             await interaction.showModal(modal);
         } catch (error) {
-            console.error("[Promotions] Could not open promotion notes modal:", error);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    content: "I couldn't open the promotion form. Please run /promote again. The bot error has been logged.",
-                    flags: MessageFlags.Ephemeral
-                }).catch(replyError => {
-                    console.error("[Promotions] Could not acknowledge failed rank selection:", replyError);
-                });
-            }
+            console.error("[Promotions] showModal failed:", {
+                code: error?.code,
+                message: error?.message,
+                targetId,
+                newRoleId
+            });
+            // Do not try a second acknowledgement if Discord has already
+            // accepted the interaction callback.
         }
     }
 
