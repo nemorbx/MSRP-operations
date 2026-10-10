@@ -296,7 +296,7 @@ client.on("interactionCreate", async interaction => {
         // Do not fetch the target before opening the modal. Discord requires
         // this component interaction to be acknowledged within a few seconds;
         // the network fetch could make the UI spin indefinitely.
-        if (!/^\\d{17,20}$/.test(targetId)) {
+        if (!/^\d{17,20}$/.test(targetId)) {
             return interaction.update({
                 content: "That promotion request is invalid.",
                 components: []
