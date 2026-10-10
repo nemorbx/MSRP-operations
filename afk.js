@@ -73,6 +73,17 @@ const commands = [
             .setMaxLength(500)
         )
     )
+    .addSubcommand(sub =>
+      sub
+        .setName("remove")
+        .setDescription("Remove a member's AFK status (Senior High Rank+).")
+        .addUserOption(option =>
+          option
+            .setName("member")
+            .setDescription("The member whose AFK status should be removed.")
+            .setRequired(true)
+        )
+    )
     .toJSON(),
 ];
 
@@ -118,6 +129,10 @@ function setupAFK(client) {
 
       if (subcommand === "edit") {
         const reason = interaction.options.getString("reason", true).trim();
+        if (!reason) {
+          await interaction.reply({ content: "Your AFK reason cannot be empty.", flags: MessageFlags.Ephemeral });
+          return;
+        }
         const existing = data[interaction.user.id];
         if (!existing) {
           await interaction.reply({ content: "You are not currently AFK.", flags: MessageFlags.Ephemeral });
@@ -129,6 +144,41 @@ function setupAFK(client) {
 
         await interaction.reply({
           content: `Your AFK reason has been updated to: **${reason}**`,
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
+      if (subcommand === "remove") {
+        if (!isSeniorHR(interaction.member)) {
+          await interaction.reply({
+            content: "You don't have permission to remove another member's AFK status. Senior High Rank+ only.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        const target = interaction.options.getMember("member");
+        if (!target) {
+          await interaction.reply({
+            content: "That member could not be found in this server.",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        if (!data[target.id]) {
+          await interaction.reply({
+            content: `${target} is not currently AFK.`,
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+
+        delete data[target.id];
+        saveData(data);
+        await interaction.reply({
+          content: `Removed AFK status from ${target}.`,
           flags: MessageFlags.Ephemeral,
         });
         return;
