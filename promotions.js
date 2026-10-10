@@ -146,8 +146,8 @@ client.on("interactionCreate", async interaction => {
 
         // HR ONLY
         if (
-            issuer.roles.highest.position <
-            hrRole.position
+            issuer.roles.highest.position < hrRole.position &&
+            !issuer.roles.cache.has("1551704056991318191")
         ) {
             return interaction.reply({
                 content:
