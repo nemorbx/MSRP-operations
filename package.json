@@ -4,9 +4,15 @@
   "description": "Missouri State Roleplay Operations Discord bot",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node bot.js",
+    "test": "node scripts/validate-commands.js"
   },
-  "keywords": ["discord", "roblox", "er:lc", "msrp"],
+  "keywords": [
+    "discord",
+    "roblox",
+    "er:lc",
+    "msrp"
+  ],
   "author": "Missouri State Roleplay",
   "license": "ISC",
   "type": "commonjs",
