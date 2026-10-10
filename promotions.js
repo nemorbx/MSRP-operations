@@ -293,15 +293,12 @@ client.on("interactionCreate", async interaction => {
                 ""
             );
 
-        const target =
-            await interaction.guild.members
-                .fetch(targetId)
-                .catch(() => null);
-
-        if (!target) {
+        // Do not fetch the target before opening the modal. Discord requires
+        // this component interaction to be acknowledged within a few seconds;
+        // the network fetch could make the UI spin indefinitely.
+        if (!/^\\d{17,20}$/.test(targetId)) {
             return interaction.update({
-                content:
-                    "That member could not be found.",
+                content: "That promotion request is invalid.",
                 components: []
             });
         }
@@ -329,7 +326,7 @@ client.on("interactionCreate", async interaction => {
         const modal =
             new ModalBuilder()
                 .setCustomId(
-                    `promotion_notes_${target.id}_${newRoleId}`
+                    `promotion_notes_${targetId}_${newRoleId}`
                 )
                 .setTitle("Staff Promotion");
 
