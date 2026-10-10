@@ -348,7 +348,21 @@ client.on("interactionCreate", async interaction => {
                 .addComponents(notesInput)
         );
 
-        await interaction.showModal(modal);
+        try {
+            // A modal is the acknowledgement for this select-menu interaction.
+            // Keep this path free of network calls so Discord receives it in time.
+            await interaction.showModal(modal);
+        } catch (error) {
+            console.error("[Promotions] Could not open promotion notes modal:", error);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: "I couldn't open the promotion form. Please run /promote again. The bot error has been logged.",
+                    flags: MessageFlags.Ephemeral
+                }).catch(replyError => {
+                    console.error("[Promotions] Could not acknowledge failed rank selection:", replyError);
+                });
+            }
+        }
     }
 
     // ==========================================
