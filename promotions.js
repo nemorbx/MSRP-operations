@@ -289,6 +289,7 @@ client.on("interactionCreate", async interaction => {
         // perform lookups or other work before this response.
         const targetId = interaction.customId.slice("promotion_rank_".length);
         const newRoleId = interaction.values?.[0];
+        console.log("[Promotions] Rank selection received", { customId: interaction.customId, targetId, newRoleId, userId: interaction.user?.id });
 
         if (!/^\d{17,20}$/.test(targetId) ||
             !RANKS.some(rank => rank.id === newRoleId)) {
