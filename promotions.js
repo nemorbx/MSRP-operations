@@ -371,10 +371,11 @@ client.on("interactionCreate", async interaction => {
             interaction.guild.roles.cache.get(
                 newRoleId
             );
+        const newRank = RANKS.find(rank => rank.id === newRoleId);
 
-        if (!newRole) {
+        if (!newRole || !newRank) {
             return interaction.editReply(
-                "The new rank could not be found."
+                "The selected rank could not be found. Please run /promote again."
             );
         }
 
