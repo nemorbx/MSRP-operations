@@ -563,13 +563,8 @@ async function handleClaim(interaction, ticket) {
 
   const thread = interaction.channel;
   await thread.members.add(interaction.user.id).catch(() => {});
-  await restrictAfterClaim(
-    thread,
-    interaction.guild,
-    ticket.userId,
-    interaction.user.id
-  );
-
+  // Keep the support team members in the private ticket thread after it is claimed.
+  // Removing them here creates a public audit log entry for every removed member.
   await interaction.update({
     components: ticketPanelComponents(ticket),
     flags: MessageFlags.IsComponentsV2,
