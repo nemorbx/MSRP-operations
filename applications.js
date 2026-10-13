@@ -34,6 +34,7 @@ const DATA_DIR = path.join(__dirname, "data");
 const APPLICATIONS_FILE = path.join(DATA_DIR, "applications.json");
 const COOLDOWNS_FILE = path.join(DATA_DIR, "application-cooldowns.json");
 const BLACKLIST_FILE = path.join(DATA_DIR, "blacklist.json");
+const STAFF_APPLICATION_RESET_MARKER = path.join(DATA_DIR, ".staff-applications-reset-v1");
 
 const STATUS_COLORS = {
   Pending: 0x3498db,
@@ -101,6 +102,21 @@ function ensureDataFiles() {
       fs.writeFileSync(file, JSON.stringify(initial, null, 2));
     }
   }
+}
+
+function resetStaffApplicationsOnce() {
+  if (fs.existsSync(STAFF_APPLICATION_RESET_MARKER)) return;
+  const applications = readJson(APPLICATIONS_FILE, {});
+  let removed = 0;
+  for (const [id, application] of Object.entries(applications)) {
+    if (application?.type === "staff") {
+      delete applications[id];
+      removed += 1;
+    }
+  }
+  writeJson(APPLICATIONS_FILE, applications);
+  fs.writeFileSync(STAFF_APPLICATION_RESET_MARKER, new Date().toISOString(), "utf8");
+  console.log(`[Applications] One-time staff application reset complete; removed ${removed} staff application record(s). Ban appeals, cooldowns, and blacklists were preserved.`);
 }
 
 function readJson(file, fallback) {
@@ -476,6 +492,15 @@ async function cancelApplicationById(userId, applicationId, dm, controlMessage) 
 }
 
 async function activateDMApplication(user, applicationId, dm, controlMessage) {
+  const existingSession = activeSessions.get(user.id);
+  if (existingSession?.collector && !existingSession.collector.ended) {
+    await dm.send("Your application is already running. Please answer the current question in this DM.").catch(() => {});
+    return;
+  }
+  if (!dm || !dm.isDMBased()) {
+    throw new Error("Staff application collector requires a direct-message channel.");
+  }
+
   const applications = readJson(APPLICATIONS_FILE, {});
   const application = applications[applicationId];
   if (!application || application.userId !== user.id || application.status !== "In Progress") return;
@@ -493,6 +518,7 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
   activeSessions.set(user.id, session);
 
   collector.on("collect", async message => {
+    try {
     const content = message.content.trim();
 
     if (!content) {
@@ -534,7 +560,28 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
       return;
     }
 
-    await dm.send(questionText(STAFF_QUESTIONS[session.index])).catch(() => {});
+    await dm.send(questionText(STAFF_QUESTIONS[session.index])).catch(error => {
+      console.error("[Applications] Failed to send next staff application question:", error);
+    });
+    } catch (error) {
+      console.error("[Applications] Error while processing a staff application answer:", error);
+      await dm.send("I encountered a problem saving your answer. Your application has been stopped safely. Please start a new application from the Application Center.").catch(() => {});
+      collector.stop("error");
+      const data = readJson(APPLICATIONS_FILE, {});
+      if (data[applicationId]?.status === "In Progress") {
+        delete data[applicationId];
+        writeJson(APPLICATIONS_FILE, data);
+      }
+      activeSessions.delete(user.id);
+      await controlMessage.edit({
+        components: [v2Container("## Staff Application\\nAn error interrupted this application. Please start a new one from the Application Center.")],
+        flags: MessageFlags.IsComponentsV2,
+      }).catch(() => {});
+    }
+  });
+
+  collector.on("error", error => {
+    console.error("[Applications] Staff application message collector error:", error);
   });
 
   collector.on("end", async (_, reason) => {
@@ -556,7 +603,22 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
     }
   });
 
-  await dm.send(questionText(STAFF_QUESTIONS[0])).catch(() => {});
+  try {
+    await dm.send(questionText(STAFF_QUESTIONS[0]));
+  } catch (error) {
+    console.error("[Applications] Failed to send first staff application question:", error);
+    collector.stop("error");
+    activeSessions.delete(user.id);
+    const data = readJson(APPLICATIONS_FILE, {});
+    if (data[applicationId]?.status === "In Progress") {
+      delete data[applicationId];
+      writeJson(APPLICATIONS_FILE, data);
+    }
+    await controlMessage.edit({
+      components: [v2Container("## Staff Application\\nI couldn't send the first question. Please check your DMs and start a new application.")],
+      flags: MessageFlags.IsComponentsV2,
+    }).catch(() => {});
+  }
 }
 
 async function beginDMApplication(interaction) {
@@ -1059,6 +1121,7 @@ async function handleDMButton(interaction) {
 
 function setup(client) {
   ensureDataFiles();
+  resetStaffApplicationsOnce();
   globalThis.__msrpClient = client;
 
   // The Application Center panel is persistent and is intentionally not
