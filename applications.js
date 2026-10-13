@@ -574,7 +574,7 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
       }
       activeSessions.delete(user.id);
       await controlMessage.edit({
-        components: [v2Container("## Staff Application\\nAn error interrupted this application. Please start a new one from the Application Center.")],
+        components: [v2Container("## Staff Application Error\nAn error interrupted this application. Please start a new one from the Application Center.")],
         flags: MessageFlags.IsComponentsV2,
       }).catch(() => {});
     }
@@ -615,7 +615,7 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
       writeJson(APPLICATIONS_FILE, data);
     }
     await controlMessage.edit({
-      components: [v2Container("## Staff Application\\nI couldn't send the first question. Please check your DMs and start a new application.")],
+      components: [v2Container("## Staff Application Error\nI couldn't send the first question. Please check your DMs and start a new application.")],
       flags: MessageFlags.IsComponentsV2,
     }).catch(() => {});
   }
@@ -822,7 +822,7 @@ async function handleStaffDecision(interaction, action, applicationId) {
     if (member) await member.roles.add(AWAITING_TRAINING_ROLE_ID).catch(() => {});
     await safeDM(
       application.userId,
-      "## Staff Application\\nYour Missouri State Roleplay staff application has been accepted. You have been placed in Awaiting Training. A member of the staff team will provide your next steps."
+      "## Staff Application Accepted\nYour Missouri State Roleplay staff application has been accepted. You have been placed in Awaiting Training. A member of the staff team will provide your next steps."
     );
   } else if (action === "deny") {
     application.status = "Denied";
@@ -833,7 +833,7 @@ async function handleStaffDecision(interaction, action, applicationId) {
     writeJson(COOLDOWNS_FILE, cooldowns);
     await safeDM(
       application.userId,
-      "## Staff Application\\nYour Missouri State Roleplay staff application has been denied. You must wait 3 days before submitting another staff application."
+      "## Staff Application Denied\nYour Missouri State Roleplay staff application has been denied. You must wait 3 days before submitting another staff application."
     );
   } else if (action === "blacklist") {
     application.status = "Blacklisted";
@@ -845,7 +845,7 @@ async function handleStaffDecision(interaction, action, applicationId) {
     if (member) await member.roles.add(STAFF_BLACKLIST_ROLE_ID).catch(() => {});
     await safeDM(
       application.userId,
-      "## Staff Application\\nYour Missouri State Roleplay staff application has been blacklisted. You are no longer eligible to submit staff applications."
+      "## Staff Application Blacklisted\nYour Missouri State Roleplay staff application has been blacklisted. You are no longer eligible to submit staff applications."
     );
   }
 
@@ -1060,8 +1060,8 @@ async function handleBanAppealDecision(interaction, action, appealId) {
   await safeDM(
     appeal.userId,
     appeal.status === "Approved"
-      ? "## Ban Appeal\nYour Missouri State Roleplay ban appeal has been accepted. You have received an approval decision."
-      : "## Ban Appeal\nYour Missouri State Roleplay ban appeal has been denied. You cannot submit another ban appeal."
+      ? "## Ban Appeal Accepted\nYour Missouri State Roleplay ban appeal has been accepted. You have received an approval decision."
+      : "## Ban Appeal Denied\nYour Missouri State Roleplay ban appeal has been denied. You cannot submit another ban appeal."
   );
 }
 
