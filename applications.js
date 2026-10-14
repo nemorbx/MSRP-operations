@@ -145,7 +145,10 @@ function isSeniorHR(member) {
 
 function isBlacklisted(member) {
   const blacklist = readJson(BLACKLIST_FILE, []);
-  return blacklist.includes(member.id) || member.roles.cache.has(STAFF_BLACKLIST_ROLE_ID);
+  const listed = Array.isArray(blacklist) && blacklist.some(entry =>
+    typeof entry === "string" ? entry === member.id : entry?.userId === member.id
+  );
+  return listed || member.roles.cache.has(STAFF_BLACKLIST_ROLE_ID);
 }
 
 function getUserApplications(userId) {
@@ -751,12 +754,12 @@ function recoverStaffApplicationFromReviewMessage(interaction, applicationId) {
   walk(components);
 
   const combined = texts.join("\n");
-  const userMatch = combined.match(/<@(\\d{17,20})>/);
+  const userMatch = combined.match(/<@(\d{17,20})>/);
   if (!userMatch) return null;
 
   const answers = [];
   for (const text of texts) {
-    const match = text.match(/^\\*\\*(.+?)\\*\\*\\n([\\s\\S]*)$/);
+    const match = text.match(/^\*\*(.+?)\*\*\n([\s\S]*)$/);
     if (match && !match[1].startsWith("Status:") && !match[1].startsWith("Applicant:")) {
       answers.push(match[2].trim());
     }
@@ -819,7 +822,8 @@ async function handleStaffDecision(interaction, action, applicationId) {
     application.status = "Approved";
     application.reviewedBy = interaction.user.id;
     application.reviewedAt = new Date().toISOString();
-    if (member) await member.roles.add(AWAITING_TRAINING_ROLE_ID).catch(() => {});
+    if (!member) throw new Error("Applicant is no longer a member of this server; cannot assign Awaiting Training role.");
+    await member.roles.add(AWAITING_TRAINING_ROLE_ID);
     await safeDM(
       application.userId,
       "## Staff Application Accepted\nYour Missouri State Roleplay staff application has been accepted. You have been placed in Awaiting Training. A member of the staff team will provide your next steps."
@@ -842,7 +846,7 @@ async function handleStaffDecision(interaction, action, applicationId) {
     const blacklist = readJson(BLACKLIST_FILE, []);
     if (!blacklist.includes(application.userId)) blacklist.push(application.userId);
     writeJson(BLACKLIST_FILE, blacklist);
-    if (member) await member.roles.add(STAFF_BLACKLIST_ROLE_ID).catch(() => {});
+    if (member) await member.roles.add(STAFF_BLACKLIST_ROLE_ID);
     await safeDM(
       application.userId,
       "## Staff Application Blacklisted\nYour Missouri State Roleplay staff application has been blacklisted. You are no longer eligible to submit staff applications."
