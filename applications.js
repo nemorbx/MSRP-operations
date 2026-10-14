@@ -374,6 +374,10 @@ function buildEligibilityContainer(remaining, ready = false) {
 
 async function startStaffApplication(interaction) {
   if (!interaction.guild || !interaction.member) return;
+  if (countdowns.has(interaction.user.id)) {
+    await v2Reply(interaction, "Your application eligibility check is already running. Please use the existing prompt.");
+    return;
+  }
 
   const existing = getCurrentApplication(interaction.user.id);
   if (existing?.status === "In Progress") {
