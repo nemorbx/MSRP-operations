@@ -630,6 +630,9 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
 
 async function beginDMApplication(interaction) {
   const user = interaction.user;
+  const timer = countdowns.get(user.id);
+  if (timer) clearInterval(timer);
+  countdowns.delete(user.id);
   const existing = getCurrentApplication(user.id);
 
   if (existing?.status === "In Progress") {
