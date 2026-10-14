@@ -333,24 +333,38 @@ function buildEligibilityContainer(remaining, ready = false) {
   const requirements = [
     "You must provide accurate and honest information.",
     "You must be at least 13 years old.",
-    "You must have no more than 5 moderations on your account.",
+    "You must have no more than 5 moderations on your Roblox account.",
     "Safe Chat must be disabled on your Roblox account.",
     "You must use a computer to complete this application.",
     "Strong spelling, punctuation, and grammar skills are required.",
-    "Your Roblox age group must be, at minimum 13–15+.",
-    "Able to run both Discord and Roblox at the same time.",
+    "Your Roblox age group must be at least 13–15+.",
+    "You must be able to run Discord and Roblox at the same time.",
   ];
 
   const container = new ContainerBuilder();
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent("## Staff Application Eligibility")
+    new TextDisplayBuilder().setContent("## Staff Application")
+  );
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      "> You are required to meet these requirements before applying. If you do not meet these requirements, you may not be accepted into the MSRP Staff Team."
+    )
+  );
+  container.addSeparatorComponents(
+    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large)
+  );
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent("## Application Requirements")
   );
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(requirements.map(item => `• ${item}`).join("\n"))
   );
+  container.addSeparatorComponents(
+    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+  );
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "You can cancel this application at any time using the Cancel button."
+      "You are about to begin your application to become a staff member of **Missouri State Roleplay**. If you wish to continue, press **Continue** below. You can cancel at any time using the Cancel button."
     )
   );
   container.addSeparatorComponents(
@@ -360,13 +374,18 @@ function buildEligibilityContainer(remaining, ready = false) {
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("staff_application_confirm_ready")
-        .setLabel(ready ? "Start Application" : `Start Application (${remaining})`)
-        .setStyle(ready ? ButtonStyle.Primary : ButtonStyle.Secondary)
+        .setLabel(ready ? "Continue" : `Continue (${remaining})`)
+        .setStyle(ButtonStyle.Success)
         .setDisabled(!ready),
       new ButtonBuilder()
         .setCustomId("staff_application_cancel")
         .setLabel("Cancel")
         .setStyle(ButtonStyle.Secondary)
+    )
+  );
+  container.addMediaGalleryComponents(
+    new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder().setURL("attachment://banner.png")
     )
   );
   return container;
@@ -406,9 +425,11 @@ async function startStaffApplication(interaction) {
   let panelMessage;
   try {
     dm = await interaction.user.createDM();
+    const bannerPath = path.join(__dirname, "banner.png");
     panelMessage = await dm.send({
       flags: MessageFlags.IsComponentsV2,
       components: [buildEligibilityContainer(10, false)],
+      files: fs.existsSync(bannerPath) ? [{ attachment: bannerPath, name: "banner.png" }] : [],
     });
   } catch (error) {
     console.error("Could not send staff application eligibility panel by DM:", error);
