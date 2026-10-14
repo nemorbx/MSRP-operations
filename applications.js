@@ -705,23 +705,15 @@ async function beginDMApplication(interaction) {
     applications[application.id] = application;
     writeJson(APPLICATIONS_FILE, applications);
 
+    // Reuse the eligibility DM as the application control message. Do not
+    // send a second "Are you ready?" confirmation panel: Continue starts the
+    // first question immediately, and the same message retains the cancel control.
     await interaction.update({
       flags: MessageFlags.IsComponentsV2,
-      components: [v2Container("Your staff application has been started. Please check your DMs.")],
+      components: [buildDMControlContainer(user.id, application.id, true, false)],
     });
 
-    const controlMessage = await dm.send({
-      components: [buildDMControlContainer(user.id, application.id, false, false)],
-      flags: MessageFlags.IsComponentsV2,
-    });
-
-    activeSessions.set(user.id, {
-      applicationId: application.id,
-      collector: null,
-      controlMessage,
-      index: 0,
-      answers: [],
-    });
+    await activateDMApplication(user, application.id, dm, interaction.message);
   } catch (error) {
     console.error("Failed to create staff application:", error);
     for (const [id, app] of Object.entries(applications)) {
