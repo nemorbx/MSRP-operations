@@ -374,8 +374,9 @@ function buildEligibilityContainer(remaining, ready = false) {
 
 async function startStaffApplication(interaction) {
   if (!interaction.guild || !interaction.member) return;
+
   if (countdowns.has(interaction.user.id)) {
-    await v2Reply(interaction, "Your application eligibility check is already running. Please use the existing prompt.");
+    await v2Reply(interaction, "Your application eligibility check is already running. Please check your DMs for the existing panel.");
     return;
   }
 
@@ -388,26 +389,34 @@ async function startStaffApplication(interaction) {
     await v2Reply(interaction, "You already have an active staff application. Please wait for it to be reviewed.");
     return;
   }
-
   if (isStaff(interaction.member)) {
     await v2Reply(interaction, "You cannot submit a staff application because you are already a member of the staff team.");
     return;
   }
-
   if (isBlacklisted(interaction.member)) {
     await v2Reply(interaction, "You are currently blacklisted from submitting staff applications.");
     return;
   }
-
   if (getCooldown(interaction.user.id)) {
     await v2Reply(interaction, "Your previous staff application was denied. You must wait 3 days before submitting another staff application.");
     return;
   }
 
-  await interaction.reply({
-    flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-    components: [buildEligibilityContainer(10, false)],
-  });
+  let dm;
+  let panelMessage;
+  try {
+    dm = await interaction.user.createDM();
+    panelMessage = await dm.send({
+      flags: MessageFlags.IsComponentsV2,
+      components: [buildEligibilityContainer(10, false)],
+    });
+  } catch (error) {
+    console.error("Could not send staff application eligibility panel by DM:", error);
+    await v2Reply(interaction, "I couldn't send you the staff application panel. Please enable direct messages from server members and try again.");
+    return;
+  }
+
+  await v2Reply(interaction, "I've sent you the staff application panel in your DMs. Please continue there.");
 
   let remaining = 10;
   const timer = setInterval(async () => {
@@ -415,17 +424,20 @@ async function startStaffApplication(interaction) {
     if (remaining <= 0) {
       clearInterval(timer);
       countdowns.delete(interaction.user.id);
-      await interaction.editReply({
+      await panelMessage.edit({
         components: [buildEligibilityContainer(0, true)],
-      }).catch(() => {});
+        flags: MessageFlags.IsComponentsV2,
+      }).catch(error => console.error("Could not update DM eligibility panel:", error));
       return;
     }
 
-    await interaction.editReply({
+    await panelMessage.edit({
       components: [buildEligibilityContainer(remaining, false)],
-    }).catch(() => {
+      flags: MessageFlags.IsComponentsV2,
+    }).catch(error => {
       clearInterval(timer);
       countdowns.delete(interaction.user.id);
+      console.error("Could not update DM eligibility countdown:", error);
     });
   }, 1000);
 
