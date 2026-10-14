@@ -208,6 +208,16 @@ client.once("clientReady", async () => {
   }
 
   try {
+    // MSRP commands are registered per guild below. Remove any legacy global
+    // registrations first so stale global /promote entries do not appear beside
+    // the current guild command in Discord's command picker.
+    try {
+      await client.application.commands.set([]);
+      console.log("Cleared legacy global MSRP slash commands.");
+    } catch (globalCommandError) {
+      console.error("Could not clear legacy global slash commands:", globalCommandError);
+    }
+
     const rawCommands = [
       ...(infractionsModule.commands || []),
       ...(promotionsModule.promoteCommand ? [promotionsModule.promoteCommand] : []),
