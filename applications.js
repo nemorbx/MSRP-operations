@@ -343,33 +343,38 @@ function buildEligibilityContainer(remaining, ready = false) {
 
   const container = new ContainerBuilder();
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent("## Staff Application")
-  );
-  container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "> You are required to meet these requirements before applying. If you do not meet these requirements, you may not be accepted into the MSRP Staff Team."
+      "## Staff Application\n> You're required to meet these requirements before applying. If you do not meet these requirements, you will not be accepted to join our Staff Team."
     )
   );
+
+  // A large separator provides the same visible breathing room as the reference.
   container.addSeparatorComponents(
     new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large)
   );
+
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent("## Application Requirements")
   );
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(requirements.map(item => `• ${item}`).join("\n"))
   );
+
+  // Separate the requirements from the final instruction paragraph.
   container.addSeparatorComponents(
-    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large)
   );
+
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "You are about to begin your application to become a staff member of **Missouri State Roleplay**. If you wish to continue, press **Continue** below. You can cancel at any time using the Cancel button."
+      "You are about to start the application to become a staff member at **Missouri State Roleplay**. If you wish to commence this application, please press the **Continue** button below."
     )
   );
+
   container.addSeparatorComponents(
     new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
   );
+
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -383,6 +388,12 @@ function buildEligibilityContainer(remaining, ready = false) {
         .setStyle(ButtonStyle.Secondary)
     )
   );
+
+  // Reference panel has a divider beneath the buttons, before the bottom banner.
+  container.addSeparatorComponents(
+    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+  );
+
   container.addMediaGalleryComponents(
     new MediaGalleryBuilder().addItems(
       new MediaGalleryItemBuilder().setURL("attachment://banner.png")
