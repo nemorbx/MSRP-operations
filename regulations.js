@@ -1,5 +1,6 @@
 const {
   ActionRowBuilder,
+  StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
   MessageFlags,
@@ -102,72 +103,93 @@ function addBottomBanner(container) {
 function mainPanel(guild) {
   const container = new ContainerBuilder();
 
-  // TOP IMAGE — regulations.png
+  // Top banner
   addBanner(container);
 
-  // MAIN TITLE — state logo + Rules
+  // Introductory copy, using Discord's quote bar to match the reference panel.
   container.addTextDisplayComponents(
     display("## Rules"),
-    display(`${emoji(guild, "info")} *Missouri State Roleplay*`),
-    display(
-      "Our regulations apply to both the MSRP Discord community and our ER:LC roleplay server. All members are expected to read and follow the applicable regulations while participating in Missouri State Roleplay."
-    )
+    display(`> Whilst engaging with anyone on our server or playing on our ER:LC server, you're required to follow a strictly moderated set of regulations that **must not be broken**.`),
+    display(`> The maximum amount of moderation points you can receive is **75**. If you reach this amount, you will be banned from our community.`)
   );
 
-  // RULES & STANDARDS
+  // First dropdown: server regulations
   container.addSeparatorComponents(divider());
-  container.addTextDisplayComponents(
-    display("## Rules & Standards"),
-    display(`${emoji(guild, "board")} *Standards that apply to members while participating in MSRP.*`)
-  );
-
-  container.addTextDisplayComponents(
-    display(`${emoji(guild, "discord")} **Discord Standards**`),
-    display("*Community conduct, communication, moderation, and Discord requirements.*"),
-    display(`${emoji(guild, "roblox")} **In-Game Standards**`),
-    display("*ER:LC roleplay standards, realism, department conduct, and gameplay.*"),
-    display(`${emoji(guild, "police")} **Priority Standards**`),
-    display("*Priority calls, pursuits, emergency situations, and scene priorities.*")
-  );
-
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
-      regulationButton(guild, "discord", "Discord", "discord"),
-      regulationButton(guild, "game", "Game", "roblox"),
-      regulationButton(guild, "priorities", "Priorities", "police")
+      new StringSelectMenuBuilder()
+        .setCustomId("msrp_reg_select_server")
+        .setPlaceholder("Server Regulations")
+        .setMinValues(1)
+        .setMaxValues(1)
+        .addOptions(
+          {
+            label: "In-game Regulations",
+            description: "View our In-game Regulations...",
+            value: "game",
+            emoji: findEmoji(guild, "roblox") ? { id: findEmoji(guild, "roblox").id } : undefined,
+          },
+          {
+            label: "Discord Regulations",
+            description: "View our Discord Regulations...",
+            value: "discord",
+            emoji: findEmoji(guild, "discord") ? { id: findEmoji(guild, "discord").id } : undefined,
+          },
+          {
+            label: "Priority Regulations",
+            description: "View our Priority Regulations...",
+            value: "priorities",
+            emoji: findEmoji(guild, "police") ? { id: findEmoji(guild, "police").id } : undefined,
+          }
+        )
     )
   );
 
-  // RESTRICTIONS
+  // Second dropdown: banned/restricted items
   container.addSeparatorComponents(divider());
-  container.addTextDisplayComponents(
-    display("## Restrictions"),
-    display(`${emoji(guild, "shield")} *Reference information for jurisdiction, vehicles, departments, and roleplay restrictions.*`),
-    display(`${emoji(guild, "info")} **Jurisdiction**`),
-    display("*Official Missouri State Roleplay jurisdiction information.*"),
-    display(`${emoji(guild, "police")} **Vehicles**`),
-    display("*Restricted and authorized vehicle information.*"),
-    display(`${emoji(guild, "people")} **Departments**`),
-    display("*Department restrictions, requirements, and authorization.*"),
-    display(`${emoji(guild, "roblox")} **Roleplays**`),
-    display("*Restricted or permission-based roleplay information.*")
-  );
-
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
-      regulationButton(guild, "jurisdiction", "Jurisdiction", "info"),
-      regulationButton(guild, "vehicles", "Vehicles", "police"),
-      regulationButton(guild, "departments", "Departments", "people"),
-      regulationButton(guild, "roleplays", "Roleplays", "roblox")
+      new StringSelectMenuBuilder()
+        .setCustomId("msrp_reg_select_banned")
+        .setPlaceholder("Banned Items")
+        .setMinValues(1)
+        .setMaxValues(1)
+        .addOptions(
+          {
+            label: "Banned Weapons",
+            description: "View our Banned Weapons...",
+            value: "weapons",
+            emoji: findEmoji(guild, "shield") ? { id: findEmoji(guild, "shield").id } : undefined,
+          },
+          {
+            label: "Banned Vehicles",
+            description: "View our Banned Vehicles...",
+            value: "vehicles",
+            emoji: findEmoji(guild, "police") ? { id: findEmoji(guild, "police").id } : undefined,
+          },
+          {
+            label: "Banned Roleplays",
+            description: "View our Banned Roleplays...",
+            value: "roleplays",
+            emoji: findEmoji(guild, "roblox") ? { id: findEmoji(guild, "roblox").id } : undefined,
+          },
+          {
+            label: "Departments",
+            description: "View department regulations...",
+            value: "departments",
+            emoji: findEmoji(guild, "people") ? { id: findEmoji(guild, "people").id } : undefined,
+          },
+          {
+            label: "Jurisdiction",
+            description: "View the official MSRP jurisdiction map...",
+            value: "jurisdiction",
+            emoji: findEmoji(guild, "pin") ? { id: findEmoji(guild, "pin").id } : undefined,
+          }
+        )
     )
   );
 
-  container.addSeparatorComponents(divider());
-  container.addTextDisplayComponents(
-    display("*Staff members may exercise reasonable discretion when handling moderation cases. If you have a concern about how a case is handled, use the appropriate support process.*")
-  );
-
-  // BOTTOM IMAGE — banner.png
+  // Bottom banner, separated from the controls like the reference.
   addBottomBanner(container);
   return container;
 }
@@ -725,10 +747,16 @@ function setup(client) {
   // during bot startup. This prevents duplicate panels and speeds up deployments.
 
   client.on("interactionCreate", async interaction => {
-    if (!interaction.isButton() || !interaction.customId.startsWith("msrp_reg_")) return;
+    if (
+      !interaction.isButton() &&
+      !interaction.isStringSelectMenu()
+    ) return;
+    if (!interaction.customId.startsWith("msrp_reg_")) return;
 
     try {
-      const id = interaction.customId.replace("msrp_reg_", "");
+      const id = interaction.isStringSelectMenu()
+        ? interaction.values[0]
+        : interaction.customId.replace("msrp_reg_", "");
 
       if (!interaction.guild) {
         await interaction.reply({
