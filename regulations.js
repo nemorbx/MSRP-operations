@@ -105,9 +105,8 @@ function addBottomBanner(container) {
 function mainPanel(guild) {
   const container = new ContainerBuilder();
 
-  // Top banner, followed by a small separator to minimize the visual gap.
+  // Keep the banner directly before the description without an extra component.
   addBanner(container);
-  container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
 
   // Keep the banner-to-description spacing minimal.
   container.addTextDisplayComponents(
