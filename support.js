@@ -185,7 +185,7 @@ function ticketPanelComponents(ticket) {
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       `> **Ping:** <@&${ticket.teamRoleId}> | <@${ticket.userId}>` +
-      (ticket.claimedBy ? `\\n> **Claimed By:** <@${ticket.claimedBy}>` : "")
+      (ticket.claimedBy ? `\n> **Claimed By:** <@${ticket.claimedBy}>` : "")
     )
   );
   // Keep just the two dividers around the action buttons.
@@ -658,7 +658,7 @@ async function handleClaim(interaction, ticket) {
   // Notification is secondary: a failed notification must not make a successful
   // claim look like it failed or leave Discord showing an error to the claimer.
   await thread.send({
-    content: `This ticket has been claimed by <@${interaction.user.id}>.`,
+    content: `**Support Ticket Claimed**\n<@${ticket.userId}>, <@${interaction.user.id}> will be handling your support ticket. Please continue replying in this channel so they can assist you.`,
   }).catch((error) => {
     console.error("Could not send ticket claim notification:", error);
   });
