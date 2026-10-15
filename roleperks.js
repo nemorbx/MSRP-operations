@@ -37,7 +37,7 @@ function rolePerksPanel() {
   container.addSeparatorComponents(divider());
   container.addTextDisplayComponents(
     display(
-      "> You can receive perks on our Discord and in-game server by having roles within our community. You are unable to purchase any roles listed here. We suggest looking at our marketplace if you wish to purchase perks for your Discord.\\n" + ROLEPERKS_PANEL_MARKER
+      "> You can receive perks on our Discord and in-game server by having roles within our community. You are unable to purchase any roles listed here. We suggest looking at our marketplace if you wish to purchase perks for your Discord." + ROLEPERKS_PANEL_MARKER
     )
   );
   container.addSeparatorComponents(divider());
