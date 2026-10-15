@@ -27,7 +27,7 @@ const INTERNAL_AFFAIRS_TEAM_ROLE_ID = "1527381477975789668";
 const MANAGEMENT_TEAM_ROLE_ID = "1528426569012609106";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const SUPPORT_LOGS_CHANNEL_ID = "1552509962910171176";
-const SUPPORT_PANEL_VERSION = 7;
+const SUPPORT_PANEL_VERSION = 8;
 const SUPPORT_PANEL_MARKER = "\u200B".repeat(SUPPORT_PANEL_VERSION);
 
 const DATA_DIR = path.join(__dirname, "data");
@@ -121,24 +121,17 @@ function buildSupportPanel(guild) {
   const banner = assetPath([ROOT_SUPPORT_BANNER, ASSET_SUPPORT_BANNER]);
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
 
-  // Keep the banner directly before the description without an extra component.
   addMedia(container, banner);
-
-  // Keep the description and response-time quote together without a divider between them.
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "> Our assistance dashboard is here to easily contact our support team through various ticket options. Pick the one that you think best supports your issue(s) and we'll be there to assist as soon as possible. Avoid pining staff inside of your tickets as they are already notified when you open the ticket."
+      "> Welcome to Missouri State Roleplay Assistance. Choose the ticket option that best matches your issue and our team will be notified automatically. Please do not ping staff repeatedly; they are notified when your ticket is created."
     )
   );
-
-  // Keep the invisible panel marker inside an existing text component so it
-  // doesn't create an extra component (and gap) beneath the footer banner.
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       "> **Average Response Time:** `12-20 minutes`." + SUPPORT_PANEL_MARKER
     )
   );
-
   container.addSeparatorComponents(separator());
 
   const menu = new StringSelectMenuBuilder()
@@ -154,70 +147,61 @@ function buildSupportPanel(guild) {
 
   container.addActionRowComponents(new ActionRowBuilder().addComponents(menu));
   addMedia(container, footer);
-
   return container;
 }
 
 function ticketPanelComponents(ticket) {
   const description = ticket.description?.trim() || "No report description was provided.";
-  const status = ticket.claimedBy
-    ? `**Claimed by:** <@${ticket.claimedBy}>`
-    : "**Status:** Unclaimed";
-
+  const createdAt = Math.floor(new Date(ticket.accountCreatedAt || ticket.createdAt).getTime() / 1000);
+  const robloxId = ticket.robloxId || null;
+  const robloxName = ticket.robloxUsername || "Not linked with Bloxlink";
+  const robloxUrl = robloxId ? `https://www.roblox.com/users/${robloxId}/profile` : "Not available";
   const container = new ContainerBuilder();
   const banner = assetPath([ROOT_SUPPORT_BANNER, ASSET_SUPPORT_BANNER]);
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
 
-  // Top support image.
   addMedia(container, banner);
-  container.addSeparatorComponents(separator());
-
-  // Ticket title and instructions, similar to the reference layout.
   container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent("## Support Ticket")
+    new TextDisplayBuilder().setContent(
+      "> Thank you for contacting our support team. They have been notified, so please do not ping them again unless there has been no response for multiple hours. Failure to follow this may result in moderation and your ticket being closed."
+    )
+  );
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(`> **Ticket Reason:** ${description.slice(0, 3500)}`)
   );
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `<@${ticket.userId}>\n\nThank you for contacting Missouri State Roleplay Support.\n\nPlease wait while a staff member reviews your request and assists you. If you have additional information or evidence that may help with your request, you can provide it below.`
+      `> **Discord User:** <@${ticket.userId}>\n> **Account Age:** <t:${createdAt}:D>`
     )
   );
-  container.addSeparatorComponents(separator());
-
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `**Report Description:**\n${description}`
+      `> **Roblox User:** ${robloxName}\n> **Roblox URL:** ${robloxUrl}`
+    )
+  );
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      `> **Ping:** <@&${ticket.teamRoleId}> | <@${ticket.userId}>` +
+      (ticket.claimedBy ? `\n> **Claimed By:** <@${ticket.claimedBy}>` : "")
     )
   );
   container.addSeparatorComponents(separator());
-
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(status)
-  );
-  container.addSeparatorComponents(separator());
-
-  // Buttons are kept separate with a divider above and below them.
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("support:claim")
-        .setLabel("Claim Ticket")
-        .setStyle(ButtonStyle.Primary)
+        .setLabel("Claim")
+        .setStyle(ButtonStyle.Secondary)
         .setDisabled(Boolean(ticket.claimedBy)),
       new ButtonBuilder()
         .setCustomId("support:close")
-        .setLabel("Close Ticket")
-        .setStyle(ButtonStyle.Secondary)
+        .setLabel("Close")
+        .setStyle(ButtonStyle.Danger)
     )
   );
-
-  container.addSeparatorComponents(separator());
-
-  // Bottom MSRP banner/footer.
   addMedia(container, footer);
-
   return [container];
 }
-
 function ticketPanelFiles() {
   const banner = assetPath([ROOT_SUPPORT_BANNER, ASSET_SUPPORT_BANNER]);
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
@@ -477,6 +461,33 @@ async function createTicket(interaction, typeKey) {
   await interaction.showModal(buildDescriptionModal(typeKey));
 }
 
+async function lookupRobloxAccount(guildId, discordUserId) {
+  const apiKey = process.env.BLOXLINK_API_KEY;
+  if (!apiKey) {
+    console.warn("BLOXLINK_API_KEY is not configured; skipping Roblox account lookup.");
+    return { robloxId: null, robloxUsername: null };
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.blox.link/v4/public/guilds/${guildId}/discord-to-roblox/${discordUserId}`,
+      { headers: { Authorization: apiKey } }
+    );
+    if (!response.ok) return { robloxId: null, robloxUsername: null };
+    const data = await response.json();
+    const robloxId = data.robloxID ? String(data.robloxID) : null;
+    if (!robloxId) return { robloxId: null, robloxUsername: null };
+
+    const profileResponse = await fetch(`https://users.roblox.com/v1/users/${robloxId}`);
+    if (!profileResponse.ok) return { robloxId, robloxUsername: null };
+    const profile = await profileResponse.json();
+    return { robloxId, robloxUsername: profile.name || profile.displayName || null };
+  } catch (error) {
+    console.error("Bloxlink Roblox account lookup failed:", error);
+    return { robloxId: null, robloxUsername: null };
+  }
+}
+
 async function submitTicket(interaction, typeKey) {
   const type = TYPES[typeKey];
   if (!type || !interaction.guild) return;
@@ -560,6 +571,7 @@ async function submitTicket(interaction, typeKey) {
     return;
   }
 
+  const account = await lookupRobloxAccount(interaction.guild.id, interaction.user.id);
   const ticket = {
     threadId: channel.id,
     isChannelTicket: true,
@@ -568,6 +580,9 @@ async function submitTicket(interaction, typeKey) {
     type: typeKey,
     teamRoleId: type.roleId,
     description,
+    accountCreatedAt: interaction.user.createdAt.toISOString(),
+    robloxId: account.robloxId,
+    robloxUsername: account.robloxUsername,
     claimedBy: null,
     closed: false,
     closeRequestMessageId: null,
@@ -685,72 +700,29 @@ async function handleClose(interaction, ticket) {
     return;
   }
 
-  // Senior HR can close any support ticket immediately. No closure request is sent.
-  if (isHighRank(interaction.member)) {
-    await interaction.deferUpdate();
-    await interaction.channel.send("This support ticket will close in 5 seconds. It was closed by Senior HR.").catch(() => {});
-    const closed = await finalizeClose(interaction, ticket, interaction.user.id);
-    if (!closed) {
-      await interaction.followUp({
-        content: "I couldn't close this ticket. Please make sure I have permission to delete the support ticket channel.",
-        ephemeral: true,
-      });
-      return;
-    }
-    return;
-  }
+  const isCreator = interaction.user.id === ticket.userId;
+  const isAuthorizedStaff =
+    isHighRank(interaction.member) ||
+    canUseTeam(interaction.member, ticket.teamRoleId) ||
+    ticket.claimedBy === interaction.user.id;
 
-  if (!canRequestClosure(interaction.member, ticket)) {
+  if (!isCreator && !isAuthorizedStaff) {
     await interaction.reply({
-      content:
-        "Only the claiming staff member or the appropriate support team can request closure. The ticket opener must confirm the request.",
+      content: "Only the ticket creator or authorized support staff can close this ticket.",
       ephemeral: true,
     });
     return;
   }
 
-  const tickets = readTickets();
-  const latest = tickets[ticket.threadId];
-  if (!latest || latest.closed) {
-    await interaction.reply({
-      content: "This ticket is already closed.",
+  await interaction.deferUpdate();
+  await interaction.channel.send("This support ticket will close in 5 seconds.").catch(() => {});
+  const closed = await finalizeClose(interaction, ticket, interaction.user.id);
+  if (!closed) {
+    await interaction.followUp({
+      content: "I couldn't close this ticket. Please make sure I have permission to delete the support ticket channel.",
       ephemeral: true,
     });
-    return;
   }
-
-  if (latest.closeRequestMessageId) {
-    await interaction.reply({
-      content: "A closure request is already waiting for the ticket opener.",
-      ephemeral: true,
-    });
-    return;
-  }
-
-  const message = await interaction.channel
-    .send({
-      components: closeRequestComponents(),
-      flags: MessageFlags.IsComponentsV2,
-    })
-    .catch(() => null);
-
-  if (!message) {
-    await interaction.reply({
-      content: "I couldn't create the closure request.",
-      ephemeral: true,
-    });
-    return;
-  }
-
-  latest.closeRequestMessageId = message.id;
-  latest.closeRequestedAt = Date.now();
-  tickets[ticket.threadId] = latest;
-  saveTickets(tickets);
-
-  await interaction.reply({
-    content: "Closure request sent to the ticket opener.",
-    ephemeral: true,
-  });
 }
 
 async function handleCloseConfirmation(interaction, ticket, confirm) {
