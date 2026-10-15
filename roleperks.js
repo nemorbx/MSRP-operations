@@ -15,7 +15,7 @@ const path = require("path");
 const ROLEPERKS_CHANNEL_ID = "1560123150635630672";
 const ROLEPERKS_IMAGE_SOURCE = "roleperks.png";
 const ROLEPERKS_IMAGE_NAME = "roleperks.png";
-const ROLEPERKS_PANEL_VERSION = 4;
+const ROLEPERKS_PANEL_VERSION = 5;
 const ROLEPERKS_PANEL_MARKER = "\u200B".repeat(ROLEPERKS_PANEL_VERSION);
 const FOOTER_IMAGE_NAME = "banner.png";
 
