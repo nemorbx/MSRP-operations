@@ -161,31 +161,35 @@ function ticketPanelComponents(ticket) {
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
 
   addMedia(container, banner);
+  // Divider directly below the top banner.
+  container.addSeparatorComponents(separator());
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       "> Thank you for contacting our support team. They have been notified, so please do not ping them again unless there has been no response for multiple hours. Failure to follow this may result in moderation and your ticket being closed."
     )
   );
+  // Give each information section its own divider and extra visual breathing room.
+  container.addSeparatorComponents(separator());
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`> **Ticket Reason:** ${description.slice(0, 3500)}`)
   );
   container.addSeparatorComponents(separator());
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `> **Discord User:** <@${ticket.userId}>\n> **Account Age:** <t:${createdAt}:D>`
+      `> **Discord User:** <@${ticket.userId}>\\n> **Account Age:** <t:${createdAt}:D>`
     )
   );
   container.addSeparatorComponents(separator());
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `> **Roblox User:** ${robloxName}\n> **Roblox URL:** ${robloxUrl}`
+      `> **Roblox User:** ${robloxName}\\n> **Roblox URL:** ${robloxUrl}`
     )
   );
   container.addSeparatorComponents(separator());
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       `> **Ping:** <@&${ticket.teamRoleId}> | <@${ticket.userId}>` +
-      (ticket.claimedBy ? `\n> **Claimed By:** <@${ticket.claimedBy}>` : "")
+      (ticket.claimedBy ? `\\n> **Claimed By:** <@${ticket.claimedBy}>` : "")
     )
   );
   container.addSeparatorComponents(separator());
@@ -202,6 +206,7 @@ function ticketPanelComponents(ticket) {
         .setStyle(ButtonStyle.Danger)
     )
   );
+  // Divider directly below the buttons and above the footer banner.
   container.addSeparatorComponents(separator());
   addMedia(container, footer);
   return [container];
