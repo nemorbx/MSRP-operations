@@ -677,9 +677,40 @@ async function sendJurisdiction(interaction) {
 }
 
 async function ensureRegulationsPanel(client) {
-  // Never create or replace the persistent Regulations panel automatically on startup.
-  // Use postOrRefreshPanel only for an intentional, explicit panel update.
-  console.log("Regulations panel startup refresh skipped; keeping the existing panel.");
+  const guild = client.guilds.cache.first();
+  if (!guild) return;
+  const channel = await guild.channels.fetch(REGULATIONS_CHANNEL_ID).catch(() => null);
+  if (!channel || !channel.isTextBased()) {
+    console.error("Regulations channel could not be found or is not text-based.");
+    return;
+  }
+  const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
+  if (!messages) return;
+
+  const botPanels = messages.filter(message =>
+    message.author?.id === client.user.id &&
+    message.components?.length &&
+    message.attachments?.some(attachment => attachment.name === REGULATIONS_BANNER_NAME)
+  );
+  if (botPanels.size) {
+    console.log("Existing Regulations panel detected. Leaving it in place.");
+    return;
+  }
+
+  const regulationsBannerPath = path.join(__dirname, REGULATIONS_BANNER_NAME);
+  const bannerPath = path.join(__dirname, BANNER_NAME);
+  if (!fs.existsSync(regulationsBannerPath)) {
+    console.error(`Missing ${REGULATIONS_BANNER_NAME}. The regulations panel requires this top image.`);
+    return;
+  }
+  const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
+  if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
+  await channel.send({
+    components: [mainPanel(guild)],
+    files,
+    flags: MessageFlags.IsComponentsV2,
+  });
+  console.log("Regulations panel was missing, so one replacement was posted.");
 }
 
 async function postOrRefreshPanel(client) {
@@ -731,8 +762,10 @@ async function postOrRefreshPanel(client) {
 }
 
 function setup(client) {
-  // The Regulations panel is persistent and is intentionally not recreated
-  // during bot startup. This prevents duplicate panels and speeds up deployments.
+  // Restore the Regulations panel only if it has been deleted; never repost an existing panel.
+  ensureRegulationsPanel(client).catch(error => {
+    console.error("Regulations panel startup check failed:", error);
+  });
 
   client.on("interactionCreate", async interaction => {
     if (
