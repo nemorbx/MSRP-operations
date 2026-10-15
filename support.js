@@ -29,6 +29,7 @@ const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const SUPPORT_LOGS_CHANNEL_ID = "1552509962910171176";
 const SUPPORT_PANEL_VERSION = 8;
 const SUPPORT_PANEL_MARKER = "\u200B".repeat(SUPPORT_PANEL_VERSION);
+let supportPanelRefreshPromise = null;
 
 const DATA_DIR = path.join(__dirname, "data");
 const TICKETS_FILE = path.join(DATA_DIR, "tickets.json");
@@ -335,6 +336,13 @@ async function sendPanel(channel, client) {
 }
 
 async function ensureSupportPanel(client) {
+  if (supportPanelRefreshPromise) return supportPanelRefreshPromise;
+  supportPanelRefreshPromise = refreshSupportPanel(client);
+  try { return await supportPanelRefreshPromise; }
+  finally { supportPanelRefreshPromise = null; }
+}
+
+async function refreshSupportPanel(client) {
   const guild = client.guilds.cache.first();
   const channel = guild ? await getSupportChannel(guild) : null;
   if (!channel || !channel.isTextBased()) {
