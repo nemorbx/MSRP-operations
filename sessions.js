@@ -87,7 +87,7 @@ function buildSessionPanel(client) {
   const container = new ContainerBuilder()
     .setAccentColor(0x35a8e0)
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent("## 🎮 | SESSION INFORMATION")
+      new TextDisplayBuilder().setContent("# SESSION INFORMATION")
     )
     .addSeparatorComponents(new SeparatorBuilder())
     .addTextDisplayComponents(
