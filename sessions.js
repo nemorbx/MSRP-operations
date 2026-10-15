@@ -16,6 +16,7 @@ const SESSION_NOTIFICATION_ROLE_ID = "1527904654212726844";
 const ON_DUTY_ROLE_ID = "1529159979674636450";
 const PANEL_MARKER = "msrp-session-panel";
 const BANNER_URL = "https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/session-info.png";
+const FOOTER_BANNER_URL = "https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/banner.png";
 const ERLC_API_URL = "https://api.erlc.gg/v2/server?Players=true&Queue=true&Staff=true";
 let liveStats = {
   name: process.env.ERLC_SERVER_NAME || "Missouri State Roleplay",
@@ -121,8 +122,7 @@ function buildSessionPanel() {
       )
     )
     .addSeparatorComponents(spacedDivider())
-    .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(item => item.setURL(BANNER_URL)))
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent("||" + PANEL_MARKER + "||"));
+    .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(item => item.setURL(FOOTER_BANNER_URL)));
   return { components: [container], flags: MessageFlags.IsComponentsV2 };
 }
 
@@ -151,7 +151,7 @@ async function ensureSessionPanel(client) {
     return null;
   });
   if (!recent) return;
-  const matches = recent.filter(message => message.author.id === client.user.id && (JSON.stringify(message.components || []).includes(PANEL_MARKER) || (JSON.stringify(message.components || []).includes("SESSION INFORMATION") && JSON.stringify(message.components || []).includes(BANNER_URL)))).sort((a, b) => b.createdTimestamp - a.createdTimestamp);
+  const matches = recent.filter(message => message.author.id === client.user.id && (JSON.stringify(message.components || []).includes(PANEL_MARKER) || (JSON.stringify(message.components || []).includes("SESSION INFORMATION") && (JSON.stringify(message.components || []).includes(BANNER_URL) || JSON.stringify(message.components || []).includes(FOOTER_BANNER_URL))))).sort((a, b) => b.createdTimestamp - a.createdTimestamp);
   const existing = matches.first();
   for (const duplicate of matches.toJSON().slice(1)) await duplicate.delete().catch(error => console.error("[Sessions] Could not remove duplicate panel:", error.message));
   if (existing) {
