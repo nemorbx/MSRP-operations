@@ -66,53 +66,63 @@ function setup(client) {
   client.on("interactionCreate", async interaction => {
     if (!interaction.isStringSelectMenu() || interaction.customId !== "msrp_marketplace_select") return;
 
-    let embed;
+    let title;
+    let body;
+    let details = [];
+
     if (interaction.values[0] === "donations") {
-      embed = new EmbedBuilder()
-        .setColor(0x3498DB)
-        .setTitle("Robux Donations")
-        .setDescription([
-          "[Donation 100R$](" + DEFAULT_LINK + ")",
-          "[Donation 250R$](" + DEFAULT_LINK + ")",
-          "[Donation 350R$](" + DEFAULT_LINK + ")",
-          "[Donation 500R$](" + DEFAULT_LINK + ")",
-          "[Donation 750R$](" + DEFAULT_LINK + ")",
-          "[Donation 1000R$](" + DEFAULT_LINK + ")",
-          "[Donation 2000R$](" + DEFAULT_LINK + ")",
-          "[Donation 2500R$](" + DEFAULT_LINK + ")",
-          "[Donation 5000R$](" + DEFAULT_LINK + ")",
-          "[Donation 10000R$](" + DEFAULT_LINK + ")"
-        ].join("\n"))
-        .addFields(
-          { name: "Cash Donations", value: "Coming soon..." },
-          { name: "Purchase Notice", value: "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment." }
-        );
+      title = "Robux Donations";
+      body = [
+        "[Donation 100R$](" + DEFAULT_LINK + ")",
+        "[Donation 250R$](" + DEFAULT_LINK + ")",
+        "[Donation 350R$](" + DEFAULT_LINK + ")",
+        "[Donation 500R$](" + DEFAULT_LINK + ")",
+        "[Donation 750R$](" + DEFAULT_LINK + ")",
+        "[Donation 1000R$](" + DEFAULT_LINK + ")",
+        "[Donation 2000R$](" + DEFAULT_LINK + ")",
+        "[Donation 2500R$](" + DEFAULT_LINK + ")",
+        "[Donation 5000R$](" + DEFAULT_LINK + ")",
+        "[Donation 10000R$](" + DEFAULT_LINK + ")"
+      ].join("\\n");
+      details = [
+        ["Cash Donations", "Coming soon..."],
+        ["Purchase Notice", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."]
+      ];
     } else if (interaction.values[0] === "custom_roles") {
-      embed = new EmbedBuilder()
-        .setColor(0x3498DB)
-        .setTitle("Custom Roles")
-        .setDescription("Obtain a custom role.\nMust not contain NSFW content.\nMust not include advertisements.\nMust follow our server regulations.\n\n[Click here to purchase](" + DEFAULT_LINK + ")")
-        .addFields({ name: "Purchase Notice", value: "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment." });
+      title = "Custom Roles";
+      body = "Obtain a custom role.\\nMust not contain NSFW content.\\nMust not include advertisements.\\nMust follow our server regulations.\\n\\n[Click here to purchase](" + DEFAULT_LINK + ")";
+      details = [["Purchase Notice", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."]];
     } else {
-      embed = new EmbedBuilder()
-        .setColor(0x3498DB)
-        .setTitle("Paid Advertisement")
-        .setDescription("Receive an everyone ping to promote your server.\n\n[Click here to purchase](" + DEFAULT_LINK + ")")
-        .addFields({ name: "Purchase Notice", value: "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment." });
+      title = "Paid Advertisement";
+      body = "Receive an everyone ping to promote your server.\\n\\n[Click here to purchase](" + DEFAULT_LINK + ")";
+      details = [["Purchase Notice", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."]];
     }
 
+    const container = new ContainerBuilder();
     const bannerPath = path.join(__dirname, MARKETPLACE_BANNER);
     const footerPath = path.join(__dirname, FOOTER_BANNER);
     const files = [];
-    if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: MARKETPLACE_BANNER });
-    if (fs.existsSync(footerPath)) files.push({ attachment: footerPath, name: FOOTER_BANNER });
-    // Keep the response as a Discord embed, with the marketplace banner attached.
-    if (files.some(file => file.name === FOOTER_BANNER)) {
-      embed.setImage("attachment://" + FOOTER_BANNER);
-    } else if (files.some(file => file.name === MARKETPLACE_BANNER)) {
-      embed.setImage("attachment://" + MARKETPLACE_BANNER);
+    if (fs.existsSync(bannerPath)) {
+      files.push({ attachment: bannerPath, name: MARKETPLACE_BANNER });
+      media(container, MARKETPLACE_BANNER);
     }
-    await interaction.reply({ embeds: [embed], files, ephemeral: true }).catch(() => {});
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent("## " + title));
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(body));
+    for (const [fieldTitle, fieldValue] of details) {
+      container.addSeparatorComponents(divider());
+      container.addTextDisplayComponents(new TextDisplayBuilder().setContent("### " + fieldTitle + "\\n" + fieldValue));
+    }
+    container.addSeparatorComponents(divider());
+    if (fs.existsSync(footerPath)) {
+      files.push({ attachment: footerPath, name: FOOTER_BANNER });
+      media(container, FOOTER_BANNER);
+    }
+
+    await interaction.reply({
+      components: [container],
+      files,
+      flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral
+    }).catch(error => console.error("Marketplace selection response failed:", error));
   });
 }
 
