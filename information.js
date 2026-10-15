@@ -60,12 +60,17 @@ function informationPanel(guild) {
   addBanner(container, INFORMATION_IMAGE_NAME);
 
   container.addTextDisplayComponents(
-    display("> **Los Angeles Roleplay** re-opened on the 3rd of September, 2025, we set to bring a realistic roleplay experience to all of our server members. Through our Discord to our in-game server, we're always here to help with your roleplay needs!\n> <:caution:1560140490823835689> **Default kick timer:** `30 Minutes`"),
+    display("> **Los Angeles Roleplay** re-opened on the 3rd of September, 2025, we set to bring a realistic roleplay experience to all of our server members. Through our Discord to our in-game server, we\'re always here to help with your roleplay needs!")
+  );
+
+  // Add breathing room above the kick timer, with no divider beneath it.
+  container.addSeparatorComponents(divider());
+  container.addTextDisplayComponents(
+    display("> <:caution:1560140490823835689> **Default kick timer:** `30 Minutes`"),
     display(INFORMATION_PANEL_MARKER)
   );
 
-  container.addSeparatorComponents(divider());
-
+  // The buttons follow immediately after the kick timer.
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setLabel("Whitelisted Group").setStyle(ButtonStyle.Link).setURL(WHITELISTED_GROUP_URL),
