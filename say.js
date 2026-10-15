@@ -86,7 +86,7 @@ async function setup(client) {
         await interaction.reply({ content: reply, flags: MessageFlags.Ephemeral }).catch(() => {});
       }
     }
-  });;;
+  });
 }
 
 module.exports = { setup, command };
