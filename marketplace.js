@@ -27,10 +27,14 @@ function buildMarketplacePanel() {
     new StringSelectMenuOptionBuilder().setLabel("Paid Advertisement").setDescription("View advertisement details").setValue("paid_advertisement")
   );
   container.addActionRowComponents(new ActionRowBuilder().addComponents(menu));
+  // Match the reference: generous divider spacing between the dropdown,
+  // disabled buttons, and footer banner. Keep the top banner tight to the text.
+  container.addSeparatorComponents(divider());
   container.addActionRowComponents(new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId("msrp_marketplace_claim").setLabel("Claim").setStyle(ButtonStyle.Primary).setDisabled(true),
     new ButtonBuilder().setCustomId("msrp_marketplace_queue").setLabel("Queue").setStyle(ButtonStyle.Secondary).setDisabled(true)
   ));
+  container.addSeparatorComponents(divider());
   media(container, FOOTER_BANNER);
   return container;
 }
