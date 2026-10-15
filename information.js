@@ -18,7 +18,7 @@ const WEBSITE_URL = "https://nemorbx.github.io/msrp/";
 const WHITELISTED_GROUP_URL = "https://www.roblox.com/communities/";
 const ROBLOX_GROUP_URL = "https://www.roblox.com/communities/";
 const INFORMATION_IMAGE_NAME = "information.png";
-const INFORMATION_PANEL_VERSION = 9;
+const INFORMATION_PANEL_VERSION = 10;
 const INFORMATION_PANEL_MARKER = "\u200B".repeat(INFORMATION_PANEL_VERSION);
 
 const CHANNELS = {
@@ -42,7 +42,7 @@ function emoji(guild, name) {
 }
 
 function divider() {
-  return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small);
+  return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large);
 }
 
 function addBanner(container, filename) {
@@ -60,8 +60,7 @@ function informationPanel(guild) {
   addBanner(container, INFORMATION_IMAGE_NAME);
 
   container.addTextDisplayComponents(
-    display("> **Los Angeles Roleplay** re-opened on the 3rd of September, 2025, we set to bring a realistic roleplay experience to all of our server members. Through our Discord to our in-game server, we're always here to help with your roleplay needs!"),
-    display("> <:caution:1560140490823835689> **Default kick timer:** `30 Minutes`"),
+    display("> **Los Angeles Roleplay** re-opened on the 3rd of September, 2025, we set to bring a realistic roleplay experience to all of our server members. Through our Discord to our in-game server, we're always here to help with your roleplay needs!\n> <:caution:1560140490823835689> **Default kick timer:** `30 Minutes`"),
     display(INFORMATION_PANEL_MARKER)
   );
 
