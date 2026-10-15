@@ -6,12 +6,19 @@ const {
   ContainerBuilder,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } = require("discord.js");
 
 const INFORMATION_CHANNEL_ID = "1527394530427666452";
 const INFORMATION_IMAGE_SOURCE = "information.png";
+const WEBSITE_URL = "https://nemorbx.github.io/msrp/";
+// Keep the supplied Roblox group destinations here when available.
+const WHITELISTED_GROUP_URL = "https://www.roblox.com/communities/";
+const ROBLOX_GROUP_URL = "https://www.roblox.com/communities/";
 const INFORMATION_IMAGE_NAME = "information.png";
-const INFORMATION_PANEL_VERSION = 5;
+const INFORMATION_PANEL_VERSION = 6;
 const INFORMATION_PANEL_MARKER = "\u200B".repeat(INFORMATION_PANEL_VERSION);
 
 const CHANNELS = {
@@ -60,14 +67,12 @@ function informationPanel(guild) {
 
   container.addSeparatorComponents(divider());
 
-  container.addTextDisplayComponents(
-    display(`## ${emoji(guild, "letter")} Important Channels`),
-    display([
-      `${emoji(guild, "bulletin")} <#${CHANNELS.shouts}>`,
-      `${emoji(guild, "bulletin")} <#${CHANNELS.sessions}>`,
-      `${emoji(guild, "bulletin")} <#${CHANNELS.regulations}>`,
-      `${emoji(guild, "bulletin")} <#${CHANNELS.applications}>`,
-    ].join("\n"))
+  container.addActionRowComponents(
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setLabel("Whitelisted Group").setStyle(ButtonStyle.Link).setURL(WHITELISTED_GROUP_URL),
+      new ButtonBuilder().setLabel("Roblox Group").setStyle(ButtonStyle.Link).setURL(ROBLOX_GROUP_URL),
+      new ButtonBuilder().setLabel("Website").setStyle(ButtonStyle.Link).setURL(WEBSITE_URL)
+    )
   );
 
   container.addSeparatorComponents(divider());
