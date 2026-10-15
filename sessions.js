@@ -8,6 +8,53 @@ const {
 const SESSION_CHANNEL_ID = "1527179992398692353";
 const SESSION_NOTIFICATION_ROLE_ID = "1527904654212726844";
 const PANEL_MARKER = "msrp-session-panel";
+const BANNER_URL = "https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/session-info.png";
+const ERLC_API_URL = "https://api.erlc.gg/v2/server";
+let liveStats = {
+  name: process.env.ERLC_SERVER_NAME || "Missouri State Roleplay",
+  owner: process.env.ERLC_SERVER_OWNER || "Not connected",
+  code: process.env.ERLC_SERVER_CODE || "Not connected",
+  players: process.env.ERLC_PLAYER_COUNT || "Not connected",
+  moderating: process.env.ERLC_MODERATING_COUNT || "Not connected",
+  queue: process.env.ERLC_QUEUE_COUNT || "Not connected",
+  online: process.env.ERLC_SESSION_ONLINE === "true",
+};
+
+async function refreshLiveStats() {
+  const key = process.env.ERLC_SERVER_KEY || process.env.ERLC_API_KEY;
+  if (!key) {
+    console.warn("[Sessions] ERLC_SERVER_KEY is not configured; live ER:LC stats cannot be fetched.");
+    return;
+  }
+  try {
+    const response = await fetch(ERLC_API_URL, {
+      headers: { "server-key": key, Accept: "application/json" },
+      signal: AbortSignal.timeout(12000),
+    });
+    const body = await response.text();
+    if (!response.ok) {
+      console.error("[Sessions] ER:LC API failed with HTTP " + response.status + ": " + body.slice(0, 250));
+      return;
+    }
+    const data = JSON.parse(body);
+    liveStats.name = data.Name || data.ServerName || liveStats.name;
+    liveStats.code = data.JoinKey || data.ServerCode || data.Code || liveStats.code;
+    const current = data.CurrentPlayers ?? data.CurrentPlayerCount;
+    const max = data.MaxPlayers ?? data.MaxPlayerCount;
+    if (current !== undefined) liveStats.players = max !== undefined ? current + "/" + max : String(current);
+    const queue = data.Queue ?? data.QueueCount ?? data.InQueue;
+    if (Array.isArray(queue)) liveStats.queue = String(queue.length);
+    else if (queue !== undefined) liveStats.queue = String(queue);
+    const staff = data.Staff ?? data.Moderators ?? data.CurrentlyModerating;
+    if (Array.isArray(staff)) liveStats.moderating = String(staff.length);
+    else if (staff !== undefined) liveStats.moderating = String(staff);
+    liveStats.online = true;
+    console.log("[Sessions] ER:LC live stats refreshed.");
+  } catch (error) {
+    liveStats.online = false;
+    console.error("[Sessions] ER:LC stats refresh failed:", error.message);
+  }
+}
 
 function buildSessionPanel() {
   const online = process.env.ERLC_SESSION_ONLINE === "true";
@@ -17,14 +64,14 @@ function buildSessionPanel() {
     .setDescription(
       "> Our sessions are managed by our **Session Managers**. We do not have an available schedule for sessions, meaning they will commence when our team is available.\n" +
       "> **Last Updated:** <t:" + Math.floor(Date.now() / 1000) + ":R>\n\n" +
-      "> **Server Name:** " + inlineCode(process.env.ERLC_SERVER_NAME || "Missouri State Roleplay") + "\n" +
-      "> **Server Owner:** " + inlineCode(process.env.ERLC_SERVER_OWNER || "Not connected") + "\n" +
-      "> **Server Code:** " + inlineCode(process.env.ERLC_SERVER_CODE || "Not connected") + "\n\n" +
-      "> **In-game Players:** " + inlineCode(process.env.ERLC_PLAYER_COUNT || "Not connected") + "\n" +
-      "> **Currently Moderating:** " + inlineCode(process.env.ERLC_MODERATING_COUNT || "Not connected") + "\n" +
-      "> **In-Queue Players:** " + inlineCode(process.env.ERLC_QUEUE_COUNT || "Not connected")
+      "> **Server Name:** " + inlineCode(liveStats.name) + "\n" +
+      "> **Server Owner:** " + inlineCode(liveStats.owner) + "\n" +
+      "> **Server Code:** " + inlineCode(liveStats.code) + "\n\n" +
+      "> **In-game Players:** " + inlineCode(liveStats.players) + "\n" +
+      "> **Currently Moderating:** " + inlineCode(liveStats.moderating) + "\n" +
+      "> **In-Queue Players:** " + inlineCode(liveStats.queue)
     )
-    .setFooter({ text: PANEL_MARKER });
+    .setFooter({ text: PANEL_MARKER })\n    .setImage(BANNER_URL);
 
   return {
     embeds: [embed],
@@ -37,7 +84,7 @@ function buildSessionPanel() {
   };
 }
 
-async function ensureSessionPanel(client) {
+async function ensureSessionPanel(client) {\n  await refreshLiveStats();
   const channel = await client.channels.fetch(SESSION_CHANNEL_ID).catch(error => {
     console.error("[Sessions] Could not fetch sessions channel:", error.message);
     return null;
@@ -91,4 +138,4 @@ function setupSessions(client) {
   });
 }
 
-module.exports = { setup: setupSessions, ensureSessionPanel };
+function startSessionRefresh(client) {\n  setInterval(async () => {\n    await refreshLiveStats();\n    await ensureSessionPanel(client).catch(error => console.error("[Sessions] Panel refresh failed:", error));\n  }, 60 * 1000);\n}\n\nmodule.exports = { setup: setupSessions, ensureSessionPanel, startSessionRefresh };
