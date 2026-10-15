@@ -497,7 +497,7 @@ function buildDMControlContainer(userId, applicationId, started = false, submitt
     new TextDisplayBuilder().setContent(
       submitted
         ? "Your responses have been received. Please wait for the staff team to review your application."
-        : "Your application will automatically close after 10 minutes of inactivity. You can cancel the application at any time from this message."
+        : "Once you start, the buttons will be disabled and this panel will stay available while you complete the application."
     )
   );
   container.addSeparatorComponents(
@@ -640,23 +640,8 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
     console.error("[Applications] Staff application message collector error:", error);
   });
 
-  collector.on("end", async (_, reason) => {
+  collector.on("end", () => {
     activeSessions.delete(user.id);
-    if (reason === "time") {
-      const data = readJson(APPLICATIONS_FILE, {});
-      if (data[applicationId]?.status === "In Progress") {
-        delete data[applicationId];
-        writeJson(APPLICATIONS_FILE, data);
-        await dm.send({
-          components: [v2Container("## Staff Application Expired\nYour application was automatically closed after 10 minutes of inactivity. You may start a new application from the Application Center.")],
-          flags: MessageFlags.IsComponentsV2,
-        }).catch(() => {});
-        await controlMessage.edit({
-          components: [v2Container("## Staff Application\nThis application has expired because there was no activity for 10 minutes.")],
-          flags: MessageFlags.IsComponentsV2,
-        }).catch(() => {});
-      }
-    }
   });
 
   try {
