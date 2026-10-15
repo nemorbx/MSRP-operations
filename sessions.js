@@ -5,6 +5,7 @@ const {
   ContainerBuilder,
   SectionBuilder,
   SeparatorBuilder,
+  SeparatorSpacingSize,
   TextDisplayBuilder,
   MediaGalleryBuilder,
   MessageFlags,
@@ -18,12 +19,12 @@ const BANNER_URL = "https://raw.githubusercontent.com/nemorbx/MSRP-operations/ma
 const ERLC_API_URL = "https://api.erlc.gg/v2/server?Players=true&Queue=true&Staff=true";
 let liveStats = {
   name: process.env.ERLC_SERVER_NAME || "Missouri State Roleplay",
-  owner: process.env.ERLC_SERVER_OWNER || "Not connected",
+  owner: process.env.ERLC_SERVER_OWNER || "Unknown",
   ownerId: null,
-  code: process.env.ERLC_SERVER_CODE || "Not connected",
-  players: process.env.ERLC_PLAYER_COUNT || "Not connected",
-  moderating: process.env.ERLC_MODERATING_COUNT || "Not connected",
-  queue: process.env.ERLC_QUEUE_COUNT || "Not connected",
+  code: process.env.ERLC_SERVER_CODE || "Unknown",
+  players: process.env.ERLC_PLAYER_COUNT || "Unknown",
+  moderating: process.env.ERLC_MODERATING_COUNT || "Unknown",
+  queue: process.env.ERLC_QUEUE_COUNT || "Unknown",
   online: null,
 };
 
@@ -33,11 +34,11 @@ async function resolveRobloxUsername(userId) {
       signal: AbortSignal.timeout(8000),
       headers: { Accept: "application/json" },
     });
-    if (!response.ok) return "Roblox ID " + userId;
+    if (!response.ok) return "Unknown";
     const user = await response.json();
-    return user.name || user.displayName || ("Roblox ID " + userId);
+    return user.name || user.displayName || "Unknown";
   } catch {
-    return "Roblox ID " + userId;
+    return "Unknown";
   }
 }
 
@@ -82,21 +83,25 @@ async function refreshLiveStats() {
   }
 }
 
-function buildSessionPanel(client) {
+function spacedDivider() { return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large); }
+
+function buildSessionPanel() {
   const safe = value => String(value ?? "Unknown").replace(/[`]/g, "");
   const container = new ContainerBuilder()
     .setAccentColor(0x35a8e0)
+    .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(item => item.setURL(BANNER_URL)))
+    .addSeparatorComponents(spacedDivider())
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent("# SESSION INFORMATION")
     )
-    .addSeparatorComponents(new SeparatorBuilder())
+    .addSeparatorComponents(spacedDivider())
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         "Our sessions are managed by our **Session Managers**. We do not have an available schedule for sessions, meaning they will commence when our team is available.\n" +
         "**Last Updated:** <t:" + Math.floor(Date.now() / 1000) + ":R>"
       )
     )
-    .addSeparatorComponents(new SeparatorBuilder())
+    .addSeparatorComponents(spacedDivider())
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         "**Server Name:** ``" + safe(liveStats.name) + "``\n" +
@@ -104,7 +109,7 @@ function buildSessionPanel(client) {
         "**Server Code:** ``" + safe(liveStats.code) + "``"
       )
     )
-    .addSeparatorComponents(new SeparatorBuilder())
+    .addSeparatorComponents(spacedDivider())
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         "**In-game Players:** ``" + safe(liveStats.players) + "``\n" +
@@ -112,17 +117,16 @@ function buildSessionPanel(client) {
         "**In-Queue Players:** ``" + safe(liveStats.queue) + "``"
       )
     )
-    .addSeparatorComponents(new SeparatorBuilder())
+    .addSeparatorComponents(spacedDivider())
     .addActionRowComponents(
       new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("session:notification").setLabel("Session Notification").setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId("session:status").setLabel("Session Status: Unknown").setStyle(ButtonStyle.Secondary).setDisabled(true)
       )
     )
-    .addSeparatorComponents(new SeparatorBuilder())
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(item => item.setURL(BANNER_URL))
-    );
+    .addSeparatorComponents(spacedDivider())
+    .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(item => item.setURL(BANNER_URL)))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent("||" + PANEL_MARKER + "||"));
   return { components: [container], flags: MessageFlags.IsComponentsV2 };
 }
 
@@ -151,13 +155,14 @@ async function ensureSessionPanel(client) {
     return null;
   });
   if (!recent) return;
-  const existing = recent.find(message => message.author.id === client.user.id && (message.embeds.some(embed => embed.footer?.text === PANEL_MARKER) || message.components?.some(row => JSON.stringify(row).includes(PANEL_MARKER))));
-  if (existing && existing.flags?.has(MessageFlags.IsComponentsV2)) {
-    await existing.edit(buildSessionPanel(client));
+  const matches = recent.filter(message => message.author.id === client.user.id && (JSON.stringify(message.components || []).includes(PANEL_MARKER) || (JSON.stringify(message.components || []).includes("SESSION INFORMATION") && JSON.stringify(message.components || []).includes(BANNER_URL)))).sort((a, b) => b.createdTimestamp - a.createdTimestamp);
+  const existing = matches.first();
+  for (const duplicate of matches.toJSON().slice(1)) await duplicate.delete().catch(error => console.error("[Sessions] Could not remove duplicate panel:", error.message));
+  if (existing) {
+    await existing.edit(buildSessionPanel());
     console.log("[Sessions] Existing Components V2 panel refreshed.");
   } else {
-    if (existing) await existing.delete().catch(error => console.error("[Sessions] Could not replace legacy panel:", error.message));
-    await channel.send(buildSessionPanel(client));
+    await channel.send(buildSessionPanel());
     console.log("[Sessions] Components V2 panel posted to channel " + SESSION_CHANNEL_ID + ".");
   }
 }
@@ -194,7 +199,6 @@ function setupSessions(client) {
 
 function startSessionRefresh(client) {
   setInterval(async () => {
-    await refreshLiveStats();
     await ensureSessionPanel(client).catch(error => console.error("[Sessions] Panel refresh failed:", error));
   }, 60 * 1000);
 }
