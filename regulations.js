@@ -57,7 +57,8 @@ function display(content) {
 }
 
 function divider() {
-  return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small);
+  // Give each regulation section more breathing room, matching the reference layout.
+  return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large);
 }
 
 function privateTextPage(title, body) {
