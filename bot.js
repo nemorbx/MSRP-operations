@@ -20,7 +20,8 @@ const { setup: setupBooster } = require("./booster");
 const { setup: setupSay, command: sayCommand } = require("./say");
 const { setup: setupSuggestions, commands: suggestionCommands } = require("./suggestions");
 const { setup: setupSticky } = require("./sticky");
-const { setup: setupMarketplace, ensureMarketplacePanel } = require("./marketplace");\nconst { setup: setupSessions, ensureSessionPanel } = require("./sessions");
+const { setup: setupMarketplace, ensureMarketplacePanel } = require("./marketplace");
+const { setup: setupSessions, ensureSessionPanel } = require("./sessions");
 
 const afkModule = require("./afk");
 const infractionsModule = require("./infractions");
