@@ -798,13 +798,6 @@ async function handleCloseConfirmation(interaction, ticket, confirm) {
 async function setup(client) {
   ensureData();
 
-  // Ensure the Support panel is present and refresh it when the panel version changes.
-  try {
-    await ensureSupportPanel(client);
-  } catch (error) {
-    console.error("Support panel refresh error:", error);
-  }
-
   client.on("threadDelete", async (thread) => {
     try {
       const tickets = readTickets();
