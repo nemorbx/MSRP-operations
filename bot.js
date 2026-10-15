@@ -61,7 +61,8 @@ setupSticky(client);
 setupMarketplace(client);
 setupBooster(client);
 setupSay(client);
-setupSuggestions(client);\nsetupSessions(client);
+setupSuggestions(client);
+setupSessions(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
@@ -229,7 +230,13 @@ client.once("clientReady", async () => {
   console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Role Perks, Marketplace, Purge, Booster, Say, Suggestions, Sticky, Welcome");
   console.log("========================================");
 
-  await testMelonlyApi();\n\n  try {\n    await ensureSessionPanel(client);\n  } catch (error) {\n    console.error("Session panel startup error:", error);\n  }
+  await testMelonlyApi();
+
+  try {
+    await ensureSessionPanel(client);
+  } catch (error) {
+    console.error("Session panel startup error:", error);
+  }
 
   try {
     await ensureApplicationPanel(client);
