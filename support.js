@@ -119,8 +119,9 @@ function buildSupportPanel(guild) {
   const banner = assetPath([ROOT_SUPPORT_BANNER, ASSET_SUPPORT_BANNER]);
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
 
-  // Keep the description close to the header banner.
+  // Use a small separator to minimize the visual gap between the banner and description.
   addMedia(container, banner);
+  container.addSeparatorComponents(bannerSeparator());
 
   // Keep the description and response-time quote together without a divider between them.
   container.addTextDisplayComponents(
