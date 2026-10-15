@@ -101,7 +101,18 @@ function setup(client) {
         .addFields({ name: "Purchase Notice", value: "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment." });
     }
 
-    await interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});
+    const bannerPath = path.join(__dirname, MARKETPLACE_BANNER);
+    const footerPath = path.join(__dirname, FOOTER_BANNER);
+    const files = [];
+    if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: MARKETPLACE_BANNER });
+    if (fs.existsSync(footerPath)) files.push({ attachment: footerPath, name: FOOTER_BANNER });
+    // Keep the response as a Discord embed, with the marketplace banner attached.
+    if (files.some(file => file.name === FOOTER_BANNER)) {
+      embed.setImage("attachment://" + FOOTER_BANNER);
+    } else if (files.some(file => file.name === MARKETPLACE_BANNER)) {
+      embed.setImage("attachment://" + MARKETPLACE_BANNER);
+    }
+    await interaction.reply({ embeds: [embed], files, ephemeral: true }).catch(() => {});
   });
 }
 
