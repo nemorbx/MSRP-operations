@@ -546,7 +546,7 @@ async function submitTicket(interaction, typeKey) {
   ];
 
   const channel = await interaction.guild.channels.create({
-    name: `general-support-${interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || interaction.user.id}`.slice(0, 100),
+    name: `${({ general: "general", ia: "internal-affairs", management: "management" }[typeKey] || "general")}-support-${interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || interaction.user.id}`.slice(0, 100),
     type: ChannelType.GuildText,
     permissionOverwrites: overwrites,
     position: 0,
