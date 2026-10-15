@@ -56,10 +56,19 @@ async function refreshLiveStats() {
     });
     const body = await response.text();
     if (!response.ok) {
+      let errorData = {};
+      try { errorData = JSON.parse(body); } catch {}
+      const errorText = String(errorData.message || errorData.error || body).toLowerCase();
+      if (String(errorData.code || errorData.Code || "").includes("3002") || errorText.includes("server offline") || errorText.includes("server is offline")) {
+        liveStats.online = false;
+      } else {
+        liveStats.online = null;
+      }
       console.error("[Sessions] ER:LC API failed with HTTP " + response.status + ": " + body.slice(0, 250));
       return;
     }
     const data = JSON.parse(body);
+    liveStats.online = true;
     liveStats.name = data.Name || data.ServerName || liveStats.name;
     liveStats.ownerId = data.OwnerId ?? liveStats.ownerId;
     liveStats.owner = data.Owner || data.ServerOwner || (data.OwnerId ? await resolveRobloxUsername(data.OwnerId) : liveStats.owner);
@@ -76,8 +85,7 @@ async function refreshLiveStats() {
       const members = Array.isArray(staff) ? staff : Object.values(staff).flatMap(value => Array.isArray(value) ? value : [value]);
       liveStats.moderating = String(members.length);
     } else if (staff !== undefined) liveStats.moderating = String(staff);
-    liveStats.online = null;
-    console.log("[Sessions] ER:LC live stats refreshed; session status remains unknown until a documented status field is verified.");
+    console.log("[Sessions] ER:LC live stats refreshed; API returned a successful server response.");
   } catch (error) {
     liveStats.online = null;
     console.error("[Sessions] ER:LC stats refresh failed:", error.message);
@@ -118,7 +126,7 @@ function buildSessionPanel() {
     .addActionRowComponents(
       new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("session:notification").setLabel("Session Notification").setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId("session:status").setLabel("Session Status: Unknown").setStyle(ButtonStyle.Secondary).setDisabled(true)
+        new ButtonBuilder().setCustomId("session:status").setLabel("Session Status: " + (liveStats.online === true ? "Online" : liveStats.online === false ? "Offline" : "Unknown")).setStyle(liveStats.online === true ? ButtonStyle.Success : ButtonStyle.Secondary).setDisabled(true)
       )
     )
     .addSeparatorComponents(spacedDivider())
