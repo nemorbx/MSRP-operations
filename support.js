@@ -4,6 +4,8 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ChannelType,
+  PermissionFlagsBits,
   ContainerBuilder,
   EmbedBuilder,
   AttachmentBuilder,
@@ -314,7 +316,7 @@ async function sendTicketLog(client, ticket, thread, reason, closedById = null) 
 
   const embed = new EmbedBuilder()
     .setTitle("Support Ticket Log")
-    .setDescription(`**${type}**\nTicket thread: <#${ticket.threadId}>`)
+    .setDescription(`**${type}**\nTicket: <#${ticket.threadId}>`)
     .addFields(
       { name: "Status", value: status, inline: true },
       { name: "Created By", value: `<@${ticket.userId}>`, inline: true },
@@ -501,34 +503,66 @@ async function submitTicket(interaction, typeKey) {
   await interaction.deferReply({ ephemeral: true });
 
   const parent = await getSupportChannel(interaction.guild);
-  if (
-    !parent ||
-    !parent.isTextBased() ||
-    typeof parent.threads?.create !== "function"
-  ) {
+  if (!parent || !parent.isTextBased()) {
     await interaction.editReply("The support channel is not configured correctly.");
     return;
   }
 
-  const thread = await parent.threads
-    .create({
-      name: `${type.label} • ${interaction.user.username}`.slice(0, 100),
-      autoArchiveDuration: 1440,
-      type: 12,
-      invitable: false,
-      reason: `Support ticket created by ${interaction.user.tag}`,
-    })
-    .catch(() => null);
+  const overwrites = [
+    {
+      id: interaction.guild.roles.everyone.id,
+      deny: [PermissionFlagsBits.ViewChannel],
+    },
+    {
+      id: interaction.user.id,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.AttachFiles,
+      ],
+    },
+    {
+      id: type.roleId,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.AttachFiles,
+      ],
+    },
+    {
+      id: SENIOR_HR_ROLE_ID,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.AttachFiles,
+      ],
+    },
+  ];
 
-  if (!thread) {
+  const channel = await interaction.guild.channels.create({
+    name: `${type.label} • ${interaction.user.username}`.slice(0, 100),
+    type: ChannelType.GuildText,
+    permissionOverwrites: overwrites,
+    position: 0,
+    reason: `Support ticket created by ${interaction.user.tag}`,
+  }).catch((error) => {
+    console.error("Failed to create support ticket channel:", error);
+    return null;
+  });
+
+  if (!channel) {
     await interaction.editReply(
-      "I couldn't create your support ticket. Please make sure the bot can create private threads in the support channel."
+      "I couldn't create your support ticket channel. Please make sure the bot can manage channels and permissions."
     );
     return;
   }
 
   const ticket = {
-    threadId: thread.id,
+    threadId: channel.id,
+    isChannelTicket: true,
     guildId: interaction.guild.id,
     userId: interaction.user.id,
     type: typeKey,
@@ -541,26 +575,20 @@ async function submitTicket(interaction, typeKey) {
     createdAt: new Date().toISOString(),
   };
 
-  await thread.members.add(interaction.user.id).catch(() => {});
-  await addRoleMembersToPrivateThread(thread, interaction.guild, type.roleId);
-  await addHighRankMembers(thread, interaction.guild);
-
-  const ping = await thread
-    .send({ content: `<@&${type.roleId}>` })
-    .catch(() => null);
+  const ping = await channel.send({ content: `<@&${type.roleId}>` }).catch(() => null);
   if (ping) setTimeout(() => ping.delete().catch(() => {}), 1500);
 
-  await thread.send({
+  await channel.send({
     components: ticketPanelComponents(ticket),
     files: ticketPanelFiles(),
     flags: MessageFlags.IsComponentsV2,
   });
 
-  tickets[thread.id] = ticket;
+  tickets[channel.id] = ticket;
   saveTickets(tickets);
 
   await interaction.editReply(
-    `Your ${type.label} ticket has been created: <#${thread.id}>`
+    `Your ${type.label} ticket has been created: <#${channel.id}>`
   );
 }
 
@@ -602,7 +630,7 @@ async function handleClaim(interaction, ticket) {
 
 async function finalizeClose(interaction, ticket, closedById = null) {
   const thread = interaction.channel;
-  if (!thread?.isThread()) return false;
+  if (!thread?.isTextBased() || !thread.messages || !thread.delete) return false;
 
   const tickets = readTickets();
   const latest = tickets[ticket.threadId];
@@ -614,7 +642,7 @@ async function finalizeClose(interaction, ticket, closedById = null) {
   tickets[ticket.threadId] = latest;
   saveTickets(tickets);
 
-  // Keep the thread available for five seconds so the closure message can be seen.
+  // Keep the ticket channel available for five seconds so the closure message can be seen.
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
   const currentTickets = readTickets();
@@ -632,7 +660,7 @@ async function finalizeClose(interaction, ticket, closedById = null) {
   currentTickets[ticket.threadId] = current;
   saveTickets(currentTickets);
 
-  // Actually delete the ticket thread after the five-second closing period.
+  // Delete the ticket channel after the five-second closing period.
   const deleted = await thread.delete("Support ticket closed").then(() => true).catch(() => false);
 
   if (!deleted) {
@@ -664,7 +692,7 @@ async function handleClose(interaction, ticket) {
     const closed = await finalizeClose(interaction, ticket, interaction.user.id);
     if (!closed) {
       await interaction.followUp({
-        content: "I couldn't close this ticket. Please make sure I have permission to delete the support thread.",
+        content: "I couldn't close this ticket. Please make sure I have permission to delete the support ticket channel.",
         ephemeral: true,
       });
       return;
@@ -828,6 +856,47 @@ async function setup(client) {
       }
     } catch (error) {
       console.error("Support thread deletion handler error:", error);
+    }
+  });
+
+  // Remove legacy private-thread tickets once after deployment; new channel tickets are preserved.
+  const legacyTickets = readTickets();
+  let changed = false;
+  for (const [id, ticket] of Object.entries(legacyTickets)) {
+    if (ticket.isChannelTicket) continue;
+    const oldTicketChannel = await client.channels.fetch(id).catch(() => null);
+    if (oldTicketChannel) {
+      await oldTicketChannel.delete("Migrating legacy support tickets to private channels").catch((error) => {
+        console.error(`Failed to remove legacy support ticket ${id}:`, error);
+      });
+    }
+    if (!ticket.closed) {
+      ticket.closed = true;
+      ticket.closing = false;
+      ticket.closedAt = new Date().toISOString();
+      ticket.closeRequestMessageId = null;
+      ticket.closeRequestedAt = null;
+      legacyTickets[id] = ticket;
+      changed = true;
+    }
+  }
+  if (changed) saveTickets(legacyTickets);
+
+  client.on("channelDelete", async (channel) => {
+    try {
+      const tickets = readTickets();
+      const ticket = tickets[channel.id];
+      if (!ticket || ticket.closed) return;
+      ticket.closed = true;
+      ticket.closing = false;
+      ticket.closedAt = new Date().toISOString();
+      ticket.closeRequestMessageId = null;
+      ticket.closeRequestedAt = null;
+      tickets[channel.id] = ticket;
+      saveTickets(tickets);
+      await sendTicketLog(client, ticket, channel, "manual deletion", null);
+    } catch (error) {
+      console.error("Support channel deletion handler error:", error);
     }
   });
 
