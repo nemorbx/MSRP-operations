@@ -636,22 +636,31 @@ async function handleClaim(interaction, ticket) {
     return;
   }
 
+  const thread = interaction.channel;
+  const claimedTicket = { ...ticket, claimedBy: interaction.user.id };
+
+  // Acknowledge the button click by updating the panel before persisting the claim.
+  // If the panel update fails, do not leave a false claim saved in the ticket data.
+  await interaction.update({
+    components: ticketPanelComponents(claimedTicket),
+    flags: MessageFlags.IsComponentsV2,
+  });
+
   ticket.claimedBy = interaction.user.id;
   const tickets = readTickets();
   tickets[ticket.threadId] = ticket;
   saveTickets(tickets);
 
-  const thread = interaction.channel;
-  await thread.members.add(interaction.user.id).catch(() => {});
-  // Keep the support team members in the private ticket thread after it is claimed.
-  // Removing them here creates a public audit log entry for every removed member.
-  await interaction.update({
-    components: ticketPanelComponents(ticket),
-    flags: MessageFlags.IsComponentsV2,
+  await thread.members.add(interaction.user.id).catch((error) => {
+    console.error("Could not add ticket claimer to ticket channel:", error);
   });
 
+  // Notification is secondary: a failed notification must not make a successful
+  // claim look like it failed or leave Discord showing an error to the claimer.
   await thread.send({
     content: `This ticket has been claimed by <@${interaction.user.id}>.`,
+  }).catch((error) => {
+    console.error("Could not send ticket claim notification:", error);
   });
 }
 
