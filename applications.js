@@ -28,7 +28,7 @@ const AWAITING_TRAINING_ROLE_ID = "1551985353802518588";
 const APPLICATION_READER_ROLE_ID = "1551993755026858084";
 const BAN_APPEAL_READER_ROLE_ID = "1551993820743335976";
 
-const APPLICATION_PANEL_VERSION = 3;
+const APPLICATION_PANEL_VERSION = 4;
 const APPLICATION_PANEL_MARKER = "\u200B".repeat(APPLICATION_PANEL_VERSION);
 
 const DATA_DIR = path.join(__dirname, "data");
@@ -219,48 +219,23 @@ function buildApplicationPanel(guild) {
 
   container.addMediaGalleryComponents(
     new MediaGalleryBuilder().addItems(
-      new MediaGalleryItemBuilder().setURL("attachment://apps.png")
+      new MediaGalleryItemBuilder().setURL("attachment://applications.png")
     )
+  );
+
+  // Layout: top banner, spaced divider, description, spaced divider, buttons, divider, footer banner.
+  container.addSeparatorComponents(
+    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large)
   );
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "## Staff Application\n" +
-      customEmoji(guild, "letter") + " Apply to join the Missouri State Roleplay staff team. Please make sure all information you provide is accurate and honest." + APPLICATION_PANEL_MARKER
-    )
-  );
-
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      customEmoji(guild, "info") + " Please review all requirements before starting. By submitting an application, you agree that the information you provide must be truthful and complete."
+      "> We offer a large range of applications, starting from our **Staff Applications** to **Media Applications**, we're always offering more opportunities to our members!" + APPLICATION_PANEL_MARKER
     )
   );
 
   container.addSeparatorComponents(
-    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
-  );
-
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      "## Ban Appeal\n" +
-      customEmoji(guild, "shield") + " Submit an appeal for a Roblox or community ban. Please provide accurate information so our team can review your appeal."
-    )
-  );
-
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      customEmoji(guild, "bulletin") + " Please explain your situation clearly and provide the information requested in the appeal form."
-    )
-  );
-
-  container.addTextDisplayComponents(
-    new TextDisplayBuilder().setContent(
-      customEmoji(guild, "board") + " You can review your available moderation logs [here](https://melody.xyz/my/logs) before submitting your appeal."
-    )
-  );
-
-  container.addSeparatorComponents(
-    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large)
   );
 
   container.addActionRowComponents(
@@ -268,7 +243,11 @@ function buildApplicationPanel(guild) {
       new ButtonBuilder()
         .setCustomId("staff_application_start")
         .setLabel("Staff Application")
-        .setStyle(ButtonStyle.Primary),
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId("media_application_start")
+        .setLabel("Media Application")
+        .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId("ban_appeal_start")
         .setLabel("Ban Appeal")
@@ -277,7 +256,7 @@ function buildApplicationPanel(guild) {
   );
 
   container.addSeparatorComponents(
-    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large)
   );
 
   container.addMediaGalleryComponents(
@@ -288,7 +267,6 @@ function buildApplicationPanel(guild) {
 
   return container;
 }
-
 async function ensureApplicationPanel(client) {
   const channel = await client.channels.fetch(APPLICATION_CHANNEL_ID).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
@@ -301,7 +279,7 @@ async function ensureApplicationPanel(client) {
 
   const looksLikeApplicationPanel = message =>
     message.components?.length &&
-    message.attachments?.some(attachment => attachment.name === "apps.png");
+    message.attachments?.some(attachment => (attachment.name === "applications.png" || attachment.name === "apps.png"));
 
   if (currentPanel) {
     for (const duplicate of botPanels.filter(message =>
@@ -319,14 +297,14 @@ async function ensureApplicationPanel(client) {
     });
   }
 
-  const appBannerPath = path.join(__dirname, "apps.png");
+  const appBannerPath = path.join(__dirname, "applications.png");
   const bottomBannerPath = path.join(__dirname, "banner.png");
 
   await channel.send({
     components: [buildApplicationPanel(client.guilds.cache.first())],
     flags: MessageFlags.IsComponentsV2,
     files: [
-      { attachment: appBannerPath, name: "apps.png" },
+      { attachment: appBannerPath, name: "applications.png" },
       { attachment: bottomBannerPath, name: "banner.png" },
     ],
   });
@@ -1231,6 +1209,14 @@ function setup(client) {
 
         if (interaction.customId === "staff_application_start") {
           await startStaffApplication(interaction);
+          return;
+        }
+
+        if (interaction.customId === "media_application_start") {
+          await v2Reply(
+            interaction,
+            "Become a member of the Media Team by applying through a General Support ticket."
+          );
           return;
         }
 
