@@ -129,10 +129,11 @@ function buildSupportPanel(guild) {
     )
   );
 
-  // No separator here: the description and average response time are one text section.
+  // Keep the invisible panel marker inside an existing text component so it
+  // doesn't create an extra component (and gap) beneath the footer banner.
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "> **Average Response Time:** `12-20 minutes`."
+      "> **Average Response Time:** `12-20 minutes`." + SUPPORT_PANEL_MARKER
     )
   );
 
@@ -151,9 +152,6 @@ function buildSupportPanel(guild) {
 
   container.addActionRowComponents(new ActionRowBuilder().addComponents(menu));
   addMedia(container, footer);
-
-  // Version marker lets startup replace the panel only when this layout changes.
-  container.addTextDisplayComponents(new TextDisplayBuilder().setContent(SUPPORT_PANEL_MARKER));
 
   return container;
 }
