@@ -177,6 +177,47 @@ client.on("messageCreate", async message => {
   }
 });
 
+async function testMelonlyApi() {
+  const apiToken = process.env.MELONLY_API_TOKEN;
+  if (!apiToken) {
+    console.log("[Melonly API] Test skipped: MELONLY_API_TOKEN is not configured in the bot environment.");
+    return;
+  }
+
+  try {
+    const response = await fetch("https://api.melonly.xyz/api/v1/server/info", {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: "Bearer " + apiToken,
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) {
+      console.error("[Melonly API] Test failed with HTTP " + response.status + ". Response: " + responseText.slice(0, 500));
+      return;
+    }
+
+    let serverInfo;
+    try {
+      serverInfo = JSON.parse(responseText);
+    } catch {
+      serverInfo = null;
+    }
+
+    console.log("[Melonly API] Connection test successful (HTTP " + response.status + ").");
+    if (serverInfo && typeof serverInfo === "object") {
+      console.log("[Melonly API] Server info response keys: " + Object.keys(serverInfo).join(", "));
+    } else {
+      console.log("[Melonly API] Server info endpoint returned a successful response.");
+    }
+  } catch (error) {
+    console.error("[Melonly API] Connection test failed:", error?.message || error);
+  }
+}
+
 client.once("clientReady", async () => {
   updateBotStatus();
 
@@ -186,6 +227,8 @@ client.once("clientReady", async () => {
   console.log("GitHub deployment test: successful.");
   console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Role Perks, Marketplace, Purge, Booster, Say, Suggestions, Sticky, Welcome");
   console.log("========================================");
+
+  await testMelonlyApi();
 
   try {
     await ensureApplicationPanel(client);
