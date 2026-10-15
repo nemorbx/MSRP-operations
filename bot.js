@@ -233,7 +233,8 @@ client.once("clientReady", async () => {
   await testMelonlyApi();
 
   try {
-    await ensureSessionPanel(client);\n    startSessionRefresh(client);
+    await ensureSessionPanel(client);
+    startSessionRefresh(client);
   } catch (error) {
     console.error("Session panel startup error:", error);
   }
