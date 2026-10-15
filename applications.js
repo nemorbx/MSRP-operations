@@ -585,16 +585,11 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
         flags: MessageFlags.IsComponentsV2,
       }).catch(() => {});
 
-      await dm.send({
-        components: [v2Container("## Application Submitted\nThank you for submitting your application to join the Missouri State Roleplay staff team. Our team will carefully review your responses, and you can expect to hear back from us soon.")],
-        flags: MessageFlags.IsComponentsV2,
-      }).catch(() => {});
-
       await postStaffApplication(globalThis.__msrpClient, data[applicationId]);
       return;
     }
 
-    await dm.send(questionText(STAFF_QUESTIONS[session.index])).catch(error => {
+    await dm.send({ components: [v2Container(questionText(STAFF_QUESTIONS[session.index]))], flags: MessageFlags.IsComponentsV2 }).catch(error => {
       console.error("[Applications] Failed to send next staff application question:", error);
     });
     } catch (error) {
@@ -638,7 +633,7 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
   });
 
   try {
-    await dm.send(questionText(STAFF_QUESTIONS[0]));
+    await dm.send({ components: [v2Container(questionText(STAFF_QUESTIONS[0]))], flags: MessageFlags.IsComponentsV2 });
   } catch (error) {
     console.error("[Applications] Failed to send first staff application question:", error);
     collector.stop("error");
