@@ -581,10 +581,21 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
       writeJson(APPLICATIONS_FILE, data);
       activeSessions.delete(user.id);
 
+      // Update the original DM control panel to a clear submitted state.
+      // Do not replace it with the eligibility panel or send another start panel.
       await controlMessage.edit({
-        components: [buildEligibilityContainer(0, true, true)],
+        components: [buildDMControlContainer(user.id, applicationId, true, true)],
         flags: MessageFlags.IsComponentsV2,
-      }).catch(() => {});
+      }).catch(error => {
+        console.error("[Applications] Failed to update the application control panel to submitted:", error);
+      });
+
+      await dm.send({
+        components: [v2Container("**Application submitted!** Your responses have been received and sent to the staff team for review. You will be notified when a decision is made.")],
+        flags: MessageFlags.IsComponentsV2,
+      }).catch(error => {
+        console.error("[Applications] Failed to send application submission confirmation:", error);
+      });
 
       await postStaffApplication(globalThis.__msrpClient, data[applicationId]);
       return;
