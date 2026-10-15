@@ -10,20 +10,32 @@ const SESSION_NOTIFICATION_ROLE_ID = "1527904654212726844";
 const PANEL_MARKER = "msrp-session-panel";
 
 function buildSessionPanel() {
-  // Status stays offline until a verified live-session endpoint is connected.
+  // This panel is formatted to match the reference layout. Live API values are
+  // connected separately; don't present placeholder values as verified stats.
   const online = false;
   const embed = new EmbedBuilder()
     .setColor(online ? 0x35b56a : 0xe04444)
-    .setTitle("SESSION INFO")
     .setDescription(
-      "Our sessions are managed by our Session Managers. We do not have an available schedule for sessions, meaning they will commence when our team is available.\n\n" +
-      "**Last Updated:** <t:" + Math.floor(Date.now() / 1000) + ":R>\n\n" +
-      "**Server Name:** Missouri State Roleplay\n" +
-      "**Server Owner:** MSRP\n" +
-      "**Server Code:** " + (process.env.ERLC_SERVER_CODE || "Not configured") + "\n\n" +
-      "**In-game Players:** " + (process.env.ERLC_PLAYER_COUNT || "Unavailable") + "\n" +
-      "**Currently Moderating:** " + (process.env.ERLC_MODERATING_COUNT || "Unavailable") + "\n" +
-      "**In-Queue Players:** " + (process.env.ERLC_QUEUE_COUNT || "Unavailable")
+      "Our sessions are managed by our **Session Managers**. We do not have an available schedule for sessions, meaning they will commence when our team is available.\n\n" +
+      "**Last Updated:** <t:" + Math.floor(Date.now() / 1000) + ":R>"
+    )
+    .addFields(
+      {
+        name: "Server Information",
+        value:
+          "**Server Name:** " + (process.env.ERLC_SERVER_NAME || "Missouri State Roleplay") + "\n" +
+          "**Server Owner:** " + (process.env.ERLC_SERVER_OWNER || "Not connected") + "\n" +
+          "**Server Code:** " + (process.env.ERLC_SERVER_CODE || "Not connected"),
+        inline: false
+      },
+      {
+        name: "Server Statistics",
+        value:
+          "**In-game Players:** " + (process.env.ERLC_PLAYER_COUNT || "Not connected") + "\n" +
+          "**Currently Moderating:** " + (process.env.ERLC_MODERATING_COUNT || "Not connected") + "\n" +
+          "**In-Queue Players:** " + (process.env.ERLC_QUEUE_COUNT || "Not connected"),
+        inline: false
+      }
     )
     .setFooter({ text: PANEL_MARKER });
 
@@ -32,7 +44,7 @@ function buildSessionPanel() {
     components: [
       new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("session:notification").setLabel("Session Notification").setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId("session:status").setLabel(online ? "Session Online" : "Session Offline").setStyle(online ? ButtonStyle.Success : ButtonStyle.Danger).setDisabled(true)
+        new ButtonBuilder().setCustomId("session:status").setLabel("Session Offline").setStyle(ButtonStyle.Danger).setDisabled(true)
       )
     ]
   };
