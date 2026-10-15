@@ -14,6 +14,7 @@ const { purgeMessages } = require("./purge");
 const { setup: setupMessageLogs } = require("./message-logs");
 const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
 const { setup: setupInformation, postOrRefreshInformationPanel } = require("./information");
+const { setup: setupRolePerks, postOrRefreshRolePerksPanel } = require("./roleperks");
 const { setup: setupWelcome, commands: welcomeCommands } = require("./welcome");
 const { setup: setupBooster } = require("./booster");
 const { setup: setupSay, command: sayCommand } = require("./say");
@@ -52,6 +53,7 @@ setupRegulations(client);
 setupMessageLogs(client);
 setupGiveaway(client);
 setupInformation(client);
+setupRolePerks(client);
 setupWelcome(client);
 setupSticky(client);
 setupBooster(client);
@@ -180,7 +182,7 @@ client.once("clientReady", async () => {
   console.log("Logged in as " + client.user.tag);
   console.log("Missouri State Roleplay Operations is online.");
   console.log("GitHub deployment test: successful.");
-  console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Purge, Booster, Say, Suggestions, Sticky, Welcome");
+  console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Role Perks, Purge, Booster, Say, Suggestions, Sticky, Welcome");
   console.log("========================================");
 
   try {
@@ -205,6 +207,12 @@ client.once("clientReady", async () => {
     await postOrRefreshInformationPanel(client);
   } catch (error) {
     console.error("Information panel refresh error:", error);
+  }
+
+  try {
+    await postOrRefreshRolePerksPanel(client);
+  } catch (error) {
+    console.error("Role Perks panel refresh error:", error);
   }
 
   try {
