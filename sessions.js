@@ -37,7 +37,8 @@ async function refreshLiveStats() {
       return;
     }
     const data = JSON.parse(body);
-    liveStats.name = data.Name || data.ServerName || liveStats.name;\n    liveStats.owner = data.Owner || data.ServerOwner || liveStats.owner;
+    liveStats.name = data.Name || data.ServerName || liveStats.name;
+    liveStats.owner = data.Owner || data.ServerOwner || liveStats.owner;
     liveStats.code = data.JoinKey || data.ServerCode || data.Code || liveStats.code;
     const current = data.CurrentPlayers ?? data.CurrentPlayerCount;
     const max = data.MaxPlayers ?? data.MaxPlayerCount;
@@ -59,7 +60,8 @@ async function refreshLiveStats() {
 function buildSessionPanel() {
   const online = process.env.ERLC_SESSION_ONLINE === "true";
   const inlineCode = value => "``" + String(value ?? "Not connected").replace(/`/g, "") + "``";
-  const banner = new EmbedBuilder().setImage(BANNER_URL);\n  const embed = new EmbedBuilder()
+  const banner = new EmbedBuilder().setImage(BANNER_URL);
+  const embed = new EmbedBuilder()
     .setColor(online ? 0x35b56a : 0xe04444)
     .setDescription(
       "> Our sessions are managed by our **Session Managers**. We do not have an available schedule for sessions, meaning they will commence when our team is available.\n" +
@@ -84,7 +86,8 @@ function buildSessionPanel() {
   };
 }
 
-async function ensureSessionPanel(client) {\n  await refreshLiveStats();
+async function ensureSessionPanel(client) {
+  await refreshLiveStats();
   const channel = await client.channels.fetch(SESSION_CHANNEL_ID).catch(error => {
     console.error("[Sessions] Could not fetch sessions channel:", error.message);
     return null;
@@ -138,4 +141,11 @@ function setupSessions(client) {
   });
 }
 
-function startSessionRefresh(client) {\n  setInterval(async () => {\n    await refreshLiveStats();\n    await ensureSessionPanel(client).catch(error => console.error("[Sessions] Panel refresh failed:", error));\n  }, 60 * 1000);\n}\n\nmodule.exports = { setup: setupSessions, ensureSessionPanel, startSessionRefresh };
+function startSessionRefresh(client) {
+  setInterval(async () => {
+    await refreshLiveStats();
+    await ensureSessionPanel(client).catch(error => console.error("[Sessions] Panel refresh failed:", error));
+  }, 60 * 1000);
+}
+
+module.exports = { setup: setupSessions, ensureSessionPanel, startSessionRefresh };
