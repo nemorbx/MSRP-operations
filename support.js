@@ -105,6 +105,10 @@ function separator() {
   return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large);
 }
 
+function bannerSeparator() {
+  return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small);
+}
+
 function customEmoji(guild, name) {
   const found = guild?.emojis.cache.find(e => e.name === name);
   return found ? `<:${found.name}:${found.id}>` : "";
@@ -117,7 +121,7 @@ function buildSupportPanel(guild) {
 
   // Assistance panel header, followed by a generously spaced divider.
   addMedia(container, banner);
-  container.addSeparatorComponents(separator());
+  container.addSeparatorComponents(bannerSeparator());
 
   // Keep the description and response-time quote together without a divider between them.
   container.addTextDisplayComponents(
