@@ -19,6 +19,8 @@ const REGULATIONS_CHANNEL_ID = "1527395795035357376";
 const BANNER_NAME = "banner.png";
 const REGULATIONS_BANNER_NAME = "regulations.png";
 const JURISDICTION_NAME = "Jurisdiction.png";
+const REGULATIONS_PANEL_VERSION = 2;
+const REGULATIONS_PANEL_MARKER = "\u200B".repeat(REGULATIONS_PANEL_VERSION);
 
 const EMOJIS = {
   letter: "letter",
@@ -192,6 +194,7 @@ function mainPanel(guild) {
 
   // Bottom banner, separated from the controls like the reference.
   addBottomBanner(container);
+  container.addTextDisplayComponents(display(REGULATIONS_PANEL_MARKER));
   return container;
 }
 
@@ -678,43 +681,52 @@ async function sendJurisdiction(interaction) {
 async function ensureRegulationsPanel(client) {
   const guild = client.guilds.cache.first();
   if (!guild) return;
-
   const channel = await guild.channels.fetch(REGULATIONS_CHANNEL_ID).catch(() => null);
   if (!channel || !channel.isTextBased()) return;
-
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) return;
 
-  // Refresh the existing panel on startup so committed layout changes appear
-  // after deployment. Remove only this bot's component-based panel messages.
-  const oldPanels = messages.filter(
-    message => message.author?.id === client.user.id && message.components?.length
-  );
-
   const regulationsBannerPath = path.join(__dirname, REGULATIONS_BANNER_NAME);
   const bannerPath = path.join(__dirname, BANNER_NAME);
-
   if (!fs.existsSync(regulationsBannerPath)) {
     console.error(`Missing ${REGULATIONS_BANNER_NAME}. The regulations panel requires this top image.`);
     return;
   }
 
-  const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
-  if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
+  const botPanels = messages.filter(message =>
+    message.author?.id === client.user.id && message.components?.length
+  );
+  const hasBothBanners = message =>
+    message.attachments?.some(attachment => attachment.name === REGULATIONS_BANNER_NAME) &&
+    message.attachments?.some(attachment => attachment.name === BANNER_NAME);
+  const currentPanel = botPanels.find(message =>
+    JSON.stringify(message.components || []).includes(REGULATIONS_PANEL_MARKER) && hasBothBanners(message)
+  ) || botPanels.find(message => hasBothBanners(message));
 
+  if (currentPanel) {
+    console.log("Existing Regulations panel detected. Leaving it in place.");
+    return;
+  }
+
+  const oldPanels = botPanels.filter(message =>
+    message.attachments?.some(attachment =>
+      [REGULATIONS_BANNER_NAME, BANNER_NAME].includes(attachment.name)
+    )
+  );
   for (const panel of oldPanels.values()) {
     await panel.delete().catch(error => {
       console.error("Failed to replace old Regulations panel during startup:", error);
     });
   }
 
+  const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
+  if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
   await channel.send({
     components: [mainPanel(guild)],
     files,
     flags: MessageFlags.IsComponentsV2,
   });
-
-  console.log(`Regulations panel refreshed on startup. Removed ${oldPanels.size} old panel(s) and posted one replacement.`);
+  console.log(`Regulations panel refreshed because no current panel was detected. Removed ${oldPanels.size} old panel(s) and posted one replacement.`);
 }
 
 async function postOrRefreshPanel(client) {
