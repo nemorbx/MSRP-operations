@@ -717,7 +717,7 @@ async function ensureRegulationsPanel(client) {
   const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
   if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
   await channel.send({
-    components: [mainPanel(guild)],
+    components: [mainPanel(channel.guild)],
     files,
     flags: MessageFlags.IsComponentsV2,
   });
