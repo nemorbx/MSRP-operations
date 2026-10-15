@@ -72,9 +72,9 @@ function buildMarketplacePanel() {
 }
 
 async function ensureMarketplacePanel(client) {
-  const guild = client.guilds.cache.first();
-  if (!guild) return;
-  const channel = await guild.channels.fetch(MARKETPLACE_CHANNEL_ID).catch(() => null);
+  // Fetch the channel directly by ID so the panel goes to the requested channel,
+  // regardless of which guild appears first in the client's cache.
+  const channel = await client.channels.fetch(MARKETPLACE_CHANNEL_ID).catch(() => null);
   if (!channel || !channel.isTextBased()) {
     console.error("Marketplace channel could not be found or is not text-based.");
     return;
@@ -92,13 +92,11 @@ async function ensureMarketplacePanel(client) {
     message.attachments?.some(attachment => attachment.name === MARKETPLACE_BANNER)
   );
 
-  if (botPanels.some(message => JSON.stringify(message.components || []).includes(PANEL_MARKER))) {
-    console.log("Current Marketplace panel detected. Leaving it in place.");
+  // Never stack Marketplace panels. If any Marketplace panel already exists,
+  // leave it alone on startup; layout edits can be applied manually when needed.
+  if (botPanels.size) {
+    console.log("Existing Marketplace panel detected. Leaving it in place.");
     return;
-  }
-
-  for (const panel of botPanels.values()) {
-    await panel.delete().catch(error => console.error("Failed to replace old Marketplace panel:", error));
   }
 
   const bannerPath = path.join(__dirname, MARKETPLACE_BANNER);
