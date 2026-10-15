@@ -359,28 +359,40 @@ async function ensureSupportPanel(client) {
   }
 
   const botPanels = messages.filter(message => message.author?.id === client.user.id);
+
+  // Discord may normalize invisible text markers in Components V2 payloads.
+  // Identify the persistent assistance panel by its attached header image as a fallback.
   const currentPanel = botPanels.find(message =>
     JSON.stringify(message.components || []).includes(SUPPORT_PANEL_MARKER)
+  ) || botPanels.find(message =>
+    message.attachments?.some(attachment => attachment.name === "assistance.png") &&
+    Array.isArray(message.components) &&
+    message.components.length > 0
   );
 
   if (currentPanel) {
-    for (const duplicate of botPanels.values()) {
-      if (duplicate.id !== currentPanel.id) {
-        await duplicate.delete().catch(() => {});
-      }
-    }
-    console.log("Support panel is current. Leaving it unchanged.");
+    // Do not delete/repost the panel on every startup. Other bot messages below it
+    // (for example, command confirmations) are not panel duplicates.
+    console.log("Existing assistance panel detected. Leaving it in place.");
     return;
   }
 
-  for (const panel of botPanels.values()) {
+  // Only remove old panel-looking messages, not every message sent by this bot.
+  const oldPanels = botPanels.filter(message =>
+    message.attachments?.some(attachment =>
+      ["assistance.png", "support.png"].includes(attachment.name)
+    ) &&
+    Array.isArray(message.components) &&
+    message.components.length > 0
+  );
+  for (const panel of oldPanels) {
     await panel.delete().catch(error => {
       console.error("Failed to delete old Support panel:", error);
     });
   }
 
   await sendPanel(channel, client);
-  console.log("Support panel updated because its panel version changed or no current panel existed.");
+  console.log("Assistance panel posted because no existing panel was detected.");
 }
 
 async function addRoleMembersToPrivateThread(thread, guild, roleId) {
