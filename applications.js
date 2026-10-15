@@ -374,7 +374,7 @@ function buildEligibilityContainer(remaining, ready = false) {
 
   // Reference panel has a divider beneath the buttons, before the bottom banner.
   container.addSeparatorComponents(
-    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
+    new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large)
   );
 
   container.addMediaGalleryComponents(
