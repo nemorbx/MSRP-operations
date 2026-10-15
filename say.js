@@ -54,7 +54,7 @@ async function setup(client) {
   client.on("interactionCreate", async interaction => {
     if (!interaction.isChatInputCommand() || interaction.commandName !== "say") return;
 
-    // Acknowledge immediately so Discord does not time out while owner/permissions are checked.
+    // Always acknowledge first; Discord times out commands that take too long to reply.
     try {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -63,38 +63,30 @@ async function setup(client) {
         return;
       }
 
-      let allowedUserId = process.env.SAY_USER_ID;
-      if (!allowedUserId) {
-        await client.application.fetch();
-        const owner = client.application.owner;
-        allowedUserId = owner?.id || null;
-      }
-
-      if (!allowedUserId || interaction.user.id !== allowedUserId) {
+      const isOwner = await isBotOwner(client, interaction.user.id);
+      if (!isOwner) {
         await interaction.editReply("You don't have permission to use this command.");
         return;
       }
 
-      const message = interaction.options.getString("message", true).trim();
-      if (!message) {
+      const content = interaction.options.getString("message", true).trim();
+      if (!content) {
         await interaction.editReply("Please provide a message to send.");
         return;
       }
 
-      await interaction.channel.send({ content: message });
+      await interaction.channel.send({ content });
       await interaction.editReply("Message sent successfully.");
     } catch (error) {
-      console.error("/say error:", error);
+      console.error("/say interaction error:", error);
+      const reply = "I couldn't send that message. Check the bot's channel permissions and try again.";
       if (interaction.deferred || interaction.replied) {
-        await interaction.editReply("I couldn't send that message. Check the bot's channel permissions and try again.").catch(() => {});
+        await interaction.editReply(reply).catch(() => {});
       } else {
-        await interaction.reply({
-          content: "I couldn't send that message. Check the bot's channel permissions and try again.",
-          flags: MessageFlags.Ephemeral,
-        }).catch(() => {});
+        await interaction.reply({ content: reply, flags: MessageFlags.Ephemeral }).catch(() => {});
       }
     }
-  });;
+  });;;
 }
 
 module.exports = { setup, command };
