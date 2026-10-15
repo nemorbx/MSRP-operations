@@ -25,15 +25,15 @@ const INTERNAL_AFFAIRS_TEAM_ROLE_ID = "1527381477975789668";
 const MANAGEMENT_TEAM_ROLE_ID = "1528426569012609106";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const SUPPORT_LOGS_CHANNEL_ID = "1552509962910171176";
-const SUPPORT_PANEL_VERSION = 4;
+const SUPPORT_PANEL_VERSION = 5;
 const SUPPORT_PANEL_MARKER = "\u200B".repeat(SUPPORT_PANEL_VERSION);
 
 const DATA_DIR = path.join(__dirname, "data");
 const TICKETS_FILE = path.join(DATA_DIR, "tickets.json");
 const ASSET_DIR = path.join(__dirname, "assets");
-const ROOT_SUPPORT_BANNER = path.join(__dirname, "support.png");
+const ROOT_SUPPORT_BANNER = path.join(__dirname, "assistance.png");
 const ROOT_FOOTER = path.join(__dirname, "msrp-footer.png");
-const ASSET_SUPPORT_BANNER = path.join(ASSET_DIR, "support.png");
+const ASSET_SUPPORT_BANNER = path.join(ASSET_DIR, "assistance.png");
 const ASSET_FOOTER = path.join(ASSET_DIR, "msrp-footer.png");
 
 const TYPES = {
@@ -102,7 +102,7 @@ function addMedia(container, filePath) {
 }
 
 function separator() {
-  return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small);
+  return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large);
 }
 
 function customEmoji(guild, name) {
@@ -115,29 +115,31 @@ function buildSupportPanel(guild) {
   const banner = assetPath([ROOT_SUPPORT_BANNER, ASSET_SUPPORT_BANNER]);
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
 
+  // Assistance panel header, followed by a generously spaced divider.
   addMedia(container, banner);
   container.addSeparatorComponents(separator());
 
-  // Main Support heading and description.
+  // Main assistance description, styled as a Discord quote block.
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "## Support\n" + customEmoji(guild, "info") + " Need assistance? Use this support center to contact the appropriate team for questions, concerns, server assistance, staff-related matters, partnerships, and other community inquiries. Select the category that best matches what you need so your request can be directed to the right team." + SUPPORT_PANEL_MARKER
+      "> Our assistance dashboard is here to easily contact our support team through various ticket options. Pick the one that you think best supports your issue(s) and we'll be there to assist as soon as possible. Avoid pining staff inside of your tickets as they are already notified when you open the ticket."
     )
   );
 
-  // One divider between the main Support section and General Support.
   container.addSeparatorComponents(separator());
 
-  // Keep the three category sections compact with no dividers between them.
+  // Average response time gets its own quote line and divider spacing.
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      "### General Support\n" + customEmoji(guild, "ticket") + " Use General Support for questions, server issues, Discord assistance, member concerns, technical problems, or other requests that do not specifically require Internal Affairs or Management. If you are unsure where your question belongs, this is the general place to start.\n### Internal Affairs Support\n" + customEmoji(guild, "shield") + " Use Internal Affairs Support to report staff misconduct, raise concerns about staff behavior, or request a review of a recent moderation action taken by a staff member. Please provide relevant details and evidence when available so the Internal Affairs Team can properly review your concern.\n### Management Support\n" + customEmoji(guild, "people") + " Use Management Support for partnerships, community collaborations, management-level concerns, department or leadership matters, business inquiries, and other requests that require assistance from Management. This category is intended for matters that go beyond normal General Support."
+      "> **Average Response Time:** `12-20 minutes`."
     )
   );
+
+  container.addSeparatorComponents(separator());
 
   const menu = new StringSelectMenuBuilder()
     .setCustomId("support:create")
-    .setPlaceholder("Select a support option...")
+    .setPlaceholder("Select a ticket type...")
     .addOptions(
       Object.entries(TYPES).map(([value, type]) => ({
         label: type.label,
