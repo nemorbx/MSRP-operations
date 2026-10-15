@@ -119,9 +119,8 @@ function buildSupportPanel(guild) {
   const banner = assetPath([ROOT_SUPPORT_BANNER, ASSET_SUPPORT_BANNER]);
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
 
-  // Assistance panel header, followed by a generously spaced divider.
+  // Keep the description close to the header banner.
   addMedia(container, banner);
-  container.addSeparatorComponents(bannerSeparator());
 
   // Keep the description and response-time quote together without a divider between them.
   container.addTextDisplayComponents(
