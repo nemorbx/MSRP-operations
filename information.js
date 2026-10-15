@@ -129,7 +129,7 @@ async function postOrRefreshInformationPanel(client) {
     await channel.send(payload);
     console.log("Information V2 panel posted because none was detected.");
   }
-}}
+}
 
 function setup(client) {}
 
