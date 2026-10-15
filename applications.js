@@ -298,17 +298,21 @@ async function ensureApplicationPanel(client) {
   const botPanels = messages.filter(message => message.author?.id === client.user.id);
   const currentPanel = botPanels.find(message => JSON.stringify(message.components || []).includes(APPLICATION_PANEL_MARKER));
 
+  const looksLikeApplicationPanel = message =>
+    message.components?.length &&
+    message.attachments?.some(attachment => attachment.name === "apps.png");
+
   if (currentPanel) {
-    for (const duplicate of botPanels.values()) {
-      if (duplicate.id !== currentPanel.id) {
-        await duplicate.delete().catch(() => {});
-      }
+    for (const duplicate of botPanels.filter(message =>
+      message.id !== currentPanel.id && looksLikeApplicationPanel(message)
+    ).values()) {
+      await duplicate.delete().catch(error => console.error("Failed to remove duplicate Application Center panel:", error));
     }
-    console.log("Application Center panel is current. Leaving it unchanged.");
+    console.log("Application Center panel is current; duplicate panels cleaned up.");
     return;
   }
 
-  for (const panel of botPanels.values()) {
+  for (const panel of botPanels.filter(looksLikeApplicationPanel).values()) {
     await panel.delete().catch(error => {
       console.error("Failed to delete old Application Center panel:", error);
     });
