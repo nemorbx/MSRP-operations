@@ -173,12 +173,12 @@ function ticketPanelComponents(ticket) {
   );
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `> **Discord User:** <@${ticket.userId}>\\n> **Account Age:** <t:${createdAt}:D>`
+      `> **Discord User:** <@${ticket.userId}>\n> **Account Age:** <t:${createdAt}:D>`
     )
   );
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `> **Roblox User:** ${robloxName}\\n> **Roblox URL:** ${robloxUrl}`
+      `> **Roblox User:** ${robloxName}\n> **Roblox URL:** ${robloxUrl}`
     )
   );
   container.addTextDisplayComponents(
