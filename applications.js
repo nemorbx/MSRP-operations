@@ -206,7 +206,7 @@ function v2Update(interaction, content) {
 }
 
 function questionText(question) {
-  return `## **${question}**`;
+  return `**${question}**`;
 }
 
 function customEmoji(guild, name) {
@@ -312,7 +312,7 @@ async function ensureApplicationPanel(client) {
   console.log("Application Center panel updated because its panel version changed or no current panel existed.");
 }
 
-function buildEligibilityContainer(remaining, ready = false) {
+function buildEligibilityContainer(remaining, ready = false, started = false) {
   const requirements = [
     "You must provide accurate and honest information.",
     "You must be at least 13 years old.",
@@ -364,11 +364,12 @@ function buildEligibilityContainer(remaining, ready = false) {
         .setCustomId("staff_application_confirm_ready")
         .setLabel(ready ? "Continue" : `Continue (${remaining})`)
         .setStyle(ButtonStyle.Success)
-        .setDisabled(!ready),
+        .setDisabled(!ready || started),
       new ButtonBuilder()
         .setCustomId("staff_application_cancel")
-        .setLabel("Cancel")
+         .setLabel("Cancel")
         .setStyle(ButtonStyle.Secondary)
+        .setDisabled(started)
     )
   );
 
@@ -581,7 +582,7 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
       activeSessions.delete(user.id);
 
       await controlMessage.edit({
-        components: [buildDMControlContainer(user.id, applicationId, true, true)],
+        components: [buildEligibilityContainer(0, true, true)],
         flags: MessageFlags.IsComponentsV2,
       }).catch(() => {});
 
@@ -688,7 +689,7 @@ async function beginDMApplication(interaction) {
     // first question immediately, and the same message retains the cancel control.
     await interaction.update({
       flags: MessageFlags.IsComponentsV2,
-      components: [buildDMControlContainer(user.id, application.id, true, false)],
+      components: [buildEligibilityContainer(0, true, true)],
     });
 
     await activateDMApplication(user, application.id, dm, interaction.message);
