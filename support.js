@@ -324,15 +324,15 @@ async function sendTicketLog(client, ticket, thread, reason, closedById = null) 
   });
 }
 
-async function sendPanel(channel, client) {
+async function supportPanelPayload(channel) {
   const banner = assetPath([ROOT_SUPPORT_BANNER, ASSET_SUPPORT_BANNER]);
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
-  const files = [banner, footer].filter(Boolean);
-  await channel.send({
+  return {
     components: [buildSupportPanel(channel.guild)],
-    files,
+    files: [banner, footer].filter(Boolean),
+    attachments: [],
     flags: MessageFlags.IsComponentsV2,
-  });
+  };
 }
 
 async function ensureSupportPanel(client) {
@@ -356,49 +356,29 @@ async function refreshSupportPanel(client) {
     return;
   }
 
-  const botPanels = messages.filter(message => message.author?.id === client.user.id);
-
-  // Discord may normalize invisible text markers in Components V2 payloads.
-  // Identify the persistent assistance panel by its attached header image as a fallback.
-  const hasHeaderAndFooter = message =>
-    message.attachments?.some(attachment => attachment.name === "assistance.png") &&
-    message.attachments?.some(attachment => attachment.name === "banner.png");
-
-  const currentPanel = botPanels.find(message =>
-    JSON.stringify(message.components || []).includes(SUPPORT_PANEL_MARKER) &&
-    hasHeaderAndFooter(message)
-  ) || botPanels.find(message =>
-    hasHeaderAndFooter(message) &&
-    Array.isArray(message.components) &&
-    message.components.length > 0
-  );
+  const botMessages = messages.filter(message => message.author?.id === client.user.id);
+  const isAssistancePanel = message => {
+    const components = JSON.stringify(message.components || []);
+    return components.includes("support:create") ||
+      components.includes(SUPPORT_PANEL_MARKER) ||
+      (message.attachments?.some(a => ["assistance.png", "support.png"].includes(a.name)) &&
+       message.components?.length > 0);
+  };
+  const panels = [...botMessages.values()].filter(isAssistancePanel);
+  const currentPanel = panels[0] || null;
 
   if (currentPanel) {
-    for (const duplicate of botPanels.filter(message =>
-      message.id !== currentPanel.id && hasHeaderAndFooter(message)
-    ).values()) {
+    // Update the one persistent panel in place, then remove only duplicate assistance panels.
+    await currentPanel.edit(await supportPanelPayload(channel));
+    for (const duplicate of panels.slice(1)) {
       await duplicate.delete().catch(error => console.error("Failed to remove duplicate Assistance panel:", error));
     }
-    console.log("Existing assistance panel detected; duplicates cleaned up.");
+    console.log("Assistance panel edited in place; duplicate panels cleaned up.");
     return;
   }
 
-  // Only remove old panel-looking messages, not every message sent by this bot.
-  const oldPanels = botPanels.filter(message =>
-    message.attachments?.some(attachment =>
-      ["assistance.png", "support.png"].includes(attachment.name)
-    ) &&
-    Array.isArray(message.components) &&
-    message.components.length > 0
-  );
-  for (const panel of oldPanels) {
-    await panel.delete().catch(error => {
-      console.error("Failed to delete old Support panel:", error);
-    });
-  }
-
-  await sendPanel(channel, client);
-  console.log("Assistance panel posted because no existing panel was detected.");
+  await channel.send(await supportPanelPayload(channel));
+  console.log("Assistance panel posted because none was detected.");
 }
 
 async function addRoleMembersToPrivateThread(thread, guild, roleId) {
