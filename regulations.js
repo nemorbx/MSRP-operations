@@ -684,15 +684,11 @@ async function ensureRegulationsPanel(client) {
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) return;
 
-  // Startup check only: never delete or repost an existing panel.
-  const existingPanel = messages.find(
+  // Refresh the existing panel on startup so committed layout changes appear
+  // after deployment. Remove only this bot's component-based panel messages.
+  const oldPanels = messages.filter(
     message => message.author?.id === client.user.id && message.components?.length
   );
-
-  if (existingPanel) {
-    console.log("Regulations panel already exists. Leaving it unchanged.");
-    return;
-  }
 
   const regulationsBannerPath = path.join(__dirname, REGULATIONS_BANNER_NAME);
   const bannerPath = path.join(__dirname, BANNER_NAME);
@@ -705,13 +701,19 @@ async function ensureRegulationsPanel(client) {
   const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
   if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
 
+  for (const panel of oldPanels.values()) {
+    await panel.delete().catch(error => {
+      console.error("Failed to replace old Regulations panel during startup:", error);
+    });
+  }
+
   await channel.send({
     components: [mainPanel(guild)],
     files,
     flags: MessageFlags.IsComponentsV2,
   });
 
-  console.log("Regulations panel created because no existing panel was found.");
+  console.log(`Regulations panel refreshed on startup. Removed ${oldPanels.size} old panel(s) and posted one replacement.`);
 }
 
 async function postOrRefreshPanel(client) {
