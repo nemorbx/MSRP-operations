@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder, MessageFlags, SeparatorBuilder, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextDisplayBuilder } = require("discord.js");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, EmbedBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder, MessageFlags, SeparatorBuilder, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextDisplayBuilder } = require("discord.js");
 
 const MARKETPLACE_CHANNEL_ID = "1527179486737600572";
 const MARKETPLACE_BANNER = "marketplace.png";
@@ -61,15 +61,43 @@ async function ensureMarketplacePanel(client) {
 function setup(client) {
   client.on("interactionCreate", async interaction => {
     if (!interaction.isStringSelectMenu() || interaction.customId !== "msrp_marketplace_select") return;
-    let content;
+
+    let embed;
     if (interaction.values[0] === "donations") {
-      content = ["**Robux Donations**", "[Donation 100R$](" + DEFAULT_LINK + ")", "[Donation 250R$](" + DEFAULT_LINK + ")", "[Donation 350R$](" + DEFAULT_LINK + ")", "[Donation 500R$](" + DEFAULT_LINK + ")", "[Donation 750R$](" + DEFAULT_LINK + ")", "[Donation 1000R$](" + DEFAULT_LINK + ")", "[Donation 2000R$](" + DEFAULT_LINK + ")", "[Donation 2500R$](" + DEFAULT_LINK + ")", "[Donation 5000R$](" + DEFAULT_LINK + ")", "[Donation 10000R$](" + DEFAULT_LINK + ")", "", "**Cash Donations**", "Coming soon...", "", "**Purchase Notice**", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."].join("\n");
+      embed = new EmbedBuilder()
+        .setColor(0x3498DB)
+        .setTitle("Robux Donations")
+        .setDescription([
+          "[Donation 100R$](" + DEFAULT_LINK + ")",
+          "[Donation 250R$](" + DEFAULT_LINK + ")",
+          "[Donation 350R$](" + DEFAULT_LINK + ")",
+          "[Donation 500R$](" + DEFAULT_LINK + ")",
+          "[Donation 750R$](" + DEFAULT_LINK + ")",
+          "[Donation 1000R$](" + DEFAULT_LINK + ")",
+          "[Donation 2000R$](" + DEFAULT_LINK + ")",
+          "[Donation 2500R$](" + DEFAULT_LINK + ")",
+          "[Donation 5000R$](" + DEFAULT_LINK + ")",
+          "[Donation 10000R$](" + DEFAULT_LINK + ")"
+        ].join("\\n"))
+        .addFields(
+          { name: "Cash Donations", value: "Coming soon..." },
+          { name: "Purchase Notice", value: "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment." }
+        );
     } else if (interaction.values[0] === "custom_roles") {
-      content = ["**Custom Roles**", "Obtain a custom role.", "Must not contain NSFW content.", "Must not include advertisements.", "Must follow our server regulations.", "", "[Click here to purchase](" + DEFAULT_LINK + ")", "", "**Purchase Notice**", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."].join("\n");
+      embed = new EmbedBuilder()
+        .setColor(0x3498DB)
+        .setTitle("Custom Roles")
+        .setDescription("Obtain a custom role.\\nMust not contain NSFW content.\\nMust not include advertisements.\\nMust follow our server regulations.\\n\\n[Click here to purchase](" + DEFAULT_LINK + ")")
+        .addFields({ name: "Purchase Notice", value: "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment." });
     } else {
-      content = ["**Paid Advertisement**", "Receive an everyone ping to promote your server.", "", "[Click here to purchase](" + DEFAULT_LINK + ")", "", "**Purchase Notice**", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."].join("\n");
+      embed = new EmbedBuilder()
+        .setColor(0x3498DB)
+        .setTitle("Paid Advertisement")
+        .setDescription("Receive an everyone ping to promote your server.\\n\\n[Click here to purchase](" + DEFAULT_LINK + ")")
+        .addFields({ name: "Purchase Notice", value: "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment." });
     }
-    await interaction.reply({ content, ephemeral: true }).catch(() => {});
+
+    await interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});
   });
 }
 
