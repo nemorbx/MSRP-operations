@@ -115,6 +115,7 @@ async function ensureSessionPanel(client) {
   const guild = client.guilds.cache.first();
   if (guild) {
     try {
+      await guild.members.fetch();
       const role = await guild.roles.fetch(ON_DUTY_ROLE_ID);
       if (role) liveStats.moderating = String(role.members.size);
     } catch (error) {
@@ -135,12 +136,13 @@ async function ensureSessionPanel(client) {
   });
   if (!recent) return;
   const existing = recent.find(message => message.author.id === client.user.id && (message.embeds.some(embed => embed.footer?.text === PANEL_MARKER) || message.components?.some(row => JSON.stringify(row).includes(PANEL_MARKER))));
-  if (existing) {
+  if (existing && existing.flags?.has(MessageFlags.IsComponentsV2)) {
     await existing.edit(buildSessionPanel(client));
-    console.log("[Sessions] Existing panel refreshed.");
+    console.log("[Sessions] Existing Components V2 panel refreshed.");
   } else {
+    if (existing) await existing.delete().catch(error => console.error("[Sessions] Could not replace legacy panel:", error.message));
     await channel.send(buildSessionPanel(client));
-    console.log("[Sessions] Panel posted to channel " + SESSION_CHANNEL_ID + ".");
+    console.log("[Sessions] Components V2 panel posted to channel " + SESSION_CHANNEL_ID + ".");
   }
 }
 
