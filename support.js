@@ -252,8 +252,10 @@ function canUseTeam(member, roleId) {
 }
 
 function canClaim(member, ticket) {
-  if (member?.roles?.cache?.has(ticket.teamRoleId)) return true;
-  return ticket.type === "management" && isHighRank(member);
+  // Senior High Rank may claim any ticket type: General, Internal Affairs,
+  // or Management. The assigned support team retains its normal claim access.
+  if (isHighRank(member)) return true;
+  return Boolean(member?.roles?.cache?.has(ticket.teamRoleId));
 }
 
 function canRequestClosure(member, ticket) {
