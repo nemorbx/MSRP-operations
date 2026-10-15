@@ -150,7 +150,6 @@ function buildSupportPanel(guild) {
     );
 
   container.addActionRowComponents(new ActionRowBuilder().addComponents(menu));
-  container.addSeparatorComponents(separator());
   addMedia(container, footer);
 
   // Version marker lets startup replace the panel only when this layout changes.
