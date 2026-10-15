@@ -82,7 +82,7 @@ function setup(client) {
           "[Donation 2500R$](" + DEFAULT_LINK + ")",
           "[Donation 5000R$](" + DEFAULT_LINK + ")",
           "[Donation 10000R$](" + DEFAULT_LINK + ")"
-        ].join("\\n"))
+        ].join("\n"))
         .addFields(
           { name: "Cash Donations", value: "Coming soon..." },
           { name: "Purchase Notice", value: "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment." }
@@ -91,13 +91,13 @@ function setup(client) {
       embed = new EmbedBuilder()
         .setColor(0x3498DB)
         .setTitle("Custom Roles")
-        .setDescription("Obtain a custom role.\\nMust not contain NSFW content.\\nMust not include advertisements.\\nMust follow our server regulations.\\n\\n[Click here to purchase](" + DEFAULT_LINK + ")")
+        .setDescription("Obtain a custom role.\nMust not contain NSFW content.\nMust not include advertisements.\nMust follow our server regulations.\n\n[Click here to purchase](" + DEFAULT_LINK + ")")
         .addFields({ name: "Purchase Notice", value: "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment." });
     } else {
       embed = new EmbedBuilder()
         .setColor(0x3498DB)
         .setTitle("Paid Advertisement")
-        .setDescription("Receive an everyone ping to promote your server.\\n\\n[Click here to purchase](" + DEFAULT_LINK + ")")
+        .setDescription("Receive an everyone ping to promote your server.\n\n[Click here to purchase](" + DEFAULT_LINK + ")")
         .addFields({ name: "Purchase Notice", value: "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment." });
     }
 
