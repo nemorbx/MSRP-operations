@@ -27,6 +27,20 @@ let liveStats = {
   online: process.env.ERLC_SESSION_ONLINE === "true",
 };
 
+async function resolveRobloxUsername(userId) {
+  try {
+    const response = await fetch("https://users.roblox.com/v1/users/" + encodeURIComponent(userId), {
+      signal: AbortSignal.timeout(8000),
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return "Roblox ID " + userId;
+    const user = await response.json();
+    return user.name || user.displayName || ("Roblox ID " + userId);
+  } catch {
+    return "Roblox ID " + userId;
+  }
+}
+
 async function refreshLiveStats() {
   const key = process.env.ERLC_SERVER_KEY || process.env.ERLC_API_KEY;
   if (!key) {
@@ -46,7 +60,7 @@ async function refreshLiveStats() {
     const data = JSON.parse(body);
     liveStats.name = data.Name || data.ServerName || liveStats.name;
     liveStats.ownerId = data.OwnerId ?? liveStats.ownerId;
-    liveStats.owner = data.Owner || data.ServerOwner || (data.OwnerId ? "Roblox ID " + data.OwnerId : liveStats.owner);
+    liveStats.owner = data.Owner || data.ServerOwner || (data.OwnerId ? await resolveRobloxUsername(data.OwnerId) : liveStats.owner);
     liveStats.code = data.JoinKey || data.ServerCode || data.Code || liveStats.code;
     const current = data.CurrentPlayers ?? data.CurrentPlayerCount;
     const max = data.MaxPlayers ?? data.MaxPlayerCount;
