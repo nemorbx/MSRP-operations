@@ -444,6 +444,26 @@ function getPage(guild, id) {
         ]
       );
 
+    case "weapons":
+      return privatePage(
+        guild,
+        "BANNED WEAPONS",
+        "Weapons and weapon-related roleplay must follow MSRP's in-game rules and any active staff instructions.",
+        [
+          {
+            title: "Weapon Restrictions",
+            emoji: "shield",
+            body: arrows(guild, [
+              "Do not use weapons to randomly attack or threaten players without a valid roleplay reason.",
+              "Do not use weapons to disrupt scenes or evade roleplay consequences.",
+              "Follow all active priority, peacetime, and scenario restrictions before using weapons.",
+              "Weapon use during major or restricted scenarios may require staff approval.",
+              "Staff may stop weapon-related roleplay that is unrealistic, unauthorized, or disruptive.",
+            ]),
+          },
+        ]
+      );
+
     case "vehicles":
       return privatePage(
         guild,
