@@ -376,9 +376,12 @@ async function ensureSupportPanel(client) {
   );
 
   if (currentPanel) {
-    // Do not delete/repost the panel on every startup. Other bot messages below it
-    // (for example, command confirmations) are not panel duplicates.
-    console.log("Existing assistance panel detected. Leaving it in place.");
+    for (const duplicate of botPanels.filter(message =>
+      message.id !== currentPanel.id && hasHeaderAndFooter(message)
+    ).values()) {
+      await duplicate.delete().catch(error => console.error("Failed to remove duplicate Assistance panel:", error));
+    }
+    console.log("Existing assistance panel detected; duplicates cleaned up.");
     return;
   }
 
