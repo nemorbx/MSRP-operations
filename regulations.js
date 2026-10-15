@@ -105,10 +105,11 @@ function addBottomBanner(container) {
 function mainPanel(guild) {
   const container = new ContainerBuilder();
 
-  // Top banner
+  // Top banner, followed by a small separator to minimize the visual gap.
   addBanner(container);
+  container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
 
-  // Keep the banner tight to the description; no divider directly underneath it.
+  // Keep the banner-to-description spacing minimal.
   container.addTextDisplayComponents(
     display(`> Whilst engaging with anyone on our server or playing on our ER:LC server, you're required to follow a strictly moderated set of regulations that **must not be broken**.`),
     display(`> The maximum amount of moderation points you can receive is **75**. If you reach this amount, you will be banned from our community.`)
