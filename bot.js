@@ -20,6 +20,7 @@ const { setup: setupBooster } = require("./booster");
 const { setup: setupSay, command: sayCommand } = require("./say");
 const { setup: setupSuggestions, commands: suggestionCommands } = require("./suggestions");
 const { setup: setupSticky } = require("./sticky");
+const { setup: setupMarketplace, ensureMarketplacePanel } = require("./marketplace");
 
 const afkModule = require("./afk");
 const infractionsModule = require("./infractions");
@@ -56,6 +57,7 @@ setupInformation(client);
 setupRolePerks(client);
 setupWelcome(client);
 setupSticky(client);
+setupMarketplace(client);
 setupBooster(client);
 setupSay(client);
 setupSuggestions(client);
@@ -182,7 +184,7 @@ client.once("clientReady", async () => {
   console.log("Logged in as " + client.user.tag);
   console.log("Missouri State Roleplay Operations is online.");
   console.log("GitHub deployment test: successful.");
-  console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Role Perks, Purge, Booster, Say, Suggestions, Sticky, Welcome");
+  console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Role Perks, Marketplace, Purge, Booster, Say, Suggestions, Sticky, Welcome");
   console.log("========================================");
 
   try {
@@ -201,6 +203,12 @@ client.once("clientReady", async () => {
     await ensureRegulationsPanel(client);
   } catch (error) {
     console.error("Regulations panel refresh error:", error);
+  }
+
+  try {
+    await ensureMarketplacePanel(client);
+  } catch (error) {
+    console.error("Marketplace panel refresh error:", error);
   }
 
   try {
