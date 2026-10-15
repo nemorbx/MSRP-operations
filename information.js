@@ -20,6 +20,7 @@ const ROBLOX_GROUP_URL = "https://www.roblox.com/communities/";
 const INFORMATION_IMAGE_NAME = "information.png";
 const INFORMATION_PANEL_VERSION = 12;
 const INFORMATION_PANEL_MARKER = "\u200B".repeat(INFORMATION_PANEL_VERSION);
+let informationPanelRefreshPromise = null;
 
 const CHANNELS = {
   shouts: "1527178204299788389",
@@ -81,6 +82,13 @@ function informationPanel(guild) {
 }
 
 async function postOrRefreshInformationPanel(client) {
+  if (informationPanelRefreshPromise) return informationPanelRefreshPromise;
+  informationPanelRefreshPromise = refreshInformationPanel(client);
+  try { return await informationPanelRefreshPromise; }
+  finally { informationPanelRefreshPromise = null; }
+}
+
+async function refreshInformationPanel(client) {
   const channel = await client.channels.fetch(INFORMATION_CHANNEL_ID).catch(() => null);
   if (!channel || !channel.isTextBased() || !channel.messages) {
     console.error(`Information channel ${INFORMATION_CHANNEL_ID} could not be found or is not text-based.`);
@@ -121,11 +129,16 @@ async function postOrRefreshInformationPanel(client) {
   };
 
   if (existingPanel) {
-    await existingPanel.edit(payload);
+    const isCurrent = JSON.stringify(existingPanel.components || []).includes(INFORMATION_PANEL_MARKER);
+    if (!isCurrent) {
+      await existingPanel.edit(payload);
+      console.log("Information V2 panel changed; updated the existing message in place.");
+    } else {
+      console.log("Information V2 panel is unchanged; leaving it alone.");
+    }
     for (const duplicate of botPanels.filter(message => message.id !== existingPanel.id).values()) {
       await duplicate.delete().catch(error => console.error("Failed to remove duplicate Information panel:", error));
     }
-    console.log("Information V2 panel updated in place; duplicates cleaned up.");
   } else {
     await channel.send(payload);
     console.log("Information V2 panel posted because none was detected.");
