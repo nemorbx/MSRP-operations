@@ -833,6 +833,9 @@ client.on("interactionCreate", async (interaction) => {
           flags: MessageFlags.IsComponentsV2,
           components: [container],
           files: [bannerAttachment],
+          // Infractions should display member/role references without notifying
+          // every person who holds a mentioned role.
+          allowedMentions: { parse: [] },
         });
 
       // ==========================================
