@@ -199,17 +199,9 @@ client.once("clientReady", async () => {
     console.error("Support panel refresh error:", error);
   }
 
-  try {
-    await ensureRegulationsPanel(client);
-  } catch (error) {
-    console.error("Regulations panel refresh error:", error);
-  }
+  // Regulations is persistent; only the explicit update command may change it.
 
-  try {
-    await ensureMarketplacePanel(client);
-  } catch (error) {
-    console.error("Marketplace panel refresh error:", error);
-  }
+  // Marketplace is persistent; do not edit or repost it during startup.
 
   try {
     await postOrRefreshInformationPanel(client);
