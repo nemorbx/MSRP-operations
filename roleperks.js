@@ -15,7 +15,7 @@ const path = require("path");
 const ROLEPERKS_CHANNEL_ID = "1560123150635630672";
 const ROLEPERKS_IMAGE_SOURCE = "roleperks.png";
 const ROLEPERKS_IMAGE_NAME = "roleperks.png";
-const ROLEPERKS_PANEL_VERSION = 2;
+const ROLEPERKS_PANEL_VERSION = 3;
 const ROLEPERKS_PANEL_MARKER = "\u200B".repeat(ROLEPERKS_PANEL_VERSION);
 const FOOTER_IMAGE_NAME = "banner.png";
 
@@ -34,11 +34,11 @@ function rolePerksPanel() {
       new MediaGalleryItemBuilder().setURL(`attachment://${ROLEPERKS_IMAGE_NAME}`)
     )
   );
+  container.addSeparatorComponents(divider());
   container.addTextDisplayComponents(
     display(
-      "> You can receive perks on our Discord and in-game server by having roles within our community. You are unable to purchase any roles listed here. We suggest looking at our marketplace if you wish to purchase perks for your Discord."
-    ),
-    display(ROLEPERKS_PANEL_MARKER)
+      "> You can receive perks on our Discord and in-game server by having roles within our community. You are unable to purchase any roles listed here. We suggest looking at our marketplace if you wish to purchase perks for your Discord.\\n" + ROLEPERKS_PANEL_MARKER
+    )
   );
   container.addSeparatorComponents(divider());
   container.addActionRowComponents(
