@@ -18,6 +18,7 @@ const {
 
 const APPLICATION_CHANNEL_ID = "1551975176084656209";
 const STAFF_APPLICATION_CHANNEL_ID = "1528942658041413693";
+const STAFF_APPLICATION_RESULTS_CHANNEL_ID = "1560173331704189008";
 const BAN_APPEAL_CHANNEL_ID = "1551967879174553610";
 
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
@@ -869,38 +870,30 @@ async function handleStaffDecision(interaction, action, applicationId) {
     application.status = "Approved";
     application.reviewedBy = interaction.user.id;
     application.reviewedAt = new Date().toISOString();
+    application.resultReason = "Your application was accepted.";
     if (!member) throw new Error("Applicant is no longer a member of this server; cannot assign Awaiting Training role.");
     await member.roles.add(AWAITING_TRAINING_ROLE_ID);
-    await safeDM(
-      application.userId,
-      "## Staff Application Accepted\nYour Missouri State Roleplay staff application has been accepted. You have been placed in Awaiting Training. A member of the staff team will provide your next steps."
-    );
   } else if (action === "deny") {
     application.status = "Denied";
     application.reviewedBy = interaction.user.id;
     application.reviewedAt = new Date().toISOString();
+    application.resultReason = "Your application did not meet the staff application requirements.";
     const cooldowns = readJson(COOLDOWNS_FILE, {});
     cooldowns[application.userId] = Date.now() + 3 * 24 * 60 * 60 * 1000;
     writeJson(COOLDOWNS_FILE, cooldowns);
-    await safeDM(
-      application.userId,
-      "## Staff Application Denied\nYour Missouri State Roleplay staff application has been denied. You must wait 3 days before submitting another staff application."
-    );
   } else if (action === "blacklist") {
     application.status = "Blacklisted";
     application.reviewedBy = interaction.user.id;
     application.reviewedAt = new Date().toISOString();
+    application.resultReason = "You are no longer eligible to submit staff applications.";
     const blacklist = readJson(BLACKLIST_FILE, []);
     if (!blacklist.includes(application.userId)) blacklist.push(application.userId);
     writeJson(BLACKLIST_FILE, blacklist);
     if (member) await member.roles.add(STAFF_BLACKLIST_ROLE_ID);
-    await safeDM(
-      application.userId,
-      "## Staff Application Blacklisted\nYour Missouri State Roleplay staff application has been blacklisted. You are no longer eligible to submit staff applications."
-    );
   }
 
   writeJson(APPLICATIONS_FILE, applications);
+  await postStaffApplicationResult(interaction.client, application);
 
   // We already deferred the interaction, so edit the original review message
   // instead of calling interaction.update() a second time.
@@ -910,6 +903,39 @@ async function handleStaffDecision(interaction, action, applicationId) {
   }).catch(error => {
     console.error("Failed to update staff application review message:", error);
   });
+}
+
+async function postStaffApplicationResult(client, application) {
+  const channel = await client.channels.fetch(STAFF_APPLICATION_RESULTS_CHANNEL_ID).catch(() => null);
+  if (!channel || !channel.isTextBased()) {
+    console.error("[Applications] Staff application results channel could not be found or is not text-based.");
+    return;
+  }
+
+  const status = application.status === "Approved" ? "Accepted" :
+    application.status === "Denied" ? "Denied" : "Blacklisted";
+  const container = new ContainerBuilder();
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(
+      `## Staff Application Results — ${status}\n**Applicant:** <@${application.userId}>\n**Reviewed By:** <@${application.reviewedBy}>\n**Reason:** ${application.resultReason || "No reason provided."}`
+    )
+  );
+  container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
+  const bannerPath = path.join(__dirname, "banner.png");
+  const payload = {
+    components: [container],
+    flags: MessageFlags.IsComponentsV2,
+    allowedMentions: { users: [application.userId, application.reviewedBy] },
+  };
+  if (fs.existsSync(bannerPath)) {
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder().setURL("attachment://banner.png")
+      )
+    );
+    payload.files = [{ attachment: bannerPath, name: "banner.png" }];
+  }
+  await channel.send(payload);
 }
 
 async function safeDM(userId, content) {
