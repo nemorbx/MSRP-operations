@@ -99,7 +99,6 @@ async function refreshInformationPanel(client) {
   const path = require("path");
   const imagePath = path.join(__dirname, INFORMATION_IMAGE_SOURCE);
   const footerPath = path.join(__dirname, "banner.png");
-
   if (!fs.existsSync(imagePath) || !fs.existsSync(footerPath)) {
     console.error(`Information panel images missing: ${!fs.existsSync(imagePath) ? INFORMATION_IMAGE_SOURCE : "banner.png"}`);
     return;
@@ -107,17 +106,18 @@ async function refreshInformationPanel(client) {
 
   const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
   if (!messages) {
-    console.error("Could not read the Information channel to replace the existing panel.");
+    console.error("Could not read the Information channel to check the panel.");
     return;
   }
 
-  const botPanels = messages.filter(message =>
-    message.author?.id === client.user.id &&
-    message.components?.length &&
-    message.attachments?.some(attachment => attachment.name === INFORMATION_IMAGE_NAME)
-  );
-
-  const existingPanel = botPanels.first();
+  const botMessages = messages.filter(message => message.author?.id === client.user.id);
+  const isInformationPanel = message => {
+    const components = JSON.stringify(message.components || []);
+    return components.includes("Default kick timer") ||
+      components.includes(INFORMATION_PANEL_MARKER) ||
+      message.attachments?.some(attachment => attachment.name === INFORMATION_IMAGE_NAME);
+  };
+  const panels = [...botMessages.values()].filter(isInformationPanel);
   const payload = {
     components: [informationPanel(channel.guild)],
     files: [
@@ -128,20 +128,16 @@ async function refreshInformationPanel(client) {
     flags: MessageFlags.IsComponentsV2,
   };
 
-  if (existingPanel) {
-    const isCurrent = JSON.stringify(existingPanel.components || []).includes(INFORMATION_PANEL_MARKER);
-    if (!isCurrent) {
-      await existingPanel.edit(payload);
-      console.log("Information V2 panel changed; updated the existing message in place.");
-    } else {
-      console.log("Information V2 panel is unchanged; leaving it alone.");
-    }
-    for (const duplicate of botPanels.filter(message => message.id !== existingPanel.id).values()) {
+  if (panels.length) {
+    const existingPanel = panels[0];
+    await existingPanel.edit(payload);
+    for (const duplicate of panels.slice(1)) {
       await duplicate.delete().catch(error => console.error("Failed to remove duplicate Information panel:", error));
     }
+    console.log("Information panel edited in place; duplicate panels cleaned up.");
   } else {
     await channel.send(payload);
-    console.log("Information V2 panel posted because none was detected.");
+    console.log("Information panel posted because none was detected.");
   }
 }
 
