@@ -694,7 +694,11 @@ async function ensureRegulationsPanel(client) {
   // Do not delete and repost an existing panel on every restart.
   // Only create one if the channel does not already contain a Regulations panel.
   if (botPanels.size) {
-    console.log("Existing Regulations panel detected. Leaving it in place.");
+    const keep = botPanels.first();
+    for (const duplicate of botPanels.filter(message => message.id !== keep.id).values()) {
+      await duplicate.delete().catch(error => console.error("Failed to remove duplicate Regulations panel:", error));
+    }
+    console.log("Existing Regulations panel detected; duplicate panels cleaned up.");
     return;
   }
 
