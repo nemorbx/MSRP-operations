@@ -169,16 +169,19 @@ function ticketPanelComponents(ticket) {
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(`> **Ticket Reason:** ${description.slice(0, 3500)}`)
   );
+  container.addSeparatorComponents(separator());
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       `> **Discord User:** <@${ticket.userId}>\n> **Account Age:** <t:${createdAt}:D>`
     )
   );
+  container.addSeparatorComponents(separator());
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       `> **Roblox User:** ${robloxName}\n> **Roblox URL:** ${robloxUrl}`
     )
   );
+  container.addSeparatorComponents(separator());
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       `> **Ping:** <@&${ticket.teamRoleId}> | <@${ticket.userId}>` +
@@ -199,6 +202,7 @@ function ticketPanelComponents(ticket) {
         .setStyle(ButtonStyle.Danger)
     )
   );
+  container.addSeparatorComponents(separator());
   addMedia(container, footer);
   return [container];
 }
