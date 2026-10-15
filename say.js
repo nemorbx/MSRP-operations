@@ -52,54 +52,49 @@ async function setup(client) {
   });
 
   client.on("interactionCreate", async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-    if (interaction.commandName !== "say") return;
+    if (!interaction.isChatInputCommand() || interaction.commandName !== "say") return;
 
+    // Acknowledge immediately so Discord does not time out while owner/permissions are checked.
     try {
-      if (!interaction.guild || !interaction.member) {
-        await interaction.reply({
-          content: "This command can only be used inside the server.",
-          flags: MessageFlags.Ephemeral,
-        });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      if (!interaction.inGuild() || !interaction.channel) {
+        await interaction.editReply("This command can only be used inside the server.");
         return;
       }
 
-      // /say is restricted to the bot owner.
-      // You can optionally set SAY_USER_ID in .env to explicitly define the allowed user.
       let allowedUserId = process.env.SAY_USER_ID;
-
       if (!allowedUserId) {
         await client.application.fetch();
         const owner = client.application.owner;
-        allowedUserId = owner && owner.id ? owner.id : null;
+        allowedUserId = owner?.id || null;
       }
 
       if (!allowedUserId || interaction.user.id !== allowedUserId) {
-        await interaction.reply({
-          content: "You don't have permission to use this command.",
-          flags: MessageFlags.Ephemeral,
-        });
+        await interaction.editReply("You don't have permission to use this command.");
         return;
       }
 
-      const message = interaction.options.getString("message", true);
-      await interaction.channel.send({ content: message });
+      const message = interaction.options.getString("message", true).trim();
+      if (!message) {
+        await interaction.editReply("Please provide a message to send.");
+        return;
+      }
 
-      await interaction.reply({
-        content: "Message sent successfully.",
-        flags: MessageFlags.Ephemeral,
-      });
+      await interaction.channel.send({ content: message });
+      await interaction.editReply("Message sent successfully.");
     } catch (error) {
       console.error("/say error:", error);
-
-      if (!interaction.replied && !interaction.deferred) {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply("I couldn't send that message. Check the bot's channel permissions and try again.").catch(() => {});
+      } else {
         await interaction.reply({
-          content: "I couldn't send that message. Make sure I have permission to send messages in this channel.",
+          content: "I couldn't send that message. Check the bot's channel permissions and try again.",
           flags: MessageFlags.Ephemeral,
-        });
+        }).catch(() => {});
       }
     }
-  });
+  });;
 }
 
 module.exports = { setup, command };
