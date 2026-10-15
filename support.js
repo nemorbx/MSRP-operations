@@ -32,9 +32,9 @@ const DATA_DIR = path.join(__dirname, "data");
 const TICKETS_FILE = path.join(DATA_DIR, "tickets.json");
 const ASSET_DIR = path.join(__dirname, "assets");
 const ROOT_SUPPORT_BANNER = path.join(__dirname, "assistance.png");
-const ROOT_FOOTER = path.join(__dirname, "msrp-footer.png");
+const ROOT_FOOTER = path.join(__dirname, "banner.png");
 const ASSET_SUPPORT_BANNER = path.join(ASSET_DIR, "assistance.png");
-const ASSET_FOOTER = path.join(ASSET_DIR, "msrp-footer.png");
+const ASSET_FOOTER = path.join(ASSET_DIR, "banner.png");
 
 const TYPES = {
   general: {
