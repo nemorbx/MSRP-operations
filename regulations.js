@@ -676,9 +676,8 @@ async function sendJurisdiction(interaction) {
 }
 
 async function ensureRegulationsPanel(client) {
-  const guild = client.guilds.cache.first();
-  if (!guild) return;
-  const channel = await guild.channels.fetch(REGULATIONS_CHANNEL_ID).catch(() => null);
+  // Fetch by channel ID directly rather than relying on the first cached guild.
+  const channel = await client.channels.fetch(REGULATIONS_CHANNEL_ID).catch(() => null);
   if (!channel || !channel.isTextBased()) {
     console.error("Regulations channel could not be found or is not text-based.");
     return;
@@ -692,12 +691,10 @@ async function ensureRegulationsPanel(client) {
     message.attachments?.some(attachment => attachment.name === REGULATIONS_BANNER_NAME)
   );
 
-  // Keep a panel that already has the current layout marker. Replace an older
-  // panel once so existing Discord messages receive the updated footer layout.
-  const hasCurrentLayout = message =>
-    JSON.stringify(message.components || []).includes(REGULATIONS_PANEL_MARKER);
-  if (botPanels.some(hasCurrentLayout)) {
-    console.log("Current Regulations panel detected. Leaving it in place.");
+  // Do not delete and repost an existing panel on every restart.
+  // Only create one if the channel does not already contain a Regulations panel.
+  if (botPanels.size) {
+    console.log("Existing Regulations panel detected. Leaving it in place.");
     return;
   }
 
