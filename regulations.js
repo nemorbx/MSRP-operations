@@ -106,14 +106,14 @@ function mainPanel(guild) {
   // Top banner
   addBanner(container);
 
-  // Introductory copy, using Discord's quote bar to match the reference panel.
+  // Match the reference: banner, divider, then the two quote-bar descriptions.
+  container.addSeparatorComponents(divider());
   container.addTextDisplayComponents(
-    display("## Rules"),
     display(`> Whilst engaging with anyone on our server or playing on our ER:LC server, you're required to follow a strictly moderated set of regulations that **must not be broken**.`),
     display(`> The maximum amount of moderation points you can receive is **75**. If you reach this amount, you will be banned from our community.`)
   );
 
-  // First dropdown: server regulations
+  // Divider between the description and first dropdown.
   container.addSeparatorComponents(divider());
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
