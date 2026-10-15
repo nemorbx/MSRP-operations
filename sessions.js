@@ -59,7 +59,7 @@ async function refreshLiveStats() {
 function buildSessionPanel() {
   const online = process.env.ERLC_SESSION_ONLINE === "true";
   const inlineCode = value => "``" + String(value ?? "Not connected").replace(/`/g, "") + "``";
-  const embed = new EmbedBuilder()
+  const banner = new EmbedBuilder().setImage(BANNER_URL);\n  const embed = new EmbedBuilder()
     .setColor(online ? 0x35b56a : 0xe04444)
     .setDescription(
       "> Our sessions are managed by our **Session Managers**. We do not have an available schedule for sessions, meaning they will commence when our team is available.\n" +
@@ -71,10 +71,10 @@ function buildSessionPanel() {
       "> **Currently Moderating:** " + inlineCode(liveStats.moderating) + "\n" +
       "> **In-Queue Players:** " + inlineCode(liveStats.queue)
     )
-    .setFooter({ text: PANEL_MARKER })\n    .setImage(BANNER_URL);
+    .setFooter({ text: PANEL_MARKER });
 
   return {
-    embeds: [embed],
+    embeds: [banner, embed],
     components: [
       new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("session:notification").setLabel("Session Notification").setStyle(ButtonStyle.Secondary),
