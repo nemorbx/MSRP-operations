@@ -15,7 +15,7 @@ const path = require("path");
 const ROLEPERKS_CHANNEL_ID = "1560123150635630672";
 const ROLEPERKS_IMAGE_SOURCE = "roleperks.png";
 const ROLEPERKS_IMAGE_NAME = "roleperks.png";
-const ROLEPERKS_PANEL_VERSION = 3;
+const ROLEPERKS_PANEL_VERSION = 4;
 const ROLEPERKS_PANEL_MARKER = "\u200B".repeat(ROLEPERKS_PANEL_VERSION);
 const FOOTER_IMAGE_NAME = "banner.png";
 
@@ -24,7 +24,7 @@ function display(content) {
 }
 
 function divider() {
-  return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small);
+  return new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large);
 }
 
 function rolePerksPanel() {
@@ -45,11 +45,11 @@ function rolePerksPanel() {
     new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId("msrp_roleperks_select")
-        .setPlaceholder("Select a role to view its perks")
+        .setPlaceholder("View role perks...")
         .addOptions(
-          { label: "Server VIP Perks", description: "View the perks for being a VIP.", value: "vip" },
-          { label: "Server Booster Perks", description: "View the perks of being a Supporter.", value: "booster" },
-          { label: "Server Contributor Perks", description: "View the perks of being a Contributor.", value: "contributor" }
+          { label: "Server VIP Perks", description: "View the perks for being a VIP...", value: "vip" },
+          { label: "Server Booster Perks", description: "View the perks of being a Supporter...", value: "booster" },
+          { label: "Server Contributor Perks", description: "View the perks of being a Contributor...", value: "contributor" }
         )
     )
   );
