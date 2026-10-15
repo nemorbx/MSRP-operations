@@ -691,8 +691,13 @@ async function ensureRegulationsPanel(client) {
     message.components?.length &&
     message.attachments?.some(attachment => attachment.name === REGULATIONS_BANNER_NAME)
   );
-  if (botPanels.size) {
-    console.log("Existing Regulations panel detected. Leaving it in place.");
+
+  // Keep a panel that already has the current layout marker. Replace an older
+  // panel once so existing Discord messages receive the updated footer layout.
+  const hasCurrentLayout = message =>
+    JSON.stringify(message.components || []).includes(REGULATIONS_PANEL_MARKER);
+  if (botPanels.some(hasCurrentLayout)) {
+    console.log("Current Regulations panel detected. Leaving it in place.");
     return;
   }
 
@@ -702,6 +707,12 @@ async function ensureRegulationsPanel(client) {
     console.error(`Missing ${REGULATIONS_BANNER_NAME}. The regulations panel requires this top image.`);
     return;
   }
+  for (const panel of botPanels.values()) {
+    await panel.delete().catch(error => {
+      console.error("Failed to replace outdated Regulations panel:", error);
+    });
+  }
+
   const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
   if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
   await channel.send({
@@ -709,7 +720,9 @@ async function ensureRegulationsPanel(client) {
     files,
     flags: MessageFlags.IsComponentsV2,
   });
-  console.log("Regulations panel was missing, so one replacement was posted.");
+  console.log(botPanels.size
+    ? "Outdated Regulations panel replaced with the current footer layout."
+    : "Regulations panel was missing, so one replacement was posted.");
 }
 
 async function postOrRefreshPanel(client) {
