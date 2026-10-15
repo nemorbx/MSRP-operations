@@ -25,7 +25,7 @@ const INTERNAL_AFFAIRS_TEAM_ROLE_ID = "1527381477975789668";
 const MANAGEMENT_TEAM_ROLE_ID = "1528426569012609106";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const SUPPORT_LOGS_CHANNEL_ID = "1552509962910171176";
-const SUPPORT_PANEL_VERSION = 6;
+const SUPPORT_PANEL_VERSION = 7;
 const SUPPORT_PANEL_MARKER = "\u200B".repeat(SUPPORT_PANEL_VERSION);
 
 const DATA_DIR = path.join(__dirname, "data");
@@ -362,10 +362,15 @@ async function ensureSupportPanel(client) {
 
   // Discord may normalize invisible text markers in Components V2 payloads.
   // Identify the persistent assistance panel by its attached header image as a fallback.
-  const currentPanel = botPanels.find(message =>
-    JSON.stringify(message.components || []).includes(SUPPORT_PANEL_MARKER)
-  ) || botPanels.find(message =>
+  const hasHeaderAndFooter = message =>
     message.attachments?.some(attachment => attachment.name === "assistance.png") &&
+    message.attachments?.some(attachment => attachment.name === "banner.png");
+
+  const currentPanel = botPanels.find(message =>
+    JSON.stringify(message.components || []).includes(SUPPORT_PANEL_MARKER) &&
+    hasHeaderAndFooter(message)
+  ) || botPanels.find(message =>
+    hasHeaderAndFooter(message) &&
     Array.isArray(message.components) &&
     message.components.length > 0
   );
