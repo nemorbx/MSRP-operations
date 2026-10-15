@@ -775,11 +775,6 @@ async function postOrRefreshPanel(client) {
 }
 
 function setup(client) {
-  // Restore the Regulations panel only if it has been deleted; never repost an existing panel.
-  ensureRegulationsPanel(client).catch(error => {
-    console.error("Regulations panel startup check failed:", error);
-  });
-
   client.on("interactionCreate", async interaction => {
     if (
       !interaction.isButton() &&
