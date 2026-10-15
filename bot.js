@@ -20,7 +20,7 @@ const { setup: setupBooster } = require("./booster");
 const { setup: setupSay, command: sayCommand } = require("./say");
 const { setup: setupSuggestions, commands: suggestionCommands } = require("./suggestions");
 const { setup: setupSticky } = require("./sticky");
-const { setup: setupMarketplace, ensureMarketplacePanel } = require("./marketplace");
+const { setup: setupMarketplace, ensureMarketplacePanel } = require("./marketplace");\nconst { setup: setupSessions, ensureSessionPanel } = require("./sessions");
 
 const afkModule = require("./afk");
 const infractionsModule = require("./infractions");
@@ -60,7 +60,7 @@ setupSticky(client);
 setupMarketplace(client);
 setupBooster(client);
 setupSay(client);
-setupSuggestions(client);
+setupSuggestions(client);\nsetupSessions(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
@@ -228,7 +228,7 @@ client.once("clientReady", async () => {
   console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Role Perks, Marketplace, Purge, Booster, Say, Suggestions, Sticky, Welcome");
   console.log("========================================");
 
-  await testMelonlyApi();
+  await testMelonlyApi();\n\n  try {\n    await ensureSessionPanel(client);\n  } catch (error) {\n    console.error("Session panel startup error:", error);\n  }
 
   try {
     await ensureApplicationPanel(client);
