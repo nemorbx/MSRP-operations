@@ -83,18 +83,18 @@ function setup(client) {
         "[Donation 2500R$](" + DEFAULT_LINK + ")",
         "[Donation 5000R$](" + DEFAULT_LINK + ")",
         "[Donation 10000R$](" + DEFAULT_LINK + ")"
-      ].join("\\n");
+      ].join("\n");
       details = [
         ["Cash Donations", "Coming soon..."],
         ["Purchase Notice", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."]
       ];
     } else if (interaction.values[0] === "custom_roles") {
       title = "Custom Roles";
-      body = "Obtain a custom role.\\nMust not contain NSFW content.\\nMust not include advertisements.\\nMust follow our server regulations.\\n\\n[Click here to purchase](" + DEFAULT_LINK + ")";
+      body = "Obtain a custom role.\nMust not contain NSFW content.\nMust not include advertisements.\nMust follow our server regulations.\n\n[Click here to purchase](" + DEFAULT_LINK + ")";
       details = [["Purchase Notice", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."]];
     } else {
       title = "Paid Advertisement";
-      body = "Receive an everyone ping to promote your server.\\n\\n[Click here to purchase](" + DEFAULT_LINK + ")";
+      body = "Receive an everyone ping to promote your server.\n\n[Click here to purchase](" + DEFAULT_LINK + ")";
       details = [["Purchase Notice", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."]];
     }
 
@@ -110,7 +110,7 @@ function setup(client) {
     container.addTextDisplayComponents(new TextDisplayBuilder().setContent(body));
     for (const [fieldTitle, fieldValue] of details) {
       container.addSeparatorComponents(divider());
-      container.addTextDisplayComponents(new TextDisplayBuilder().setContent("### " + fieldTitle + "\\n" + fieldValue));
+      container.addTextDisplayComponents(new TextDisplayBuilder().setContent("### " + fieldTitle + "\n" + fieldValue));
     }
     container.addSeparatorComponents(divider());
     if (fs.existsSync(footerPath)) {
