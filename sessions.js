@@ -151,15 +151,29 @@ async function ensureSessionPanel(client) {
     return null;
   });
   if (!recent) return;
-  const matches = recent.filter(message => message.author.id === client.user.id && (JSON.stringify(message.components || []).includes(PANEL_MARKER) || (JSON.stringify(message.components || []).includes("SESSION INFORMATION") && (JSON.stringify(message.components || []).includes(BANNER_URL) || JSON.stringify(message.components || []).includes(FOOTER_BANNER_URL))))).sort((a, b) => b.createdTimestamp - a.createdTimestamp);
+  const matches = recent.filter(message => {
+    if (message.author.id !== client.user.id) return false;
+    const componentText = JSON.stringify(message.components || []);
+    const embedText = JSON.stringify(message.embeds || []);
+    // Match both the current Components V2 panel and the older embed-based panel
+    // so deployment upgrades the existing post instead of creating another one.
+    return componentText.includes(PANEL_MARKER) ||
+      componentText.includes(BANNER_URL) ||
+      componentText.includes(FOOTER_BANNER_URL) ||
+      embedText.includes(BANNER_URL) ||
+      embedText.includes(FOOTER_BANNER_URL) ||
+      (componentText.includes("SESSION INFORMATION") && componentText.includes("Server Owner"));
+  }).sort((a, b) => b.createdTimestamp - a.createdTimestamp);
   const existing = matches.first();
-  for (const duplicate of matches.toJSON().slice(1)) await duplicate.delete().catch(error => console.error("[Sessions] Could not remove duplicate panel:", error.message));
   if (existing) {
     await existing.edit(buildSessionPanel());
-    console.log("[Sessions] Existing Components V2 panel refreshed.");
+    console.log("[Sessions] Existing session panel converted/refreshed as Components V2.");
+    for (const duplicate of matches.toJSON().slice(1)) {
+      await duplicate.delete().catch(error => console.error("[Sessions] Could not remove duplicate panel:", error.message));
+    }
   } else {
     await channel.send(buildSessionPanel());
-    console.log("[Sessions] Components V2 panel posted to channel " + SESSION_CHANNEL_ID + ".");
+    console.log("[Sessions] No existing panel found; posted the initial Components V2 panel to channel " + SESSION_CHANNEL_ID + ".");
   }
 }
 
