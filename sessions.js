@@ -2,17 +2,24 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  EmbedBuilder,
+  ContainerBuilder,
+  SectionBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+  MediaGalleryBuilder,
+  MessageFlags,
 } = require("discord.js");
 
 const SESSION_CHANNEL_ID = "1527179992398692353";
 const SESSION_NOTIFICATION_ROLE_ID = "1527904654212726844";
+const ON_DUTY_ROLE_ID = "1529159979674636450";
 const PANEL_MARKER = "msrp-session-panel";
 const BANNER_URL = "https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/session-info.png";
 const ERLC_API_URL = "https://api.erlc.gg/v2/server?Players=true&Queue=true&Staff=true";
 let liveStats = {
   name: process.env.ERLC_SERVER_NAME || "Missouri State Roleplay",
   owner: process.env.ERLC_SERVER_OWNER || "Not connected",
+  ownerId: null,
   code: process.env.ERLC_SERVER_CODE || "Not connected",
   players: process.env.ERLC_PLAYER_COUNT || "Not connected",
   moderating: process.env.ERLC_MODERATING_COUNT || "Not connected",
@@ -38,7 +45,8 @@ async function refreshLiveStats() {
     }
     const data = JSON.parse(body);
     liveStats.name = data.Name || data.ServerName || liveStats.name;
-    liveStats.owner = data.Owner || data.ServerOwner || liveStats.owner;
+    liveStats.ownerId = data.OwnerId ?? liveStats.ownerId;
+    liveStats.owner = data.Owner || data.ServerOwner || (data.OwnerId ? "Roblox ID " + data.OwnerId : liveStats.owner);
     liveStats.code = data.JoinKey || data.ServerCode || data.Code || liveStats.code;
     const current = data.CurrentPlayers ?? data.CurrentPlayerCount;
     const max = data.MaxPlayers ?? data.MaxPlayerCount;
@@ -48,7 +56,10 @@ async function refreshLiveStats() {
     else if (queue !== undefined) liveStats.queue = String(queue);
     const staff = data.Staff ?? data.Moderators ?? data.CurrentlyModerating;
     if (Array.isArray(staff)) liveStats.moderating = String(staff.length);
-    else if (staff !== undefined) liveStats.moderating = String(staff);
+    else if (staff && typeof staff === "object") {
+      const members = Array.isArray(staff) ? staff : Object.values(staff).flatMap(value => Array.isArray(value) ? value : [value]);
+      liveStats.moderating = String(members.length);
+    } else if (staff !== undefined) liveStats.moderating = String(staff);
     liveStats.online = true;
     console.log("[Sessions] ER:LC live stats refreshed.");
   } catch (error) {
@@ -57,37 +68,59 @@ async function refreshLiveStats() {
   }
 }
 
-function buildSessionPanel() {
-  const online = process.env.ERLC_SESSION_ONLINE === "true";
-  const inlineCode = value => "``" + String(value ?? "Not connected").replace(/`/g, "") + "``";
-  const banner = new EmbedBuilder().setImage(BANNER_URL);
-  const embed = new EmbedBuilder()
-    .setColor(online ? 0x35b56a : 0xe04444)
-    .setDescription(
-      "> Our sessions are managed by our **Session Managers**. We do not have an available schedule for sessions, meaning they will commence when our team is available.\n" +
-      "> **Last Updated:** <t:" + Math.floor(Date.now() / 1000) + ":R>\n\n" +
-      "> **Server Name:** " + inlineCode(liveStats.name) + "\n" +
-      "> **Server Owner:** " + inlineCode(liveStats.owner) + "\n" +
-      "> **Server Code:** " + inlineCode(liveStats.code) + "\n\n" +
-      "> **In-game Players:** " + inlineCode(liveStats.players) + "\n" +
-      "> **Currently Moderating:** " + inlineCode(liveStats.moderating) + "\n" +
-      "> **In-Queue Players:** " + inlineCode(liveStats.queue)
+function buildSessionPanel(client) {
+  const online = liveStats.online;
+  const safe = value => String(value ?? "Not connected").replace(/[`]/g, "");
+  const container = new ContainerBuilder()
+    .setAccentColor(online ? 0x35b56a : 0xe04444)
+    .addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(item => item.setURL(BANNER_URL))
     )
-    .setFooter({ text: PANEL_MARKER });
-
-  return {
-    embeds: [banner, embed],
-    components: [
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        "Our sessions are managed by our **Session Managers**. We do not have an available schedule for sessions, meaning they will commence when our team is available.\n" +
+        "**Last Updated:** <t:" + Math.floor(Date.now() / 1000) + ":R>"
+      )
+    )
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        "**Server Name:** ``" + safe(liveStats.name) + "``\n" +
+        "**Server Owner:** ``" + safe(liveStats.owner) + "``\n" +
+        "**Server Code:** ``" + safe(liveStats.code) + "``"
+      )
+    )
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        "**In-game Players:** ``" + safe(liveStats.players) + "``\n" +
+        "**Currently Moderating:** ``" + safe(liveStats.moderating) + "``\n" +
+        "**In-Queue Players:** ``" + safe(liveStats.queue) + "``"
+      )
+    )
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent("`" + PANEL_MARKER + "`"))
+    .addActionRowComponents(
       new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("session:notification").setLabel("Session Notification").setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId("session:status").setLabel(online ? "Session Online" : "Session Offline").setStyle(online ? ButtonStyle.Success : ButtonStyle.Danger).setDisabled(true)
       )
-    ]
-  };
+    );
+  return { components: [container], flags: MessageFlags.IsComponentsV2 };
 }
 
 async function ensureSessionPanel(client) {
   await refreshLiveStats();
+  const guild = client.guilds.cache.first();
+  if (guild) {
+    try {
+      const role = await guild.roles.fetch(ON_DUTY_ROLE_ID);
+      if (role) liveStats.moderating = String(role.members.size);
+    } catch (error) {
+      console.error("[Sessions] Could not count on-duty role members:", error.message);
+    }
+  }
   const channel = await client.channels.fetch(SESSION_CHANNEL_ID).catch(error => {
     console.error("[Sessions] Could not fetch sessions channel:", error.message);
     return null;
@@ -101,12 +134,12 @@ async function ensureSessionPanel(client) {
     return null;
   });
   if (!recent) return;
-  const existing = recent.find(message => message.author.id === client.user.id && message.embeds.some(embed => embed.footer?.text === PANEL_MARKER));
+  const existing = recent.find(message => message.author.id === client.user.id && (message.embeds.some(embed => embed.footer?.text === PANEL_MARKER) || message.components?.some(row => JSON.stringify(row).includes(PANEL_MARKER))));
   if (existing) {
-    await existing.edit(buildSessionPanel());
+    await existing.edit(buildSessionPanel(client));
     console.log("[Sessions] Existing panel refreshed.");
   } else {
-    await channel.send(buildSessionPanel());
+    await channel.send(buildSessionPanel(client));
     console.log("[Sessions] Panel posted to channel " + SESSION_CHANNEL_ID + ".");
   }
 }
