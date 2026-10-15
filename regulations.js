@@ -109,8 +109,7 @@ function mainPanel(guild) {
   // Top banner
   addBanner(container);
 
-  // Match the reference: banner, divider, then the two quote-bar descriptions.
-  container.addSeparatorComponents(divider());
+  // Keep the banner tight to the description; no divider directly underneath it.
   container.addTextDisplayComponents(
     display(`> Whilst engaging with anyone on our server or playing on our ER:LC server, you're required to follow a strictly moderated set of regulations that **must not be broken**.`),
     display(`> The maximum amount of moderation points you can receive is **75**. If you reach this amount, you will be banned from our community.`)
@@ -679,54 +678,9 @@ async function sendJurisdiction(interaction) {
 }
 
 async function ensureRegulationsPanel(client) {
-  const guild = client.guilds.cache.first();
-  if (!guild) return;
-  const channel = await guild.channels.fetch(REGULATIONS_CHANNEL_ID).catch(() => null);
-  if (!channel || !channel.isTextBased()) return;
-  const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
-  if (!messages) return;
-
-  const regulationsBannerPath = path.join(__dirname, REGULATIONS_BANNER_NAME);
-  const bannerPath = path.join(__dirname, BANNER_NAME);
-  if (!fs.existsSync(regulationsBannerPath)) {
-    console.error(`Missing ${REGULATIONS_BANNER_NAME}. The regulations panel requires this top image.`);
-    return;
-  }
-
-  const botPanels = messages.filter(message =>
-    message.author?.id === client.user.id && message.components?.length
-  );
-  const hasBothBanners = message =>
-    message.attachments?.some(attachment => attachment.name === REGULATIONS_BANNER_NAME) &&
-    message.attachments?.some(attachment => attachment.name === BANNER_NAME);
-  const currentPanel = botPanels.find(message =>
-    JSON.stringify(message.components || []).includes(REGULATIONS_PANEL_MARKER) && hasBothBanners(message)
-  ) || botPanels.find(message => hasBothBanners(message));
-
-  if (currentPanel) {
-    console.log("Existing Regulations panel detected. Leaving it in place.");
-    return;
-  }
-
-  const oldPanels = botPanels.filter(message =>
-    message.attachments?.some(attachment =>
-      [REGULATIONS_BANNER_NAME, BANNER_NAME].includes(attachment.name)
-    )
-  );
-  for (const panel of oldPanels.values()) {
-    await panel.delete().catch(error => {
-      console.error("Failed to replace old Regulations panel during startup:", error);
-    });
-  }
-
-  const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
-  if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
-  await channel.send({
-    components: [mainPanel(guild)],
-    files,
-    flags: MessageFlags.IsComponentsV2,
-  });
-  console.log(`Regulations panel refreshed because no current panel was detected. Removed ${oldPanels.size} old panel(s) and posted one replacement.`);
+  // Never create or replace the persistent Regulations panel automatically on startup.
+  // Use postOrRefreshPanel only for an intentional, explicit panel update.
+  console.log("Regulations panel startup refresh skipped; keeping the existing panel.");
 }
 
 async function postOrRefreshPanel(client) {
