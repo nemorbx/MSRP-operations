@@ -95,7 +95,6 @@ function addBanner(container, assetName = REGULATIONS_BANNER_NAME) {
 }
 
 function addBottomBanner(container) {
-  container.addSeparatorComponents(divider());
   container.addMediaGalleryComponents(
     new MediaGalleryBuilder().addItems(
       new MediaGalleryItemBuilder().setURL(`attachment://${BANNER_NAME}`)
