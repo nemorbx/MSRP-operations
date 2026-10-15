@@ -111,7 +111,7 @@ function mainPanel(guild) {
   // Keep the banner-to-description spacing minimal.
   container.addTextDisplayComponents(
     display(`> Whilst engaging with anyone on our server or playing on our ER:LC server, you're required to follow a strictly moderated set of regulations that **must not be broken**.`),
-    display(`> The maximum amount of moderation points you can receive is **75**. If you reach this amount, you will be banned from our community.`)
+    display(`> The maximum amount of moderation points you can receive is **75**. If you reach this amount, you will be banned from our community.` + REGULATIONS_PANEL_MARKER)
   );
 
   // Divider between the description and first dropdown.
@@ -192,7 +192,6 @@ function mainPanel(guild) {
 
   // Bottom banner, separated from the controls like the reference.
   addBottomBanner(container);
-  container.addTextDisplayComponents(display(REGULATIONS_PANEL_MARKER));
   return container;
 }
 
