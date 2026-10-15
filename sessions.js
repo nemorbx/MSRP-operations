@@ -9,7 +9,7 @@ const SESSION_CHANNEL_ID = "1527179992398692353";
 const SESSION_NOTIFICATION_ROLE_ID = "1527904654212726844";
 const PANEL_MARKER = "msrp-session-panel";
 const BANNER_URL = "https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/session-info.png";
-const ERLC_API_URL = "https://api.erlc.gg/v2/server";
+const ERLC_API_URL = "https://api.erlc.gg/v2/server?Players=true&Queue=true&Staff=true";
 let liveStats = {
   name: process.env.ERLC_SERVER_NAME || "Missouri State Roleplay",
   owner: process.env.ERLC_SERVER_OWNER || "Not connected",
@@ -37,7 +37,7 @@ async function refreshLiveStats() {
       return;
     }
     const data = JSON.parse(body);
-    liveStats.name = data.Name || data.ServerName || liveStats.name;
+    liveStats.name = data.Name || data.ServerName || liveStats.name;\n    liveStats.owner = data.Owner || data.ServerOwner || liveStats.owner;
     liveStats.code = data.JoinKey || data.ServerCode || data.Code || liveStats.code;
     const current = data.CurrentPlayers ?? data.CurrentPlayerCount;
     const max = data.MaxPlayers ?? data.MaxPlayerCount;
