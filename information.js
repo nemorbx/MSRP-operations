@@ -67,8 +67,6 @@ function informationPanel(guild) {
   container.addTextDisplayComponents(
     display("> <:caution:1560140490823835689> **Default kick timer:** `30 Minutes` " + INFORMATION_PANEL_MARKER)
   );
-  container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
-
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setLabel("Whitelisted Group").setStyle(ButtonStyle.Link).setURL(WHITELISTED_GROUP_URL),
