@@ -18,7 +18,7 @@ const WEBSITE_URL = "https://nemorbx.github.io/msrp/";
 const WHITELISTED_GROUP_URL = "https://www.roblox.com/communities/";
 const ROBLOX_GROUP_URL = "https://www.roblox.com/communities/";
 const INFORMATION_IMAGE_NAME = "information.png";
-const INFORMATION_PANEL_VERSION = 8;
+const INFORMATION_PANEL_VERSION = 9;
 const INFORMATION_PANEL_MARKER = "\u200B".repeat(INFORMATION_PANEL_VERSION);
 
 const CHANNELS = {
@@ -104,26 +104,33 @@ async function postOrRefreshInformationPanel(client) {
   }
 
   const botPanels = messages.filter(message =>
-    message.author?.id === client.user.id && message.components?.length
+    message.author?.id === client.user.id &&
+    message.components?.length &&
+    message.attachments?.some(attachment => attachment.name === INFORMATION_IMAGE_NAME)
   );
 
-  for (const panel of botPanels.values()) {
-    await panel.delete().catch(error => {
-      console.error("Failed to delete old Information panel:", error);
-    });
-  }
-
-  await channel.send({
+  const existingPanel = botPanels.first();
+  const payload = {
     components: [informationPanel(channel.guild)],
     files: [
       { attachment: imagePath, name: INFORMATION_IMAGE_NAME },
       { attachment: footerPath, name: "banner.png" },
     ],
+    attachments: [],
     flags: MessageFlags.IsComponentsV2,
-  });
+  };
 
-  console.log("Information V2 panel replaced in the Dashboard channel.");
-}
+  if (existingPanel) {
+    await existingPanel.edit(payload);
+    for (const duplicate of botPanels.filter(message => message.id !== existingPanel.id).values()) {
+      await duplicate.delete().catch(error => console.error("Failed to remove duplicate Information panel:", error));
+    }
+    console.log("Information V2 panel updated in place; duplicates cleaned up.");
+  } else {
+    await channel.send(payload);
+    console.log("Information V2 panel posted because none was detected.");
+  }
+}}
 
 function setup(client) {}
 
