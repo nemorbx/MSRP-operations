@@ -24,7 +24,7 @@ let liveStats = {
   players: process.env.ERLC_PLAYER_COUNT || "Not connected",
   moderating: process.env.ERLC_MODERATING_COUNT || "Not connected",
   queue: process.env.ERLC_QUEUE_COUNT || "Not connected",
-  online: process.env.ERLC_SESSION_ONLINE === "true",
+  online: null,
 };
 
 async function resolveRobloxUsername(userId) {
@@ -74,21 +74,20 @@ async function refreshLiveStats() {
       const members = Array.isArray(staff) ? staff : Object.values(staff).flatMap(value => Array.isArray(value) ? value : [value]);
       liveStats.moderating = String(members.length);
     } else if (staff !== undefined) liveStats.moderating = String(staff);
-    liveStats.online = true;
-    console.log("[Sessions] ER:LC live stats refreshed.");
+    liveStats.online = null;
+    console.log("[Sessions] ER:LC live stats refreshed; session status remains unknown until a documented status field is verified.");
   } catch (error) {
-    liveStats.online = false;
+    liveStats.online = null;
     console.error("[Sessions] ER:LC stats refresh failed:", error.message);
   }
 }
 
 function buildSessionPanel(client) {
-  const online = liveStats.online;
-  const safe = value => String(value ?? "Not connected").replace(/[`]/g, "");
+  const safe = value => String(value ?? "Unknown").replace(/[`]/g, "");
   const container = new ContainerBuilder()
-    .setAccentColor(online ? 0x35b56a : 0xe04444)
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(item => item.setURL(BANNER_URL))
+    .setAccentColor(0x35a8e0)
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent("## 🎮 | SESSION INFORMATION")
     )
     .addSeparatorComponents(new SeparatorBuilder())
     .addTextDisplayComponents(
@@ -114,12 +113,15 @@ function buildSessionPanel(client) {
       )
     )
     .addSeparatorComponents(new SeparatorBuilder())
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent("`" + PANEL_MARKER + "`"))
     .addActionRowComponents(
       new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("session:notification").setLabel("Session Notification").setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId("session:status").setLabel(online ? "Session Online" : "Session Offline").setStyle(online ? ButtonStyle.Success : ButtonStyle.Danger).setDisabled(true)
+        new ButtonBuilder().setCustomId("session:status").setLabel("Session Status: Unknown").setStyle(ButtonStyle.Secondary).setDisabled(true)
       )
+    )
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(item => item.setURL(BANNER_URL))
     );
   return { components: [container], flags: MessageFlags.IsComponentsV2 };
 }
