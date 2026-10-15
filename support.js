@@ -25,7 +25,7 @@ const INTERNAL_AFFAIRS_TEAM_ROLE_ID = "1527381477975789668";
 const MANAGEMENT_TEAM_ROLE_ID = "1528426569012609106";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const SUPPORT_LOGS_CHANNEL_ID = "1552509962910171176";
-const SUPPORT_PANEL_VERSION = 5;
+const SUPPORT_PANEL_VERSION = 6;
 const SUPPORT_PANEL_MARKER = "\u200B".repeat(SUPPORT_PANEL_VERSION);
 
 const DATA_DIR = path.join(__dirname, "data");
@@ -119,16 +119,14 @@ function buildSupportPanel(guild) {
   addMedia(container, banner);
   container.addSeparatorComponents(separator());
 
-  // Main assistance description, styled as a Discord quote block.
+  // Keep the description and response-time quote together without a divider between them.
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       "> Our assistance dashboard is here to easily contact our support team through various ticket options. Pick the one that you think best supports your issue(s) and we'll be there to assist as soon as possible. Avoid pining staff inside of your tickets as they are already notified when you open the ticket."
     )
   );
 
-  container.addSeparatorComponents(separator());
-
-  // Average response time gets its own quote line and divider spacing.
+  // No separator here: the description and average response time are one text section.
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
       "> **Average Response Time:** `12-20 minutes`."
@@ -151,6 +149,9 @@ function buildSupportPanel(guild) {
   container.addActionRowComponents(new ActionRowBuilder().addComponents(menu));
   container.addSeparatorComponents(separator());
   addMedia(container, footer);
+
+  // Version marker lets startup replace the panel only when this layout changes.
+  container.addTextDisplayComponents(new TextDisplayBuilder().setContent(SUPPORT_PANEL_MARKER));
 
   return container;
 }
