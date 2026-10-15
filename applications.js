@@ -389,30 +389,33 @@ function buildEligibilityContainer(remaining, ready = false, started = false) {
 async function startStaffApplication(interaction) {
   if (!interaction.guild || !interaction.member) return;
 
+  // Acknowledge immediately to prevent Discord's interaction from remaining in a thinking state.
+  await interaction.deferReply({ flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
+
   if (countdowns.has(interaction.user.id)) {
-    await v2Reply(interaction, "Your application eligibility check is already running. Please check your DMs for the existing panel.");
+    await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("Your application eligibility check is already running. Please check your DMs for the existing panel.")] });
     return;
   }
 
   const existing = getCurrentApplication(interaction.user.id);
   if (existing?.status === "In Progress") {
-    await v2Reply(interaction, "An application has already been started. Please check your DMs.");
+    await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("An application has already been started. Please check your DMs.")] });
     return;
   }
   if (existing?.status === "Pending") {
-    await v2Reply(interaction, "You already have an active staff application. Please wait for it to be reviewed.");
+    await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("You already have an active staff application. Please wait for it to be reviewed.")] });
     return;
   }
   if (isStaff(interaction.member)) {
-    await v2Reply(interaction, "You cannot submit a staff application because you are already a member of the staff team.");
+    await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("You cannot submit a staff application because you are already a member of the staff team.")] });
     return;
   }
   if (isBlacklisted(interaction.member)) {
-    await v2Reply(interaction, "You are currently blacklisted from submitting staff applications.");
+    await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("You are currently blacklisted from submitting staff applications.")] });
     return;
   }
   if (getCooldown(interaction.user.id)) {
-    await v2Reply(interaction, "Your previous staff application was denied. You must wait 3 days before submitting another staff application.");
+    await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("Your previous staff application was denied. You must wait 3 days before submitting another staff application.")] });
     return;
   }
 
@@ -428,11 +431,11 @@ async function startStaffApplication(interaction) {
     });
   } catch (error) {
     console.error("Could not send staff application eligibility panel by DM:", error);
-    await v2Reply(interaction, "I couldn't send you the staff application panel. Please enable direct messages from server members and try again.");
+    await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("I couldn't send you the staff application panel. Please enable direct messages from server members and try again.")] });
     return;
   }
 
-  await v2Reply(interaction, "I've sent you the staff application panel in your DMs. Please continue there.");
+  await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("I've sent you the staff application panel in your DMs. Please continue there.")] });
 
   let remaining = 10;
   const timer = setInterval(async () => {
