@@ -823,11 +823,27 @@ function recoverStaffApplicationFromReviewMessage(interaction, applicationId) {
   };
 }
 
-async function handleStaffDecision(interaction, action, applicationId) {
-  // Acknowledge immediately. All work below can safely take longer than
-  // Discord's initial interaction response window.
+async function showStaffDecisionReasonModal(interaction, action, applicationId) {
+  const modal = new ModalBuilder()
+    .setCustomId(`staff_decision_reason:${action}:${applicationId}`)
+    .setTitle(action === "approve" ? "Accept Application" : "Deny Application");
+  const reason = new TextInputBuilder()
+    .setCustomId("decision_reason")
+    .setLabel(action === "approve" ? "Reason for accepting" : "Reason for denying")
+    .setStyle(TextInputStyle.Paragraph)
+    .setPlaceholder("Explain why this decision was made...")
+    .setMinLength(3)
+    .setMaxLength(1000)
+    .setRequired(true);
+  modal.addComponents(new ActionRowBuilder().addComponents(reason));
+  await interaction.showModal(modal);
+}
+
+async function handleStaffDecision(interaction, action, applicationId, decisionReason = "") {
+  // Modal submissions need a response of their own; button-based decisions defer the update.
   if (!interaction.deferred && !interaction.replied) {
-    await interaction.deferUpdate();
+    if (interaction.isModalSubmit?.()) await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    else await interaction.deferUpdate();
   }
 
   if (!interaction.member?.roles?.cache?.has(APPLICATION_READER_ROLE_ID)) {
@@ -870,14 +886,14 @@ async function handleStaffDecision(interaction, action, applicationId) {
     application.status = "Approved";
     application.reviewedBy = interaction.user.id;
     application.reviewedAt = new Date().toISOString();
-    application.resultReason = "Your application was accepted.";
+    application.resultReason = decisionReason.trim();
     if (!member) throw new Error("Applicant is no longer a member of this server; cannot assign Awaiting Training role.");
     await member.roles.add(AWAITING_TRAINING_ROLE_ID);
   } else if (action === "deny") {
     application.status = "Denied";
     application.reviewedBy = interaction.user.id;
     application.reviewedAt = new Date().toISOString();
-    application.resultReason = "Your application did not meet the staff application requirements.";
+    application.resultReason = decisionReason.trim();
     const cooldowns = readJson(COOLDOWNS_FILE, {});
     cooldowns[application.userId] = Date.now() + 3 * 24 * 60 * 60 * 1000;
     writeJson(COOLDOWNS_FILE, cooldowns);
@@ -1237,8 +1253,13 @@ function setup(client) {
         }
 
         const [prefix, id] = interaction.customId.split(":");
-        if (prefix === "staff_approve" || prefix === "staff_deny" || prefix === "staff_blacklist") {
-          await handleStaffDecision(interaction, prefix.replace("staff_", ""), id);
+        if (prefix === "staff_approve" || prefix === "staff_deny") {
+          await showStaffDecisionReasonModal(interaction, prefix.replace("staff_", ""), id);
+          return;
+        }
+
+        if (prefix === "staff_blacklist") {
+          await handleStaffDecision(interaction, "blacklist", id);
           return;
         }
 
@@ -1251,6 +1272,17 @@ function setup(client) {
           await showBanAppealModal(interaction);
           return;
         }
+      }
+
+      if (interaction.isModalSubmit() && interaction.customId.startsWith("staff_decision_reason:")) {
+        const [, action, applicationId] = interaction.customId.split(":");
+        const reason = interaction.fields.getTextInputValue("decision_reason").trim();
+        if (reason.length < 3) {
+          await interaction.reply({ content: "Please provide a reason of at least 3 characters.", ephemeral: true });
+          return;
+        }
+        await handleStaffDecision(interaction, action, applicationId, reason);
+        return;
       }
 
       if (interaction.isModalSubmit() && interaction.customId === "ban_appeal_modal") {
