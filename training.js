@@ -3,7 +3,7 @@ const path = require("path");
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 
 const STAFF_TRAINER_ROLE_ID = "1527903039669665853";
-const JUNIOR_MOD_ROLE_ID = "1528449495136731237";
+const TRIAL_MOD_ROLE_ID = "1527383332093038755";
 const STAFF_TEAM_ROLE_ID = "1528242210871447672";
 const TRAINING_ROLE_ID = "1551985353802518588";
 const REQUEST_CHANNEL_ID = "1528996885262766250";
@@ -29,7 +29,9 @@ const data = loadData();
 const trainingCommand = new SlashCommandBuilder()
   .setName("training")
   .setDescription("Training requests and results")
-  .addSubcommand(sub => sub.setName("request").setDescription("Request a training session"))
+  .addSubcommand(sub => sub.setName("request").setDescription("Request a training session")
+    .addStringOption(o => o.setName("availability").setDescription("What days/times are you available? Include dates and times").setRequired(true))
+    .addStringOption(o => o.setName("timezone").setDescription("Your time zone (e.g. America/Chicago or Eastern Time)").setRequired(true))
   .addSubcommand(sub => sub.setName("results").setDescription("Submit a trainee's training results")
     .addUserOption(o => o.setName("trainee").setDescription("Trainee being evaluated").setRequired(true))
     .addStringOption(o => o.setName("driving").setDescription("Driving result").setRequired(true)
@@ -60,6 +62,11 @@ function setup(client) {
       if (now - last < REQUEST_COOLDOWN_MS) {
         const minutes = Math.ceil((REQUEST_COOLDOWN_MS - (now - last)) / 60000);
         return interaction.reply({ content: `You can request training again in ${minutes} minute(s).`, flags: MessageFlags.Ephemeral });
+      }
+      const availability = interaction.options.getString("availability", true).trim();
+      const timezone = interaction.options.getString("timezone", true).trim();
+      if (availability.length < 2 || timezone.length < 2) {
+        return interaction.reply({ content: "Please enter your availability and time zone.", flags: MessageFlags.Ephemeral });
       }
       const channel = interaction.guild.channels.cache.get(REQUEST_CHANNEL_ID);
       if (!channel || !channel.isTextBased()) {
@@ -98,17 +105,17 @@ function setup(client) {
 
       try {
         if (passed) {
-          const juniorRole = interaction.guild.roles.cache.get(JUNIOR_MOD_ROLE_ID);
+          const trialModRole = interaction.guild.roles.cache.get(TRIAL_MOD_ROLE_ID);
           const staffRole = interaction.guild.roles.cache.get(STAFF_TEAM_ROLE_ID);
-          if (!juniorRole || !staffRole) {
-            return interaction.reply({ content: "The Junior Moderator or Staff Team role could not be found. No roles were changed.", flags: MessageFlags.Ephemeral });
+          if (!trialModRole || !staffRole) {
+            return interaction.reply({ content: "The Trial Moderator or Staff Team role could not be found. No roles were changed.", flags: MessageFlags.Ephemeral });
           }
-          if (juniorRole.position >= interaction.guild.members.me.roles.highest.position ||
+          if (trialModRole.position >= interaction.guild.members.me.roles.highest.position ||
               staffRole.position >= interaction.guild.members.me.roles.highest.position ||
               (interaction.guild.roles.cache.get(TRAINING_ROLE_ID)?.position || 0) >= interaction.guild.members.me.roles.highest.position) {
             return interaction.reply({ content: "My highest role must be above the Junior Moderator, Staff Team, and Awaiting Training roles. No roles were changed.", flags: MessageFlags.Ephemeral });
           }
-          await trainee.roles.add([JUNIOR_MOD_ROLE_ID, STAFF_TEAM_ROLE_ID], "Passed staff training");
+          await trainee.roles.add([TRIAL_MOD_ROLE_ID, STAFF_TEAM_ROLE_ID], "Passed staff training");
           await trainee.roles.remove(TRAINING_ROLE_ID, "Passed staff training");
           delete data.failedUntil[trainee.id];
         } else {
@@ -128,11 +135,11 @@ function setup(client) {
           const promotionsChannel = interaction.guild.channels.cache.get(PROMOTIONS_CHANNEL_ID);
           if (promotionsChannel && promotionsChannel.isTextBased()) {
             const promotionEmbed = new EmbedBuilder().setColor(0x2ecc71).setTitle("Staff Promotion")
-              .setDescription(`Congratulations ${trainee}! You have successfully passed staff training and have been assigned **Junior Moderator** and **Staff Team** roles. Welcome to the MSRP staff team!\n\n**Trainer:** ${interaction.user}`)
+              .setDescription(`Congratulations ${trainee}! You have successfully passed staff training and have been assigned **Trial Moderator** and **Staff Team** roles. Welcome to the MSRP staff team!\n\n**Trainer:** ${interaction.user}`)
               .setTimestamp();
             await promotionsChannel.send({ embeds: [promotionEmbed], allowedMentions: { parse: [] } });
           }
-          await interaction.reply({ content: `Training results recorded: **PASS**. ${trainee} received the Junior Moderator and Staff Team roles, and the promotion announcement was sent.`, flags: MessageFlags.Ephemeral });
+          await interaction.reply({ content: `Training results recorded: **PASS**. ${trainee} received the Trial Moderator and Staff Team roles, and the promotion announcement was sent.`, flags: MessageFlags.Ephemeral });
         } else {
           await interaction.reply({ content: `Training results recorded: **FAIL**. The result was sent to the results channel only. ${trainee} must wait 3 days before requesting training again.`, flags: MessageFlags.Ephemeral });
         }
