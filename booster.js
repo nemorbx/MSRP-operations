@@ -14,34 +14,20 @@ const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "booster.json");
 const BOOSTER_IMAGE_PATH = path.join(__dirname, "booster.png");
 const BOOSTER_IMAGE_NAME = "booster.png";
-
-function ensureData() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ channelId: null }, null, 2), "utf8");
-  }
-}
-
-function loadData() {
-  ensureData();
-  try {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    return { channelId: data.channelId ?? null };
-  } catch {
-    return { channelId: null };
-  }
-}
-
-function saveData(data) {
-  ensureData();
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
-}
+const BOOSTER_BANNER_PATH = path.join(__dirname, "booster-banner.png");
+const BOOSTER_BANNER_NAME = "booster-banner.png";
+const BOOSTER_CHANNEL_ID = "1527194109494693938";
 
 function buildBoosterMessage(member) {
   const displayName = member.displayName || member.user.username;
   const mention = `<@${member.id}>`;
 
   const container = new ContainerBuilder()
+    .addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder().setURL(`attachment://${BOOSTER_IMAGE_NAME}`)
+      )
+    )
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(`## Thank You for Boosting!\n${mention}`)
     )
@@ -53,28 +39,27 @@ function buildBoosterMessage(member) {
     )
     .addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder().setURL(`attachment://${BOOSTER_IMAGE_NAME}`)
+        new MediaGalleryItemBuilder().setURL(`attachment://${BOOSTER_BANNER_NAME}`)
       )
     );
 
   return {
     components: [container],
     flags: MessageFlags.IsComponentsV2,
-    files: [new AttachmentBuilder(BOOSTER_IMAGE_PATH, { name: BOOSTER_IMAGE_NAME })],
+    files: [
+      new AttachmentBuilder(BOOSTER_IMAGE_PATH, { name: BOOSTER_IMAGE_NAME }),
+      new AttachmentBuilder(BOOSTER_BANNER_PATH, { name: BOOSTER_BANNER_NAME }),
+    ],
     allowedMentions: { users: [member.id] },
   };
 }
 
 async function sendBoosterMessage(client, member) {
-  if (!client.boosterData?.channelId) {
-    return { ok: false, reason: "NO_CHANNEL" };
-  }
-
-  if (!fs.existsSync(BOOSTER_IMAGE_PATH)) {
+  if (!fs.existsSync(BOOSTER_IMAGE_PATH) || !fs.existsSync(BOOSTER_BANNER_PATH)) {
     return { ok: false, reason: "NO_IMAGE" };
   }
 
-  const channel = await member.guild.channels.fetch(client.boosterData.channelId).catch(() => null);
+  const channel = await member.guild.channels.fetch(BOOSTER_CHANNEL_ID).catch(() => null);
   if (!channel || !channel.isTextBased() || !channel.send) {
     return { ok: false, reason: "INVALID_CHANNEL" };
   }
@@ -103,67 +88,60 @@ function setupBooster(client) {
   });
 }
 
-async function sendOwnerConfirmation(message, content) {
+async function isBotOwner(client, userId) {
   try {
-    const confirmation = await message.channel.send({ content, allowedMentions: { users: [message.author.id] } });
-    setTimeout(() => confirmation.delete().catch(() => {}), 4000);
-  } catch {}
+    await client.application.fetch();
+    const owner = client.application.owner;
+    if (!owner) return false;
+    if (owner.members) return owner.members.has(userId);
+    return owner.id === userId;
+  } catch (error) {
+    console.error("Unable to verify bot owner for !boost:", error);
+    return false;
+  }
 }
 
-async function handlePrefixCommand(client, message, args, isOwner) {
-  if (!isOwner || args[0]?.toLowerCase() !== "booster") return false;
+function setupBooster(client) {
+  client.on("messageCreate", async message => {
+    if (message.author.bot || !message.guild || !message.content.trim().toLowerCase().startsWith("!boost")) return;
 
-  const action = args[1]?.toLowerCase();
-
-  if (!action) {
-    await message.reply("Usage: `!booster #channel` or `!booster test`").catch(() => {});
-    return true;
-  }
-
-  if (action === "test") {
-    if (!client.boosterData?.channelId) {
-      await message.reply("You must set a Booster Message channel first with `!booster #channel`.").catch(() => {});
-      return true;
+    if (!(await isBotOwner(client, message.author.id))) {
+      await message.reply("Only the bot owner can use `!boost`.").catch(() => {});
+      return;
     }
 
-    if (!fs.existsSync(BOOSTER_IMAGE_PATH)) {
-      await message.reply("I can't run the booster test because `booster.png` is missing from the bot folder.").catch(() => {});
-      return true;
+    const target = message.mentions.members.first();
+    if (!target || message.content.trim().split(/\\s+/).length !== 2) {
+      await message.reply("Usage: `!boost @user`").catch(() => {});
+      return;
     }
 
-    const result = await sendBoosterMessage(client, message.member);
-    if (!result.ok) {
-      await message.reply("I couldn't send the booster test to the configured channel. Make sure the channel still exists and I can send messages and attach files there.").catch(() => {});
-      return true;
+    try {
+      const result = await sendBoosterMessage(client, target);
+      if (!result.ok) {
+        const reason = result.reason === "NO_IMAGE"
+          ? "I couldn't find `booster.png` or `booster-banner.png` in the bot folder."
+          : "I couldn't send the simulated boost message. Check that the supporters channel exists and I have permission to send messages and attach files.";
+        await message.reply(reason).catch(() => {});
+        return;
+      }
+      const confirmation = await message.reply(`Test boost message sent for ${target}.`).catch(() => null);
+      if (confirmation) setTimeout(() => confirmation.delete().catch(() => {}), 4000);
+    } catch (error) {
+      console.error("!boost command error:", error);
+      await message.reply("The boost test failed. Check the bot logs for details.").catch(() => {});
     }
+  });
 
-    await sendOwnerConfirmation(message, "Booster command executed successfully. Booster test sent.");
-    return true;
-  }
-
-  if (action === "remove") {
-    client.boosterData.channelId = null;
-    saveData(client.boosterData);
-    await sendOwnerConfirmation(message, "Booster command executed successfully. The Booster Message channel has been removed.");
-    return true;
-  }
-
-  const channelId = action.match(/^<#(\d+)>$/)?.[1] || action;
-  if (!/^\d{15,25}$/.test(channelId)) {
-    await message.reply("Usage: `!booster #channel` or `!booster test`").catch(() => {});
-    return true;
-  }
-
-  const channel = await message.guild.channels.fetch(channelId).catch(() => null);
-  if (!channel || !channel.isTextBased() || !channel.send) {
-    await message.reply("That is not a valid text channel.").catch(() => {});
-    return true;
-  }
-
-  client.boosterData.channelId = channel.id;
-  saveData(client.boosterData);
-  await sendOwnerConfirmation(message, `Booster command executed successfully. Booster Message channel set to <#${channel.id}>.`);
-  return true;
+  client.on("guildMemberUpdate", async (oldMember, newMember) => {
+    try {
+      if (oldMember.premiumSince || !newMember.premiumSince) return;
+      const result = await sendBoosterMessage(client, newMember);
+      if (!result.ok) console.error("Automatic booster message could not be sent:", result.reason);
+    } catch (error) {
+      console.error("Booster message error:", error);
+    }
+  });
 }
 
-module.exports = { setup: setupBooster, handlePrefixCommand, sendBoosterMessage };
+module.exports = { setup: setupBooster, sendBoosterMessage };
