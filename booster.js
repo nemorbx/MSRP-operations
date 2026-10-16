@@ -13,15 +13,15 @@ const {
 
 const BOOSTER_IMAGE_PATH = path.join(__dirname, "booster.png");
 const BOOSTER_IMAGE_NAME = "booster.png";
-const BOOSTER_BANNER_PATH = path.join(__dirname, "booster-banner.png");
-const BOOSTER_BANNER_NAME = "booster-banner.png";
+const BOOSTER_BANNER_NAME = fs.existsSync(path.join(__dirname, "booster-banner.png")) ? "booster-banner.png" : "banner.png";
+const BOOSTER_BANNER_PATH = path.join(__dirname, BOOSTER_BANNER_NAME);
 const BOOSTER_CHANNEL_ID = "1527194109494693938";
 const PERKS_CHANNEL_ID = "1560123150635630672";
 
 function banner(name) {
   const url = name === BOOSTER_IMAGE_NAME
     ? "https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/booster.png"
-    : `attachment://${name}`;
+    : `attachment://${BOOSTER_BANNER_NAME}`;
   return new MediaGalleryBuilder().addItems(
     new MediaGalleryItemBuilder().setURL(url)
   );
