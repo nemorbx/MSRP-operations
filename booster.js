@@ -81,7 +81,7 @@ async function isBotOwner(client, userId) {
 
 function setupBooster(client) {
   client.on("messageCreate", async message => {
-    if (message.author.bot || !message.guild || !/^!boost(?:\\s|$)/i.test(message.content.trim())) return;
+    if (message.author.bot || !message.guild || !/^!boost(?:\s|$)/i.test(message.content.trim())) return;
 
     if (!(await isBotOwner(client, message.author.id))) {
       await message.reply("Only the bot owner can use `!boost`.").catch(() => {});
