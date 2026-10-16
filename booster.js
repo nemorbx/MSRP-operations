@@ -19,8 +19,11 @@ const BOOSTER_CHANNEL_ID = "1527194109494693938";
 const PERKS_CHANNEL_ID = "1560123150635630672";
 
 function banner(name) {
+  const url = name === BOOSTER_IMAGE_NAME
+    ? "https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/booster.png"
+    : `attachment://${name}`;
   return new MediaGalleryBuilder().addItems(
-    new MediaGalleryItemBuilder().setURL(`attachment://${name}`)
+    new MediaGalleryItemBuilder().setURL(url)
   );
 }
 
@@ -63,7 +66,6 @@ function buildBoosterMessage(member, boostCount) {
     components: [container],
     flags: MessageFlags.IsComponentsV2,
     files: [
-      new AttachmentBuilder(BOOSTER_IMAGE_PATH, { name: BOOSTER_IMAGE_NAME }),
       new AttachmentBuilder(BOOSTER_BANNER_PATH, { name: BOOSTER_BANNER_NAME }),
     ],
     allowedMentions: { users: [member.id] },
