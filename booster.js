@@ -10,8 +10,6 @@ const {
   TextDisplayBuilder,
 } = require("discord.js");
 
-const DATA_DIR = path.join(__dirname, "data");
-const DATA_FILE = path.join(DATA_DIR, "booster.json");
 const BOOSTER_IMAGE_PATH = path.join(__dirname, "booster.png");
 const BOOSTER_IMAGE_NAME = "booster.png";
 const BOOSTER_BANNER_PATH = path.join(__dirname, "booster-banner.png");
@@ -68,26 +66,6 @@ async function sendBoosterMessage(client, member) {
   return { ok: true };
 }
 
-function setupBooster(client) {
-  client.boosterData = loadData();
-
-  client.on("guildMemberUpdate", async (oldMember, newMember) => {
-    try {
-      if (oldMember.premiumSince || !newMember.premiumSince) return;
-
-      const result = await sendBoosterMessage(client, newMember);
-      if (!result.ok) {
-        if (result.reason === "NO_IMAGE") {
-          console.error("Booster message could not be sent: booster.png is missing.");
-        }
-        return;
-      }
-    } catch (error) {
-      console.error("Booster message error:", error);
-    }
-  });
-}
-
 async function isBotOwner(client, userId) {
   try {
     await client.application.fetch();
@@ -103,15 +81,16 @@ async function isBotOwner(client, userId) {
 
 function setupBooster(client) {
   client.on("messageCreate", async message => {
-    if (message.author.bot || !message.guild || !message.content.trim().toLowerCase().startsWith("!boost")) return;
+    if (message.author.bot || !message.guild || !/^!boost(?:\\s|$)/i.test(message.content.trim())) return;
 
     if (!(await isBotOwner(client, message.author.id))) {
       await message.reply("Only the bot owner can use `!boost`.").catch(() => {});
       return;
     }
 
+    const parts = message.content.trim().split(/\s+/);
     const target = message.mentions.members.first();
-    if (!target || message.content.trim().split(/\\s+/).length !== 2) {
+    if (!target || parts.length !== 2) {
       await message.reply("Usage: `!boost @user`").catch(() => {});
       return;
     }
