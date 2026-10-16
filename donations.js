@@ -8,7 +8,6 @@ const DONATOR_ROLE = "1552174252093087784";
 const STAFF_ROLE_NAME = "Senior High Rank";
 const TOP_URL = "https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/donor.png";
 const FOOTER = path.join(__dirname, "donor-banner.png");
-const MARKER = "msrp-donation-leaderboard";
 function load() { fs.mkdirSync(path.dirname(FILE), {recursive:true}); if (!fs.existsSync(FILE)) fs.writeFileSync(FILE, JSON.stringify({donors:{}}, null, 2)); try { return JSON.parse(fs.readFileSync(FILE, "utf8")); } catch { return {donors:{}}; } }
 function save(d) { fs.writeFileSync(FILE, JSON.stringify(d, null, 2)); }
 function banner(url) { return new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(url)); }
@@ -23,20 +22,20 @@ function makePanel(d) {
   }).join("\n");
   const c = new ContainerBuilder()
     .addTextDisplayComponents(new TextDisplayBuilder().setContent("## Donation Leaderboard"))
-    .addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large))
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(lines))
-    .addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large))
     .addTextDisplayComponents(new TextDisplayBuilder().setContent("> We'd like to thank all of our donators, the people above are the **top three highest donators** to Missouri State Roleplay."))
+    .addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large))
     .addMediaGalleryComponents(banner("attachment://donor-banner.png"));
   return {components:[c],flags:MessageFlags.IsComponentsV2,files:[new AttachmentBuilder(FOOTER,{name:"donor-banner.png"})]};
 }
 async function refresh(client,guild) {
   const ch = await guild.channels.fetch(LEADERBOARD).catch(()=>null);
   if (!ch || !ch.isTextBased() || !fs.existsSync(FOOTER)) { console.error("[Donations] Leaderboard channel or donor-banner.png unavailable."); return; }
-  const msgs = await ch.messages.fetch({limit:30}).catch(()=>null);
-  const old = msgs?.find(m => m.author.id === client.user.id && m.components?.some(x => JSON.stringify(x).includes(MARKER)));
+  const msgs = await ch.messages.fetch({limit:100}).catch(()=>null);
+  const old = msgs?.find(m => m.author.id === client.user.id && JSON.stringify(m.components || []).includes("Donation Leaderboard"));
   const p = makePanel(load());
-  if (old) await old.edit(p); else await ch.send(p);
+  if (old) await old.edit(p);
+  else await ch.send(p);
 }
 async function runCommand(client,m) {
   const parts=m.content.trim().split(/\s+/);
