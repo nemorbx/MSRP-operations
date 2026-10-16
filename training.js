@@ -31,7 +31,7 @@ const trainingCommand = new SlashCommandBuilder()
   .setDescription("Training requests and results")
   .addSubcommand(sub => sub.setName("request").setDescription("Request a training session")
     .addStringOption(o => o.setName("availability").setDescription("What days/times are you available? Include dates and times").setRequired(true))
-    .addStringOption(o => o.setName("timezone").setDescription("Your time zone (e.g. America/Chicago or Eastern Time)").setRequired(true))
+    .addStringOption(o => o.setName("timezone").setDescription("Your time zone (e.g. America/Chicago or Eastern Time)").setRequired(true)))
   .addSubcommand(sub => sub.setName("results").setDescription("Submit a trainee's training results")
     .addUserOption(o => o.setName("trainee").setDescription("Trainee being evaluated").setRequired(true))
     .addStringOption(o => o.setName("driving").setDescription("Driving result").setRequired(true)
@@ -40,7 +40,7 @@ const trainingCommand = new SlashCommandBuilder()
       .addChoices({name:"Pass",value:"Pass"},{name:"Fail",value:"Fail"}))
     .addStringOption(o => o.setName("moderation").setDescription("Moderation result").setRequired(true)
       .addChoices({name:"Pass",value:"Pass"},{name:"Fail",value:"Fail"}))
-    .addStringOption(o => o.setName("notes").setDescription("Optional trainer notes").setRequired(false));
+    .addStringOption(o => o.setName("notes").setDescription("Optional trainer notes").setRequired(false)));
 
 function setup(client) {
   client.on("interactionCreate", async interaction => {
