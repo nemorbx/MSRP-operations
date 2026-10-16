@@ -66,25 +66,12 @@ async function sendBoosterMessage(client, member) {
   return { ok: true };
 }
 
-async function isBotOwner(client, userId) {
-  try {
-    await client.application.fetch();
-    const owner = client.application.owner;
-    if (!owner) return false;
-    if (owner.members) return owner.members.has(userId);
-    return owner.id === userId;
-  } catch (error) {
-    console.error("Unable to verify bot owner for !boost:", error);
-    return false;
-  }
-}
-
 function setupBooster(client) {
   client.on("messageCreate", async message => {
     if (message.author.bot || !message.guild || !/^!boost(?:\s|$)/i.test(message.content.trim())) return;
 
-    if (!(await isBotOwner(client, message.author.id))) {
-      await message.reply("Only the bot owner can use `!boost`.").catch(() => {});
+    if (message.guild.ownerId !== message.author.id) {
+      await message.reply("Only the server owner can use `!boost`.").catch(() => {});
       return;
     }
 
