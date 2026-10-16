@@ -165,12 +165,17 @@ async function ensureSessionPanel(client) {
     const embedText = JSON.stringify(message.embeds || []);
     // Match both the current Components V2 panel and the older embed-based panel
     // so deployment upgrades the existing post instead of creating another one.
+    const legacyPanelText = (componentText + " " + embedText).toLowerCase();
     return componentText.includes(PANEL_MARKER) ||
       componentText.includes(BANNER_URL) ||
       componentText.includes(FOOTER_BANNER_URL) ||
       embedText.includes(BANNER_URL) ||
       embedText.includes(FOOTER_BANNER_URL) ||
-      (componentText.includes("SESSION INFORMATION") && componentText.includes("Server Owner"));
+      (legacyPanelText.includes("server owner") &&
+        (legacyPanelText.includes("server name") ||
+         legacyPanelText.includes("in-game players") ||
+         legacyPanelText.includes("currently moderating") ||
+         legacyPanelText.includes("session information")));
   }).sort((a, b) => b.createdTimestamp - a.createdTimestamp);
   const existing = matches.first();
   if (existing) {
