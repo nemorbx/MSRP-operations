@@ -17,6 +17,7 @@ const { setup: setupInformation, postOrRefreshInformationPanel } = require("./in
 const { setup: setupRolePerks, postOrRefreshRolePerksPanel } = require("./roleperks");
 const { setup: setupWelcome, commands: welcomeCommands } = require("./welcome");
 const { setup: setupBooster } = require("./booster");
+const { setup: setupDonations, ensureDonationPanel } = require("./donations");
 const { setup: setupSay, command: sayCommand } = require("./say");
 const { setup: setupSuggestions, commands: suggestionCommands } = require("./suggestions");
 const { setup: setupSticky } = require("./sticky");
@@ -61,6 +62,7 @@ setupWelcome(client);
 setupSticky(client);
 setupMarketplace(client);
 setupBooster(client);
+setupDonations(client);
 setupSay(client);
 setupSuggestions(client);
 setupSessions(client);
@@ -233,6 +235,12 @@ client.once("clientReady", async () => {
   console.log("========================================");
 
   await testMelonlyApi();
+
+  try {
+    await ensureDonationPanel(client);
+  } catch (error) {
+    console.error("Donation leaderboard startup error:", error);
+  }
 
   try {
     await ensureSessionPanel(client);
