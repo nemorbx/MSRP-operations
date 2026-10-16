@@ -40,7 +40,7 @@ const trainingCommand = new SlashCommandBuilder()
       .addChoices({name:"Pass",value:"Pass"},{name:"Fail",value:"Fail"}))
     .addStringOption(o => o.setName("moderation").setDescription("Moderation result").setRequired(true)
       .addChoices({name:"Pass",value:"Pass"},{name:"Fail",value:"Fail"}))
-    .addStringOption(o => o.setName("notes").setDescription("Optional trainer notes").setRequired(false)));
+    .addStringOption(o => o.setName("notes").setDescription("Optional trainer notes").setRequired(false));
 
 function setup(client) {
   client.on("interactionCreate", async interaction => {
