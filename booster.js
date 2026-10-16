@@ -7,6 +7,7 @@ const {
   MediaGalleryItemBuilder,
   MessageFlags,
   SeparatorBuilder,
+  SeparatorSpacingSize,
   TextDisplayBuilder,
 } = require("discord.js");
 
@@ -15,31 +16,48 @@ const BOOSTER_IMAGE_NAME = "booster.png";
 const BOOSTER_BANNER_PATH = path.join(__dirname, "booster-banner.png");
 const BOOSTER_BANNER_NAME = "booster-banner.png";
 const BOOSTER_CHANNEL_ID = "1527194109494693938";
+const PERKS_CHANNEL_ID = "1560123150635630672";
 
-function buildBoosterMessage(member) {
+function banner(name) {
+  return new MediaGalleryBuilder().addItems(
+    new MediaGalleryItemBuilder().setURL(`attachment://${name}`)
+  );
+}
+
+async function getBoostCount(guild) {
+  try {
+    const boosts = await guild.fetch();
+    return boosts.premiumSubscriptionCount ?? guild.premiumSubscriptionCount ?? 0;
+  } catch {
+    return guild.premiumSubscriptionCount ?? 0;
+  }
+}
+
+function buildBoosterMessage(member, boostCount) {
   const displayName = member.displayName || member.user.username;
   const mention = `<@${member.id}>`;
+  const perks = [
+    "> Access to Booster Vehicles",
+    "> Unlocks: Falcon Heritage Track, Surrey 650S, Falcon Heritage, Takeo Experience, Chevlon Corbeta 8, Averon LM/LR, Chevlon Corbeta RZR, and Chevlon Corbeta X08.",
+    "> Access to Booster Weapons",
+    "> Unlocks: PPSH 41, M14, Remington 870, and Colt Python.",
+    "> Permission to stream in all voice-perks channels.",
+    "> 75,000 in-game economy cash.",
+  ].join("\n");
 
   const container = new ContainerBuilder()
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder().setURL(`attachment://${BOOSTER_IMAGE_NAME}`)
-      )
-    )
+    .addMediaGalleryComponents(banner(BOOSTER_IMAGE_NAME))
+    .addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large))
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(`## Thank You for Boosting!\n${mention}`)
+      new TextDisplayBuilder().setContent(`## Server Boost\n${mention}`)
     )
-    .addSeparatorComponents(new SeparatorBuilder())
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `Thank you for taking us to the next level!\n\nWe now have **current boosts**, and you also get some **server benefits** for supporting Missouri State Roleplay.\n\nThank you, **${displayName}**, for supporting MSRP!`
+        `Thank you for taking us to the next level! We now have **${boostCount} server boost${boostCount === 1 ? "" : "s"}**, and here are some benefits you unlock by supporting Missouri State Roleplay:\n\n${perks}\n\nYou can view more perks in <#${PERKS_CHANNEL_ID}>.\n\nThank you, **${displayName}**, for supporting MSRP!`
       )
     )
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder().setURL(`attachment://${BOOSTER_BANNER_NAME}`)
-      )
-    );
+    .addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large))
+    .addMediaGalleryComponents(banner(BOOSTER_BANNER_NAME));
 
   return {
     components: [container],
@@ -62,7 +80,8 @@ async function sendBoosterMessage(client, member) {
     return { ok: false, reason: "INVALID_CHANNEL" };
   }
 
-  await channel.send(buildBoosterMessage(member));
+  const boostCount = await getBoostCount(member.guild);
+  await channel.send(buildBoosterMessage(member, boostCount));
   return { ok: true };
 }
 
@@ -86,8 +105,8 @@ function setupBooster(client) {
       const result = await sendBoosterMessage(client, target);
       if (!result.ok) {
         const reason = result.reason === "NO_IMAGE"
-          ? "I couldn't find `booster.png` or `booster-banner.png` in the bot folder."
-          : "I couldn't send the simulated boost message. Check that the supporters channel exists and I have permission to send messages and attach files.";
+          ? "I couldn't find `booster.png` or `booster-banner.png` in the bot folder. Make sure both files are uploaded to the repository and deployed to the bot host."
+          : "I couldn't send the boost message. Check the supporters channel and the bot's permissions to send messages and attach files.";
         await message.reply(reason).catch(() => {});
         return;
       }
