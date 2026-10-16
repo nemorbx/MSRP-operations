@@ -40,10 +40,8 @@ function buildBoosterMessage(member, boostCount) {
   const displayName = member.displayName || member.user.username;
   const mention = `<@${member.id}>`;
   const perks = [
-    "> Access to Booster Vehicles",
-    "> Unlocks: Falcon Heritage Track, Surrey 650S, Falcon Heritage, Takeo Experience, Chevlon Corbeta 8, Averon LM/LR, Chevlon Corbeta RZR, and Chevlon Corbeta X08.",
-    "> Access to Booster Weapons",
-    "> Unlocks: PPSH 41, M14, Remington 870, and Colt Python.",
+    "> Access to exclusive booster vehicles, including the **Falcon Heritage Track**, **Chevlon Corbeta 8**, and **Chevrolet Corvette**.",
+    "> Access to exclusive booster weapons and more unlocks.",
     "> Permission to stream in all voice-perks channels.",
     "> 75,000 in-game economy cash.",
   ].join("\n");
@@ -92,7 +90,7 @@ function setupBooster(client) {
     if (message.author.bot || !message.guild || !/^!boost(?:\s|$)/i.test(message.content.trim())) return;
 
     if (message.guild.ownerId !== message.author.id) {
-      await message.reply("Only the server owner can use `!boost`.").catch(() => {});
+      await message.reply("Only the server owner can use `!boost`.");
       return;
     }
 
