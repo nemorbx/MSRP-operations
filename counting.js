@@ -224,7 +224,7 @@ function setupCounting(client) {
 
     if (["set", "remove", "reset"].includes(subcommand) && !senior) {
       await interaction.reply({
-        content: "You don't have permission to manage the counting system. Senior High Rank+ only.",
+        content: "You don't have permission to manage the counting system.",
         flags: MessageFlags.Ephemeral,
       });
       return;
