@@ -11,6 +11,7 @@ const {
   ContainerBuilder,
   TextDisplayBuilder,
   SeparatorBuilder,
+  SeparatorSpacingSize,
   SectionBuilder,
   ThumbnailBuilder,
   MediaGalleryBuilder,
