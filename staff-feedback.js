@@ -259,7 +259,7 @@ function setup(client) {
         pending.delete(id);
 
         const channel = interaction.guild.channels.cache.get(FEEDBACK_CHANNEL_ID);
-        if (!channel || !channel.isTextBased()) return interaction.editReply({ content: 'Your review was saved, but it couldn't be posted right now. Please contact an administrator.' });
+        if (!channel || !channel.isTextBased()) return interaction.editReply({ content: 'Your review was saved, but it could not be posted right now. Please contact an administrator.' });
         const card = buildFeedbackCard({ reviewer: `<@${reviewer.id}>`, target, rating: data.rating, feedback: reason, createdAt: now, id });
         await channel.send({
           components: [card],
@@ -318,7 +318,7 @@ function setup(client) {
     } catch (error) {
       console.error('Staff feedback interaction error:', error);
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: 'We couldn't process your staff review. Please try again later.', flags: MessageFlags.Ephemeral }).catch(() => {});
+        await interaction.reply({ content: 'We could not process your staff review. Please try again later.', flags: MessageFlags.Ephemeral }).catch(() => {});
       }
     }
   });
