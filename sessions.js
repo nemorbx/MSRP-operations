@@ -122,7 +122,7 @@ function buildSessionPanel() {
         "### Live Server Statistics\n" +
         "**In-game Players:** ``" + safe(liveStats.players) + "``\n" +
         "**Currently Moderating:** ``" + safe(liveStats.moderating) + "``\n" +
-        "**In-Queue Players:** ``" + safe(liveStats.queue) + "``
+        "**In-Queue Players:** ``" + safe(liveStats.queue) + "``"
       )
     )
     .addSeparatorComponents(spacedDivider())
