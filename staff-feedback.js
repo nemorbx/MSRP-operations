@@ -197,16 +197,16 @@ function setup(client) {
           return interaction.reply({ content: 'Please choose someone who is part of the staff team.', flags: MessageFlags.Ephemeral });
         }
         if (target.id === interaction.user.id) {
-          return interaction.reply({ content: 'You can't submit a review for yourself.', flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: 'You cannot submit a review for yourself.', flags: MessageFlags.Ephemeral });
         }
 
         const now = Date.now();
         const all = loadFeedback();
         if (all.some(x => x.reviewerId === interaction.user.id && x.createdAt >= startOfDay(now))) {
-          return interaction.reply({ content: 'You've already submitted a staff review today. Please try again tomorrow.', flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: 'You have already submitted a staff review today. Please try again tomorrow.', flags: MessageFlags.Ephemeral });
         }
         if (all.some(x => x.reviewerId === interaction.user.id && x.targetId === target.id && x.createdAt >= monthsAgo(now, 1))) {
-          return interaction.reply({ content: 'You've already reviewed this staff member within the last month.', flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: 'You have already reviewed this staff member within the last month.', flags: MessageFlags.Ephemeral });
         }
 
         const id = Math.random().toString(36).slice(2, 10).toUpperCase();
@@ -246,11 +246,11 @@ function setup(client) {
         const all = loadFeedback();
         if (all.some(x => x.reviewerId === reviewer.id && x.createdAt >= startOfDay(now))) {
           pending.delete(id);
-          return interaction.editReply({ content: 'You've already submitted a staff review today. Please try again tomorrow.' });
+          return interaction.editReply({ content: 'You have already submitted a staff review today. Please try again tomorrow.' });
         }
         if (all.some(x => x.reviewerId === reviewer.id && x.targetId === target.id && x.createdAt >= monthsAgo(now, 1))) {
           pending.delete(id);
-          return interaction.editReply({ content: 'You've already reviewed this staff member within the last month.' });
+          return interaction.editReply({ content: 'You have already reviewed this staff member within the last month.' });
         }
 
         const record = { id, reviewerId: reviewer.id, targetId: target.id, rating: data.rating, feedback: reason, createdAt: now };
@@ -288,11 +288,11 @@ function setup(client) {
         const now = Date.now();
         if (all.some(x => x.reviewerId === reviewer.id && x.createdAt >= startOfDay(now))) {
           pending.delete(id);
-          return interaction.update({ content: 'You've already submitted a staff review today. Please try again tomorrow.', components: [] });
+          return interaction.update({ content: 'You have already submitted a staff review today. Please try again tomorrow.', components: [] });
         }
         if (all.some(x => x.reviewerId === reviewer.id && x.targetId === target.id && x.createdAt >= monthsAgo(now, 1))) {
           pending.delete(id);
-          return interaction.update({ content: 'You've already reviewed this staff member within the last month.', components: [] });
+          return interaction.update({ content: 'You have already reviewed this staff member within the last month.', components: [] });
         }
 
         const rating = Number(ratingText);
