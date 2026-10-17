@@ -103,12 +103,14 @@ function buildSessionPanel() {
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         "Our sessions are managed by our **Session Managers**. We do not have an available schedule for sessions, meaning they will commence when our team is available.\n" +
-        "**Last Updated:** <t:" + Math.floor(Date.now() / 1000) + ":R>"
+        "**Last Updated:** <t:" + Math.floor(Date.now() / 1000) + ":R>\n" +
+        "-# " + PANEL_MARKER
       )
     )
     .addSeparatorComponents(spacedDivider())
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
+        "### Server Information\n" +
         "**Server Name:** ``" + safe(liveStats.name) + "``\n" +
         "**Server Owner:** ``" + safe(liveStats.owner) + "``\n" +
         "**Server Code:** ``" + safe(liveStats.code) + "``"
@@ -117,9 +119,10 @@ function buildSessionPanel() {
     .addSeparatorComponents(spacedDivider())
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
+        "### Live Server Statistics\n" +
         "**In-game Players:** ``" + safe(liveStats.players) + "``\n" +
         "**Currently Moderating:** ``" + safe(liveStats.moderating) + "``\n" +
-        "**In-Queue Players:** ``" + safe(liveStats.queue) + "``"
+        "**In-Queue Players:** ``" + safe(liveStats.queue) + "``
       )
     )
     .addSeparatorComponents(spacedDivider())
