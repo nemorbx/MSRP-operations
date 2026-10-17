@@ -152,7 +152,7 @@ function setupAFK(client) {
       if (subcommand === "remove") {
         if (!isSeniorHR(interaction.member)) {
           await interaction.reply({
-            content: "You don't have permission to remove another member's AFK status. Senior High Rank+ only.",
+            content: "You don't have permission to remove another member's AFK status.",
             flags: MessageFlags.Ephemeral,
           });
           return;
