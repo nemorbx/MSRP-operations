@@ -194,19 +194,19 @@ function setup(client) {
         const targetUser = interaction.options.getUser('user', true);
         const target = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
         if (!target || target.user.bot || !target.roles.cache.has(STAFF_TEAM_ROLE_ID)) {
-          return interaction.reply({ content: 'You can only review a member who has the Staff Team role.', flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: 'Please choose someone who is part of the staff team.', flags: MessageFlags.Ephemeral });
         }
         if (target.id === interaction.user.id) {
-          return interaction.reply({ content: 'You cannot review yourself.', flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: 'You can't submit a review for yourself.', flags: MessageFlags.Ephemeral });
         }
 
         const now = Date.now();
         const all = loadFeedback();
         if (all.some(x => x.reviewerId === interaction.user.id && x.createdAt >= startOfDay(now))) {
-          return interaction.reply({ content: 'You can only submit **one staff rating per day**.', flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: 'You've already submitted a staff review today. Please try again tomorrow.', flags: MessageFlags.Ephemeral });
         }
         if (all.some(x => x.reviewerId === interaction.user.id && x.targetId === target.id && x.createdAt >= monthsAgo(now, 1))) {
-          return interaction.reply({ content: 'You can only rate the same staff member once per month.', flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: 'You've already reviewed this staff member within the last month.', flags: MessageFlags.Ephemeral });
         }
 
         const id = Math.random().toString(36).slice(2, 10).toUpperCase();
@@ -240,17 +240,17 @@ function setup(client) {
         const target = await interaction.guild.members.fetch(data.targetId).catch(() => null);
         if (!target || target.user.bot || !target.roles.cache.has(STAFF_TEAM_ROLE_ID)) {
           pending.delete(id);
-          return interaction.editReply({ content: 'That staff member is no longer eligible to receive feedback.' });
+          return interaction.editReply({ content: 'That person can no longer receive a staff review.' });
         }
         const now = Date.now();
         const all = loadFeedback();
         if (all.some(x => x.reviewerId === reviewer.id && x.createdAt >= startOfDay(now))) {
           pending.delete(id);
-          return interaction.editReply({ content: 'You already submitted a staff rating today.' });
+          return interaction.editReply({ content: 'You've already submitted a staff review today. Please try again tomorrow.' });
         }
         if (all.some(x => x.reviewerId === reviewer.id && x.targetId === target.id && x.createdAt >= monthsAgo(now, 1))) {
           pending.delete(id);
-          return interaction.editReply({ content: 'You already rated this staff member within the last month.' });
+          return interaction.editReply({ content: 'You've already reviewed this staff member within the last month.' });
         }
 
         const record = { id, reviewerId: reviewer.id, targetId: target.id, rating: data.rating, feedback: reason, createdAt: now };
@@ -259,7 +259,7 @@ function setup(client) {
         pending.delete(id);
 
         const channel = interaction.guild.channels.cache.get(FEEDBACK_CHANNEL_ID);
-        if (!channel || !channel.isTextBased()) return interaction.editReply({ content: 'Feedback was saved, but the configured staff feedback channel could not be found.' });
+        if (!channel || !channel.isTextBased()) return interaction.editReply({ content: 'Your review was saved, but it couldn't be posted right now. Please contact an administrator.' });
         const card = buildFeedbackCard({ reviewer: `<@${reviewer.id}>`, target, rating: data.rating, feedback: reason, createdAt: now, id });
         await channel.send({
           components: [card],
@@ -281,18 +281,18 @@ function setup(client) {
         const target = await interaction.guild.members.fetch(data.targetId).catch(() => null);
         if (!target || !target.roles.cache.has(STAFF_TEAM_ROLE_ID)) {
           pending.delete(id);
-          return interaction.update({ content: 'That staff member is no longer eligible to receive feedback.', components: [] });
+          return interaction.update({ content: 'That person can no longer receive a staff review.', components: [] });
         }
 
         const all = loadFeedback();
         const now = Date.now();
         if (all.some(x => x.reviewerId === reviewer.id && x.createdAt >= startOfDay(now))) {
           pending.delete(id);
-          return interaction.update({ content: 'You already submitted a staff rating today.', components: [] });
+          return interaction.update({ content: 'You've already submitted a staff review today. Please try again tomorrow.', components: [] });
         }
         if (all.some(x => x.reviewerId === reviewer.id && x.targetId === target.id && x.createdAt >= monthsAgo(now, 1))) {
           pending.delete(id);
-          return interaction.update({ content: 'You already rated this staff member within the last month.', components: [] });
+          return interaction.update({ content: 'You've already reviewed this staff member within the last month.', components: [] });
         }
 
         const rating = Number(ratingText);
@@ -318,7 +318,7 @@ function setup(client) {
     } catch (error) {
       console.error('Staff feedback interaction error:', error);
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: 'Something went wrong while processing staff feedback.', flags: MessageFlags.Ephemeral }).catch(() => {});
+        await interaction.reply({ content: 'We couldn't process your staff review. Please try again later.', flags: MessageFlags.Ephemeral }).catch(() => {});
       }
     }
   });
