@@ -41,7 +41,7 @@ async function runCommand(client,m) {
   const parts=m.content.trim().split(/\s+/);
   const target=m.mentions.members.first();
   const staff=m.guild.roles.cache.find(r=>r.name.toLowerCase()===STAFF_ROLE_NAME.toLowerCase());
-  if(!staff||!m.member.roles.cache.has(staff.id)){await m.reply("Only Senior High Rank staff can use donation commands.").catch(()=>{});return;}
+  if(!staff||!m.member.roles.cache.has(staff.id)){await m.reply("You don't have permission to use donation commands.").catch(()=>{});return;}
   const d=load();
   if((parts[1]||"").toLowerCase()==="remove"){
     if(!target||parts.length!==3){await m.reply("Usage: !donate remove @user").catch(()=>{});return;}
