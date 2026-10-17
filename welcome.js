@@ -135,7 +135,7 @@ function setupWelcome(client) {
     if (interaction.isChatInputCommand() && interaction.commandName === "autonickname") {
       if (!interaction.member?.roles?.cache?.has("1551704056991318191")) {
         await interaction.reply({
-          content: "You need the Senior High Rank role to use this command.",
+          content: "You don't have permission to use this command.",
           flags: MessageFlags.Ephemeral,
         });
         return;
