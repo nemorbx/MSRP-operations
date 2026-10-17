@@ -90,7 +90,6 @@ function buildRatingButtons(guild, id, disabled = false) {
 function buildFeedbackCard({ reviewer, target, rating, feedback, createdAt, id }) {
   const stars = renderStars(target.guild, rating);
   const bannerPath = path.join(__dirname, 'banner.png');
-
   const container = new ContainerBuilder();
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
@@ -100,11 +99,12 @@ function buildFeedbackCard({ reviewer, target, rating, feedback, createdAt, id }
         `**Staff Member:** ${target}`,
         `**Rating:** ${stars}`,
         `**Reason:** ${feedback}`,
-        `Reviewed by ${reviewer}`,
+        `-# Reviewed by ${reviewer}`,
       ].join('\n')
     )
   );
 
+  container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large));
   if (fs.existsSync(bannerPath)) {
     container.addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems(
@@ -259,7 +259,7 @@ function setup(client) {
 
         const channel = interaction.guild.channels.cache.get(FEEDBACK_CHANNEL_ID);
         if (!channel || !channel.isTextBased()) return interaction.editReply({ content: 'Feedback was saved, but the configured staff feedback channel could not be found.' });
-        const card = buildFeedbackCard({ reviewer: reviewer.user.username, target, rating: data.rating, feedback: reason, createdAt: now, id });
+        const card = buildFeedbackCard({ reviewer: `<@${reviewer.id}>`, target, rating: data.rating, feedback: reason, createdAt: now, id });
         await channel.send({
           components: [card],
           files: fs.existsSync(path.join(__dirname, 'banner.png'))
