@@ -126,12 +126,17 @@ const staffRatingCommand = new SlashCommandBuilder()
   );
 
 const feedbackCommand = new SlashCommandBuilder()
-  .setName('feedback')
-  .setDescription('Rate a staff member and leave feedback.')
-  .addUserOption(option =>
-    option.setName('user')
-      .setDescription('The staff member you want to rate.')
-      .setRequired(true)
+  .setName('staff')
+  .setDescription('Staff review and feedback commands.')
+  .addSubcommand(subcommand =>
+    subcommand
+      .setName('review')
+      .setDescription('Rate a staff member and leave feedback.')
+      .addUserOption(option =>
+        option.setName('user')
+          .setDescription('The staff member you want to review.')
+          .setRequired(true)
+      )
   );
 
 function buildRatingProfileCard({ target, ratings }) {
@@ -183,15 +188,15 @@ function buildRatingProfileCard({ target, ratings }) {
 function setup(client) {
   client.on('interactionCreate', async interaction => {
     try {
-      if (interaction.isChatInputCommand() && interaction.commandName === 'feedback') {
+      if (interaction.isChatInputCommand() && interaction.commandName === 'staff' && interaction.options.getSubcommand() === 'review') {
         if (!interaction.guild) return interaction.reply({ content: 'This command can only be used in the server.', flags: MessageFlags.Ephemeral });
         const targetUser = interaction.options.getUser('user', true);
         const target = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
         if (!target || target.user.bot || !target.roles.cache.has(STAFF_TEAM_ROLE_ID)) {
-          return interaction.reply({ content: 'You can only rate a member who has the Staff Team role.', flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: 'You can only review a member who has the Staff Team role.', flags: MessageFlags.Ephemeral });
         }
         if (target.id === interaction.user.id) {
-          return interaction.reply({ content: 'You cannot rate yourself.', flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: 'You cannot review yourself.', flags: MessageFlags.Ephemeral });
         }
 
         const now = Date.now();
@@ -224,8 +229,8 @@ function setup(client) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const id = interaction.customId.split(':')[2];
         const data = pending.get(id);
-        if (!data) return interaction.editReply({ content: 'This feedback request has expired. Please run `/feedback @user` again.' });
-        if (data.reviewerId !== interaction.user.id) return interaction.editReply({ content: 'Only the member who started this feedback can submit it.' });
+        if (!data) return interaction.editReply({ content: 'This review request has expired. Please run `/staff review @user` again.' });
+        if (data.reviewerId !== interaction.user.id) return interaction.editReply({ content: 'Only the member who started this review can submit it.' });
 
         const reason = interaction.fields.getTextInputValue('reason').trim();
         if (!reason) return interaction.editReply({ content: 'A reason is required.' });
@@ -262,13 +267,13 @@ function setup(client) {
             : [],
           flags: MessageFlags.IsComponentsV2
         });
-        return interaction.editReply({ content: 'Your staff feedback has been submitted.' });
+        return interaction.editReply({ content: 'Your staff review has been submitted.' });
       }
 
       if (interaction.isButton() && interaction.customId.startsWith('stafffeedback:rate:')) {
         const [, , id, ratingText] = interaction.customId.split(':');
         const data = pending.get(id);
-        if (!data) return interaction.reply({ content: 'This feedback request has expired. Please run `/feedback` again.', flags: MessageFlags.Ephemeral });
+        if (!data) return interaction.reply({ content: 'This feedback request has expired. Please run `/staff review` again.', flags: MessageFlags.Ephemeral });
         if (data.reviewerId !== interaction.user.id) return interaction.reply({ content: 'Only the staff member who started this feedback can rate it.', flags: MessageFlags.Ephemeral });
 
         const reviewer = await interaction.guild.members.fetch(data.reviewerId);
