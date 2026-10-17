@@ -97,14 +97,12 @@ function spacedDivider() { return new SeparatorBuilder().setSpacing(SeparatorSpa
 function buildSessionPanel() {
   const safe = value => String(value ?? "Unknown").replace(/[`]/g, "");
   const container = new ContainerBuilder()
-    .setAccentColor(0x35a8e0)
     .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(item => item.setURL(BANNER_URL)))
     .addSeparatorComponents(spacedDivider())
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         "Our sessions are managed by our **Session Managers**. We do not have an available schedule for sessions, meaning they will commence when our team is available.\n" +
-        "**Last Updated:** <t:" + Math.floor(Date.now() / 1000) + ":R>\n" +
-        "-# " + PANEL_MARKER
+        "**Last Updated:** <t:" + Math.floor(Date.now() / 1000) + ":R>"
       )
     )
     .addSeparatorComponents(spacedDivider())
