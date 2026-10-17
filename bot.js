@@ -144,7 +144,7 @@ client.on("messageCreate", async message => {
   if (!message.content.toLowerCase().startsWith("!purge")) return;
 
   if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
-    await message.reply("You need the Manage Messages permission to use !purge.").catch(() => {});
+    await message.reply("You don't have permission to use this command.").catch(() => {});
     return;
   }
 
@@ -334,7 +334,7 @@ client.on("messageCreate", async message => {
   if (message.content.trim().toLowerCase() !== "!update-regulations") return;
 
   if (!message.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
-    await message.reply("You need the Manage Server permission to update the Regulations panel.");
+    await message.reply("You don't have permission to update the Regulations panel.");
     return;
   }
 
