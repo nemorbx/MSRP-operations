@@ -81,8 +81,8 @@ function requestPanel(traineeId, traineeName, timezone, teamAccess, availability
       "## Training Request\n\n" +
       "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted make your way to the briefing room located inside of the Sheriff's station.\n\n" +
       "**Trainee:** <@" + traineeId + ">\n" +
-      "**Team Access:** ` `" + teamAccess + "` `\n" +
-      "**Time Zone:** ` `" + timezone + "` `"
+      "**Team Access:** ``" + teamAccess + "``\n" +
+      "**Time Zone:** ``" + timezone + "``"
     ))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
     .addActionRowComponents(requestButtons(traineeId, accepted))
