@@ -26,7 +26,6 @@ const TRAINING_ROLE_ID = "1551985353802518588";
 const REQUEST_CHANNEL_ID = "1528996885262766250";
 const RESULTS_CHANNEL_ID = "1528997058365886554";
 const PROMOTIONS_CHANNEL_ID = "1529167049949970453";
-const REQUEST_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const DATA_PATH = path.join(__dirname, "training-data.json");
 
 function loadData() {
@@ -174,11 +173,6 @@ function setup(client) {
           if (!member.roles.cache.has(TRAINING_ROLE_ID)) {
             return interaction.reply({ content: "Only members with the Awaiting Training role can request training.", flags: MessageFlags.Ephemeral });
           }
-          const last = Number(data.requests[member.id] || 0);
-          if (now - last < REQUEST_COOLDOWN_MS) {
-            const hours = Math.ceil((REQUEST_COOLDOWN_MS - (now - last)) / 3600000);
-            return interaction.reply({ content: "You can submit another training request in approximately " + hours + " hour(s).", flags: MessageFlags.Ephemeral });
-          }
           if (data.activeRequests[member.id]) {
             return interaction.reply({ content: "You already have a pending or accepted training request. Cancel the pending request or complete your session first.", flags: MessageFlags.Ephemeral });
           }
@@ -193,7 +187,6 @@ function setup(client) {
             return interaction.reply({ content: "The training request channel is not configured correctly. Please contact an administrator.", flags: MessageFlags.Ephemeral });
           }
           const request = { traineeId: member.id, guildId: interaction.guild.id, timezone, teamAccess, availability, createdAt: now, status: "pending", messageId: null, channelId: channel.id };
-          data.requests[member.id] = now;
           data.activeRequests[member.id] = request;
           saveData();
           const sent = await channel.send({
@@ -262,7 +255,7 @@ function setup(client) {
               });
             } catch {}
           }
-          return interaction.reply({ content: "Training results recorded: **" + (passed ? "PASS" : "FAIL") + "** (" + total + "/30). " + (passed ? "The trainee must claim their roles from the results message." : "A score below 20 is a fail. The trainee may request another session after the 12-hour request cooldown, provided they still have the Awaiting Training role."), flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: "Training results recorded: **" + (passed ? "PASS" : "FAIL") + "** (" + total + "/30). " + (passed ? "The trainee must claim their roles from the results message." : "A score below 20 is a fail. The trainee may request another session whenever they are eligible and have the Awaiting Training role."), flags: MessageFlags.Ephemeral });
         }
       }
 
