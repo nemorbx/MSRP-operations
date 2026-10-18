@@ -15,7 +15,7 @@ const path = require("path");
 const ROLEPERKS_CHANNEL_ID = "1560123150635630672";
 const ROLEPERKS_IMAGE_SOURCE = "roleperks.png";
 const ROLEPERKS_IMAGE_NAME = "roleperks.png";
-const ROLEPERKS_PANEL_VERSION = 6;
+const ROLEPERKS_PANEL_VERSION = 7;
 const ROLEPERKS_PANEL_MARKER = "\u200B".repeat(ROLEPERKS_PANEL_VERSION);
 const FOOTER_IMAGE_NAME = "banner.png";
 
@@ -91,7 +91,9 @@ function perksDetails(type) {
       "Access to exclusive chats.",
       "Image permissions in all channels.",
       "100 cash daily."
-    ]
+    ],
+    premium: ["175 cash daily."],
+    notable: ["100 cash daily."]
   };
   return details[type] || null;
 }
@@ -100,7 +102,9 @@ function perksResponse(type) {
   const titles = {
     vip: "Server VIP Perks",
     booster: "Server Booster Perks",
-    contributor: "Server Contributor Perks"
+    contributor: "Server Contributor Perks",
+    premium: "Premium Perks",
+    notable: "Notable Perks"
   };
   const container = new ContainerBuilder();
   container.addMediaGalleryComponents(
