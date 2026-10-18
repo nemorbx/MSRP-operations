@@ -89,7 +89,7 @@ function requestPanel(traineeId, traineeName, timezone, teamAccess, availability
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
     .addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder().setURL("https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/banner.png")
+        new MediaGalleryItemBuilder().setURL("https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/banner.PNG")
       )
     );
   return [container];
