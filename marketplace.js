@@ -90,7 +90,7 @@ function setup(client) {
       ];
     } else if (interaction.values[0] === "custom_roles") {
       title = "Custom Roles";
-      body = "Obtain a custom role.\nMust not contain NSFW content.\nMust not include advertisements.\nMust follow our server regulations.\n\n[Click here to purchase](https://www.roblox.com/game-pass/2040753089/Paid-Advertisement)";
+      body = "Obtain a custom role.\nMust not contain NSFW content.\nMust not include advertisements.\nMust follow our server regulations.\n\n[Click here to purchase](https://www.roblox.com/game-pass/2036823565)";
       details = [["Purchase Notice", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."]];
     } else {
       title = "Paid Advertisement";
