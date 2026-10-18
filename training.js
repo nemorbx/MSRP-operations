@@ -72,9 +72,10 @@ function requestButtons(traineeId, accepted = false) {
     new ButtonBuilder().setCustomId("training_cancel_" + traineeId).setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(accepted)
   );
 }
-function requestPanel(traineeId, traineeName, timezone, teamAccess, availability, accepted = false) {
+function requestPanel(traineeId, traineeName, timezone, teamAccess, availability, accepted = false, testPreview = false) {
   const container = new ContainerBuilder()
     .setAccentColor(0xf1c40f)
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(testPreview ? "**TEST PREVIEW — not a real request**" : "<@&" + STAFF_TRAINER_ROLE_ID + ">"))
     .addTextDisplayComponents(new TextDisplayBuilder().setContent("## Training Request"))
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
       "<@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room located inside the Sheriff's station."
@@ -118,24 +119,9 @@ function setup(client) {
       if (command === "!test training request") {
         const testId = message.author.id;
         const sent = await channel.send({
-          content: "TRAINING REQUEST TEST — this is a preview only; no real request was created.",
-          components: [
-            new ContainerBuilder()
-              .setAccentColor(0xf1c40f)
-              .addTextDisplayComponents(new TextDisplayBuilder().setContent("## Training Request"))
-              .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                "<@" + testId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room located inside the Sheriff's station."
-              ))
-              .addSeparatorComponents(new SeparatorBuilder())
-              .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-                "**Trainee**\n<@" + testId + "> (TEST PREVIEW)\n\n**Team Access**\nYes\n\n**Time Zone**\nCDT\n\n**Availability**\nTest preview"
-              ))
-              .addSeparatorComponents(new SeparatorBuilder())
-              .addActionRowComponents(new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId("training_test_accept_disabled").setLabel("Accept Request").setStyle(ButtonStyle.Success).setDisabled(true),
-                new ButtonBuilder().setCustomId("training_test_cancel_disabled").setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(true)
-              ))
-          ],
+          components: requestPanel(testId, message.author.username, "CDT", "Yes", "Test preview", false, true).map(container =>
+            container.setAccentColor(0xf1c40f)
+          ),
           flags: MessageFlags.IsComponentsV2,
           allowedMentions: { parse: [] }
         });
@@ -207,7 +193,6 @@ function setup(client) {
           data.activeRequests[member.id] = request;
           saveData();
           const sent = await channel.send({
-            content: "<@" + STAFF_TRAINER_ROLE_ID + ">",
             components: requestPanel(member.id, member.user.username, timezone, teamAccess, availability),
             flags: MessageFlags.IsComponentsV2,
             allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], users: [member.id] }
@@ -301,7 +286,7 @@ function setup(client) {
           request.availability,
           true
         );
-        await interaction.update({ content: "<@" + STAFF_TRAINER_ROLE_ID + ">", components: requestPanelComponents, flags: MessageFlags.IsComponentsV2, allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], parse: [] } });
+        await interaction.update({ components: requestPanelComponents, flags: MessageFlags.IsComponentsV2, allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], parse: [] } });
         await interaction.followUp({ content: "You accepted this training request. The trainee has been notified.", flags: MessageFlags.Ephemeral });
         if (trainee) {
           await trainee.send("Your training request has been accepted by <@" + interaction.user.id + ">. Please make your way to the briefing room inside the Sheriff's station.").catch(() => {});
@@ -321,7 +306,7 @@ function setup(client) {
         }
         delete data.activeRequests[traineeId];
         saveData();
-        await interaction.update({ content: "Training request cancelled by <@" + interaction.user.id + ">.", components: [], flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [] } });
+        await interaction.update({ components: [], flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [] } });
         return;
       }
 
