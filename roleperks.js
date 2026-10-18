@@ -15,7 +15,7 @@ const path = require("path");
 const ROLEPERKS_CHANNEL_ID = "1560123150635630672";
 const ROLEPERKS_IMAGE_SOURCE = "roleperks.png";
 const ROLEPERKS_IMAGE_NAME = "roleperks.png";
-const ROLEPERKS_PANEL_VERSION = 5;
+const ROLEPERKS_PANEL_VERSION = 6;
 const ROLEPERKS_PANEL_MARKER = "\u200B".repeat(ROLEPERKS_PANEL_VERSION);
 const FOOTER_IMAGE_NAME = "banner.png";
 
@@ -72,7 +72,7 @@ function perksDetails(type) {
       "Permissions to stream in all voice calls.",
       "Access to exclusive chats.",
       "Image permissions in all channels.",
-      "100,000 economy cash daily."
+      "150 cash daily."
     ],
     booster: [
       "Access Booster Vehicles.",
@@ -80,7 +80,7 @@ function perksDetails(type) {
       "Access Booster Weapons.",
       "Unlocks: PPSH 41, M14, Remington 870 & Colt Python.",
       "Permissions to stream in all voice channels.",
-      "75,000 economy cash."
+      "350 cash daily."
     ],
     contributor: [
       "Access Booster Weapons.",
@@ -90,7 +90,7 @@ function perksDetails(type) {
       "Permissions to stream in all voice calls.",
       "Access to exclusive chats.",
       "Image permissions in all channels.",
-      "115,000 economy cash daily."
+      "100 cash daily."
     ]
   };
   return details[type] || null;
