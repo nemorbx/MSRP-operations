@@ -95,7 +95,7 @@ async function getTeamAccess(discordUserId, guildId) {
     ? (user.robloxID || user.robloxId || user.id || user.roblox_id)
     : user;
 
-  if (!robloxId || !/^\\d+$/.test(String(robloxId))) {
+  if (!robloxId || !/^\d+$/.test(String(robloxId))) {
     throw new Error("Bloxlink did not return a linked Roblox account.");
   }
 
