@@ -120,7 +120,7 @@ async function getTeamAccess(discordUserId, guildId) {
 function requestButtons(traineeId, accepted = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId("training_accept_" + traineeId).setLabel(accepted ? "Request Accepted" : "Accept Request").setStyle(ButtonStyle.Success).setDisabled(accepted),
-    new ButtonBuilder().setCustomId("training_cancel_" + traineeId).setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(accepted)
+    new ButtonBuilder().setCustomId("training_cancel_" + traineeId).setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(false)
   );
 }
 function requestPanel(traineeId, traineeName, timezone, teamAccess, availability = "Now", accepted = false, testPreview = false) {
@@ -352,8 +352,8 @@ function setup(client) {
       if (interaction.customId.startsWith("training_cancel_")) {
         const traineeId = interaction.customId.slice("training_cancel_".length);
         const request = data.activeRequests[traineeId];
-        if (!request || request.status !== "pending" || request.guildId !== interaction.guild.id) {
-          return interaction.reply({ content: "This request is no longer pending or has already been cancelled.", flags: MessageFlags.Ephemeral });
+        if (!request || !["pending", "accepted"].includes(request.status) || request.guildId !== interaction.guild.id) {
+          return interaction.reply({ content: "This request has already been completed or cancelled.", flags: MessageFlags.Ephemeral });
         }
         if (interaction.user.id !== request.traineeId) {
           return interaction.reply({ content: "Only the person who submitted this training request can cancel it.", flags: MessageFlags.Ephemeral });
