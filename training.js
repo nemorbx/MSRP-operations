@@ -149,7 +149,34 @@ function resultButtons(traineeId, resultId, passed, claimed = false) {
     row.addComponents(new ButtonBuilder().setCustomId("training_claim_" + resultId).setLabel(claimed ? "Roles Claimed" : "Claim Roles").setStyle(ButtonStyle.Success).setDisabled(claimed));
   }
   row.addComponents(new ButtonBuilder().setCustomId("training_void_" + resultId).setLabel("Void Result").setStyle(ButtonStyle.Danger));
-  return [row];
+  return row;
+}
+function resultPanel(record) {
+  const passed = record.passed;
+  const container = new ContainerBuilder()
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+      "## Training Results\\n\\n" +
+      "<@" + record.trainerId + "> has sent the results for <@" + record.traineeId + ">'s training. They scored a total of **" + record.total + "/30**, which means the trainee has **" + (passed ? "passed" : "failed") + "**."
+    ))
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+      "**Trainee:** <@" + record.traineeId + ">\\n" +
+      "**Trainer:** <@" + record.trainerId + ">"
+    ))
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+      "**Driving Ability:** " + record.driving + "\\n" +
+      "**SPaG Ability:** " + record.spag + "\\n" +
+      "**Moderation Ability:** " + record.moderation + "\\n" +
+      "**Total Score:** " + record.total + "/30"
+    ))
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+      "**Training Notes:** " + String(record.notes || "No additional notes.").slice(0, 1000)
+    ))
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+    .addActionRowComponents(resultButtons(record.traineeId, record.resultId, passed, record.claimed));
+  return [container];
 }
 
 function setup(client) {
@@ -287,20 +314,9 @@ function setup(client) {
           delete data.activeRequests[trainee.id];
           saveData();
 
-          const embed = new EmbedBuilder().setColor(passed ? 0x2ecc71 : 0xe74c3c).setTitle("Training Results")
-            .setDescription("<@" + interaction.user.id + "> has sent the results for <@" + trainee.id + ">'s training. They scored a total of **" + total + "/30**, which means the trainee has **" + (passed ? "passed" : "failed") + "**.")
-            .addFields(
-              { name: "Trainee", value: "<@" + trainee.id + ">", inline: true },
-              { name: "Trainer", value: "<@" + interaction.user.id + ">", inline: true },
-              { name: "Driving Ability", value: String(driving), inline: true },
-              { name: "SPaG Ability", value: String(spag), inline: true },
-              { name: "Moderation Ability", value: String(moderation), inline: true },
-              { name: "Total Score", value: total + "/30", inline: true },
-              { name: "Training Notes", value: notes.slice(0, 1000), inline: false }
-            ).setTimestamp();
           const message = await resultsChannel.send({
-            embeds: [embed],
-            components: resultButtons(trainee.id, resultId, passed),
+            components: resultPanel(record),
+            flags: MessageFlags.IsComponentsV2,
             allowedMentions: { parse: [] }
           });
           record.messageId = message.id;
@@ -397,7 +413,7 @@ function setup(client) {
         record.claimedAt = Date.now();
         data.claimed[trainee.id] = record.resultId;
         saveData();
-        await interaction.update({ embeds: interaction.message.embeds, components: resultButtons(trainee.id, resultId, true, true) });
+        await interaction.update({ components: resultPanel(record), flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [] } });
         await interaction.followUp({ content: "Congratulations! You received Junior Moderator, Moderation Team, and Staff Team roles.", flags: MessageFlags.Ephemeral });
         const promotionsChannel = interaction.guild.channels.cache.get(PROMOTIONS_CHANNEL_ID);
         if (promotionsChannel && promotionsChannel.isTextBased()) {
