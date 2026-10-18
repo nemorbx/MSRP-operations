@@ -15,7 +15,7 @@ const path = require("path");
 const ROLEPERKS_CHANNEL_ID = "1560123150635630672";
 const ROLEPERKS_IMAGE_SOURCE = "roleperks.png";
 const ROLEPERKS_IMAGE_NAME = "roleperks.png";
-const ROLEPERKS_PANEL_VERSION = 7;
+const ROLEPERKS_PANEL_VERSION = 8;
 const ROLEPERKS_PANEL_MARKER = "\u200B".repeat(ROLEPERKS_PANEL_VERSION);
 const FOOTER_IMAGE_NAME = "banner.png";
 
@@ -49,7 +49,9 @@ function rolePerksPanel() {
         .addOptions(
           { label: "Server VIP Perks", description: "View the perks for being a VIP...", value: "vip" },
           { label: "Server Booster Perks", description: "View the perks of being a Supporter...", value: "booster" },
-          { label: "Server Contributor Perks", description: "View the perks of being a Contributor...", value: "contributor" }
+          { label: "Server Contributor Perks", description: "View the perks of being a Contributor...", value: "contributor" },
+          { label: "Premium Perks", description: "View the perks for Premium members...", value: "premium" },
+          { label: "Notable Perks", description: "View the perks for Notable members...", value: "notable" }
         )
     )
   );
