@@ -10,6 +10,9 @@ const {
   TextInputBuilder,
   TextInputStyle,
   MessageFlags,
+  ContainerBuilder,
+  TextDisplayBuilder,
+  SeparatorBuilder,
 } = require("discord.js");
 
 const STAFF_TRAINER_ROLE_ID = "1527903039669665853";
@@ -64,10 +67,25 @@ function isSeniorHR(member) {
   return member.roles.cache.has(SENIOR_HR_ROLE_ID);
 }
 function requestButtons(traineeId, accepted = false) {
-  return [new ActionRowBuilder().addComponents(
+  return new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId("training_accept_" + traineeId).setLabel(accepted ? "Request Accepted" : "Accept Request").setStyle(ButtonStyle.Success).setDisabled(accepted),
     new ButtonBuilder().setCustomId("training_cancel_" + traineeId).setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(accepted)
-  )];
+  );
+}
+function requestPanel(traineeId, traineeName, timezone, teamAccess, availability, accepted = false) {
+  const container = new ContainerBuilder()
+    .setAccentColor(0xf1c40f)
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent("## Training Request"))
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+      "<@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room located inside the Sheriff's station."
+    ))
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+      "**Trainee**\n<@" + traineeId + "> (" + traineeName + ")\n\n**Team Access**\n" + teamAccess + "\n\n**Time Zone**\n" + timezone + "\n\n**Availability**\n" + availability
+    ))
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addActionRowComponents(requestButtons(traineeId, accepted));
+  return [container];
 }
 function resultButtons(traineeId, resultId, passed, claimed = false) {
   const row = new ActionRowBuilder();
@@ -112,18 +130,10 @@ function setup(client) {
           data.requests[member.id] = now;
           data.activeRequests[member.id] = request;
           saveData();
-          const embed = new EmbedBuilder().setColor(0xf1c40f).setTitle("Training Request")
-            .setDescription(member + ", please await a trainer to accept your training. Once accepted, make your way to the briefing room located inside of the Sheriff's station.")
-            .addFields(
-              { name: "Trainee", value: member.toString(), inline: true },
-              { name: "Team Access", value: teamAccess, inline: true },
-              { name: "Time Zone", value: timezone, inline: true },
-              { name: "Availability", value: availability, inline: false }
-            ).setTimestamp();
           const sent = await channel.send({
             content: "<@" + STAFF_TRAINER_ROLE_ID + ">",
-            embeds: [embed],
-            components: requestButtons(member.id),
+            components: requestPanel(member.id, member.user.username, timezone, teamAccess, availability),
+            flags: MessageFlags.IsComponentsV2,
             allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], users: [member.id] }
           });
           request.messageId = sent.id;
@@ -205,9 +215,18 @@ function setup(client) {
         request.acceptedBy = interaction.user.id;
         request.acceptedAt = Date.now();
         saveData();
-        await interaction.update({ embeds: interaction.message.embeds, components: requestButtons(traineeId, true) });
-        await interaction.followUp({ content: "You accepted this training request. The trainee has been notified.", flags: MessageFlags.Ephemeral });
+        const panelText = interaction.message.components?.[0]?.components || [];
         const trainee = await interaction.guild.members.fetch(traineeId).catch(() => null);
+        const requestPanelComponents = requestPanel(
+          traineeId,
+          trainee?.user?.username || "Unknown user",
+          request.timezone,
+          request.teamAccess,
+          request.availability,
+          true
+        );
+        await interaction.update({ content: "<@" + STAFF_TRAINER_ROLE_ID + ">", components: requestPanelComponents, flags: MessageFlags.IsComponentsV2, allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], parse: [] } });
+        await interaction.followUp({ content: "You accepted this training request. The trainee has been notified.", flags: MessageFlags.Ephemeral });
         if (trainee) {
           await trainee.send("Your training request has been accepted by <@" + interaction.user.id + ">. Please make your way to the briefing room inside the Sheriff's station.").catch(() => {});
         }
@@ -226,7 +245,7 @@ function setup(client) {
         }
         delete data.activeRequests[traineeId];
         saveData();
-        await interaction.update({ content: "Training request cancelled by <@" + interaction.user.id + ">.", embeds: [], components: [] });
+        await interaction.update({ content: "Training request cancelled by <@" + interaction.user.id + ">.", components: [], flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [] } });
         return;
       }
 
