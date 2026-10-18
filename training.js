@@ -74,18 +74,19 @@ function requestButtons(traineeId, accepted = false) {
 }
 function requestPanel(traineeId, traineeName, timezone, teamAccess, availability, accepted = false, testPreview = false) {
   const container = new ContainerBuilder()
-    .setAccentColor(0xf1c40f)
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(testPreview ? "**TEST PREVIEW — not a real request**" : "<@&" + STAFF_TRAINER_ROLE_ID + ">"))
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent("## Training Request"))
+    .setAccentColor(0x2b2d31)
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      "<@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room located inside the Sheriff's station."
+      (testPreview ? "**TEST PREVIEW — not a real request**\\n\\n" : "") +
+      "## Training Request\\n\\n" +
+      "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted make your way to the briefing room located inside of the Sheriff's station.\\n\\n" +
+      "**Trainee:** <@" + traineeId + ">\\n" +
+      "**Team Access:** \\u0060\\u0060" + teamAccess + "\\u0060\\u0060\\n" +
+      "**Time Zone:** \\u0060\\u0060" + timezone + "\\u0060\\u0060" +
+      (availability && availability !== "Not provided" ? "\\n**Availability:** " + availability : "")
     ))
-    .addSeparatorComponents(new SeparatorBuilder())
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      "**Trainee**\n<@" + traineeId + "> (" + traineeName + ")\n\n**Team Access**\n" + teamAccess + "\n\n**Time Zone**\n" + timezone + "\n\n**Availability**\n" + availability
-    ))
-    .addSeparatorComponents(new SeparatorBuilder())
-    .addActionRowComponents(requestButtons(traineeId, accepted));
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+    .addActionRowComponents(requestButtons(traineeId, accepted))
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }));
   return [container];
 }
 function resultButtons(traineeId, resultId, passed, claimed = false) {
