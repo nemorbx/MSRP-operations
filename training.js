@@ -353,15 +353,22 @@ function setup(client) {
         const traineeId = interaction.customId.slice("training_cancel_".length);
         const request = data.activeRequests[traineeId];
         if (!request || request.status !== "pending" || request.guildId !== interaction.guild.id) {
-          return interaction.reply({ content: "Only a pending request can be cancelled. Accepted sessions must be handled by a Staff Trainer.", flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: "This request is no longer pending or has already been cancelled.", flags: MessageFlags.Ephemeral });
         }
-        if (interaction.user.id !== traineeId && !isTrainer(member) && !isSeniorHR(member)) {
-          return interaction.reply({ content: "Only the trainee, a Staff Trainer, or Senior HR can cancel a pending request.", flags: MessageFlags.Ephemeral });
+        if (interaction.user.id !== request.traineeId) {
+          return interaction.reply({ content: "Only the person who submitted this training request can cancel it.", flags: MessageFlags.Ephemeral });
         }
         delete data.activeRequests[traineeId];
         saveData();
-        await interaction.update({ components: [], flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [] } });
-        return;
+        const cancelledPanel = new ContainerBuilder()
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent("## Training Request Cancelled\n\n<@" + traineeId + "> cancelled their training request."))
+          .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }));
+        await interaction.update({
+          components: [cancelledPanel],
+          flags: MessageFlags.IsComponentsV2,
+          allowedMentions: { parse: [] }
+        });
+        return interaction.followUp({ content: "Your training request has been cancelled.", flags: MessageFlags.Ephemeral });
       }
 
       if (interaction.customId.startsWith("training_claim_")) {
