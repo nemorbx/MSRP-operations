@@ -43,6 +43,7 @@ async function deleteStickyMessage(channel, data) {
 
 function setupSticky(client) {
   const data = loadData();
+  const messageCounts = {};
 
   client.on("messageCreate", async message => {
     if (message.author.bot || !message.guild) return;
@@ -102,9 +103,11 @@ function setupSticky(client) {
     const entry = data.channels[message.channel.id];
     if (!entry?.messageId) return;
 
-    // Any new member message makes the sticky move back to the bottom.
-    // The sticky's own message is ignored because bot messages return above.
-    const oldStickyId = entry.messageId;
+    // Move the sticky back to the bottom after every five non-bot messages.
+    messageCounts[message.channel.id] = (messageCounts[message.channel.id] || 0) + 1;
+    if (messageCounts[message.channel.id] < 5) return;
+    messageCounts[message.channel.id] = 0;
+
     await deleteStickyMessage(message.channel, data);
 
     const sticky = await message.channel.send(entry.text).catch(() => null);
