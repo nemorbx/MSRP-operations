@@ -50,10 +50,7 @@ const trainingCommand = new SlashCommandBuilder()
   .setName("training")
   .setDescription("Training requests and results")
   .addSubcommand(sub => sub.setName("request").setDescription("Request a training session")
-    .addStringOption(o => o.setName("timezone").setDescription("Your time zone (e.g. CST, EST, AEDT)").setRequired(true))
-    .addStringOption(o => o.setName("team_access").setDescription("Can you access the Sheriff's whitelisted team?").setRequired(true)
-      .addChoices({ name: "Yes", value: "Yes" }, { name: "No", value: "No" }))
-    .addStringOption(o => o.setName("availability").setDescription("Optional: days/times you are available").setRequired(false)))
+    .addStringOption(o => o.setName("timezone").setDescription("Your time zone (e.g. CST, EST, AEDT)").setRequired(true)))
   .addSubcommand(sub => sub.setName("results").setDescription("Submit a trainee's training results")
     .addUserOption(o => o.setName("trainee").setDescription("Trainee being evaluated").setRequired(true))
     .addIntegerOption(o => o.setName("driving").setDescription("Driving score (0–10)").setRequired(true).setMinValue(0).setMaxValue(10))
@@ -67,13 +64,66 @@ function isTrainer(member) {
 function isSeniorHR(member) {
   return member.roles.cache.has(SENIOR_HR_ROLE_ID);
 }
+
+const ROBLOX_GROUP_ID = "974927500";
+const BLOXLINK_API_KEY = process.env.BLOXLINK_API_KEY;
+
+async function getTeamAccess(discordUserId, guildId) {
+  if (!BLOXLINK_API_KEY) {
+    throw new Error("BLOXLINK_API_KEY is not configured in the bot environment.");
+  }
+
+  const response = await fetch(
+    "https://api.blox.link/v4/public/guilds/" + encodeURIComponent(guildId) +
+      "/discord-to-roblox/" + encodeURIComponent(discordUserId),
+    {
+      method: "GET",
+      headers: { Authorization: BLOXLINK_API_KEY, Accept: "application/json" },
+      signal: AbortSignal.timeout(12000),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Bloxlink lookup failed with HTTP " + response.status + ".");
+  }
+
+  const result = await response.json();
+  const user = result && (result.robloxID || result.robloxId || result.roblox_id ||
+    result.primaryAccount || result.primary_account || result.user?.robloxID ||
+    result.user?.robloxId || result.user?.roblox_id);
+  const robloxId = typeof user === "object" && user !== null
+    ? (user.robloxID || user.robloxId || user.id || user.roblox_id)
+    : user;
+
+  if (!robloxId || !/^\\d+$/.test(String(robloxId))) {
+    throw new Error("Bloxlink did not return a linked Roblox account.");
+  }
+
+  const groupResponse = await fetch(
+    "https://groups.roblox.com/v2/users/" + encodeURIComponent(String(robloxId)) + "/groups/roles",
+    { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(12000) }
+  );
+
+  if (!groupResponse.ok) {
+    throw new Error("Roblox group membership lookup failed with HTTP " + groupResponse.status + ".");
+  }
+
+  const groupResult = await groupResponse.json();
+  if (!Array.isArray(groupResult.data)) {
+    throw new Error("Roblox returned an unexpected group membership response.");
+  }
+
+  return groupResult.data.some(entry =>
+    String(entry.group?.id ?? entry.groupId ?? entry.group_id) === ROBLOX_GROUP_ID
+  ) ? "Yes" : "No";
+}
 function requestButtons(traineeId, accepted = false) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId("training_accept_" + traineeId).setLabel(accepted ? "Request Accepted" : "Accept Request").setStyle(ButtonStyle.Success).setDisabled(accepted),
     new ButtonBuilder().setCustomId("training_cancel_" + traineeId).setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(accepted)
   );
 }
-function requestPanel(traineeId, traineeName, timezone, teamAccess, availability, accepted = false, testPreview = false) {
+function requestPanel(traineeId, traineeName, timezone, teamAccess, availability = "Now", accepted = false, testPreview = false) {
   const container = new ContainerBuilder()
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
       (testPreview ? "**TEST PREVIEW — not a real request**\n\n" : "") +
@@ -124,7 +174,7 @@ function setup(client) {
       if (command === "!test training request") {
         const testId = message.author.id;
         const sent = await channel.send({
-          components: requestPanel(testId, message.author.username, "CDT", "Yes", "Test preview", false, true),
+          components: requestPanel(testId, message.author.username, "CDT", "No", "Now", false, true),
           flags: MessageFlags.IsComponentsV2,
           allowedMentions: { parse: [] }
         });
@@ -177,10 +227,17 @@ function setup(client) {
             return interaction.reply({ content: "You already have a pending or accepted training request. Cancel the pending request or complete your session first.", flags: MessageFlags.Ephemeral });
           }
           const timezone = interaction.options.getString("timezone", true).trim();
-          const teamAccess = interaction.options.getString("team_access", true);
-          const availability = interaction.options.getString("availability")?.trim() || "Not provided";
-          if (timezone.length < 2 || timezone.length > 60 || availability.length > 300) {
-            return interaction.reply({ content: "Please enter a valid time zone and keep availability notes under 300 characters.", flags: MessageFlags.Ephemeral });
+          const availability = "Now";
+          if (timezone.length < 2 || timezone.length > 60) {
+            return interaction.reply({ content: "Please enter a valid time zone.", flags: MessageFlags.Ephemeral });
+          }
+          let teamAccess;
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+          try {
+            teamAccess = await getTeamAccess(member.id, interaction.guild.id);
+          } catch (error) {
+            console.error("Training Bloxlink/group check failed:", error?.message || error);
+            return interaction.editReply("I couldn't verify your linked Roblox account or group membership right now. Please make sure your Discord is verified with Bloxlink and try again later.");
           }
           const channel = interaction.guild.channels.cache.get(REQUEST_CHANNEL_ID);
           if (!channel || !channel.isTextBased()) {
@@ -196,7 +253,7 @@ function setup(client) {
           });
           request.messageId = sent.id;
           saveData();
-          return interaction.reply({ content: "Your training request has been submitted. Staff Trainers have been notified.", flags: MessageFlags.Ephemeral });
+          return interaction.editReply({ content: "Your training request has been submitted. Staff Trainers have been notified." });
         }
 
         if (sub === "results") {
