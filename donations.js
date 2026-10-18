@@ -17,8 +17,8 @@ function makePanel(d) {
   const lines = [1,2,3].map((n,i) => {
     const entry = top[i];
     return entry
-      ? "> `` " + n + ". `` <@" + entry.id + "> (``" + entry.amount.toLocaleString("en-US") + "``)"
-      : "> `` " + n + ". `` N/A (``0``)";
+      ? "> `` " + n + ". `` " + entry.amount.toLocaleString("en-US") + " Robux"
+      : "> `` " + n + ". `` N/A (0 Robux)";
   }).join("\n");
   const c = new ContainerBuilder()
     .addTextDisplayComponents(new TextDisplayBuilder().setContent("## Donation Leaderboard"))
