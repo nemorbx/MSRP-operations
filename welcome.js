@@ -3,11 +3,18 @@ const path = require("path");
 const {
   SlashCommandBuilder,
   MessageFlags,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ContainerBuilder,
+  TextDisplayBuilder,
 } = require("discord.js");
 
 const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "welcome.json");
 const ARRIVALS_CHANNEL_ID = "1527178537600286914";
+const VERIFY_URL = "https://blox.link/dashboard/user/verifications/verify";
+const WELCOME_EMOJI = "<:image_20260331_002936379:1488319316247183434>";
 
 const PREFIX = "!nickname";
 
@@ -36,28 +43,35 @@ function generateNickname() {
   return first + second;
 }
 
-const WELCOME_MESSAGES = [
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Welcome to Missouri State Roleplay!",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Your ER:LC journey starts here.",
-  "<:msrpwhite:1552141993768132668> Welcome to MSRP, {member}!",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Get ready to roleplay.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! We're glad to have you in MSRP.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Your next scene starts here.",
-  "<:msrpwhite:1552141993768132668> Welcome to Missouri State Roleplay, {member}!",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Enjoy your time in MSRP.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Time to hit the roads of Missouri.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! We hope you enjoy our ER:LC community.",
-  "<:msrpwhite:1552141993768132668> Welcome to the community, {member}!",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Your roleplay adventure begins now.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! We're happy to have you here.",
-  "<:msrpwhite:1552141993768132668> Welcome to MSRP, {member}! Have fun roleplaying.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Get familiar with the community and enjoy ER:LC.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! We look forward to seeing you in-game.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Thanks for joining Missouri State Roleplay.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Your Missouri roleplay experience starts here.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Glad to have another member of MSRP with us.",
-  "<:msrpwhite:1552141993768132668> Welcome, {member}! Enjoy Missouri with us!",
-];
+function buildWelcomeMessage(member) {
+  const memberCount = member.guild.memberCount.toLocaleString("en-US");
+  const container = new ContainerBuilder()
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(
+        WELCOME_EMOJI + " `` - `` Welcome <@" + member.id + "> to **Missouri State Roleplay!** You are our **" +
+        memberCount + "th** member, we hope you enjoy your stay!\n-# Ensure to verify to gain access to all of our channels and stop in-game Private Messages."
+      )
+    )
+    .addActionRowComponents(
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel("Verify")
+          .setStyle(ButtonStyle.Link)
+          .setURL(VERIFY_URL)
+          .setEmoji("👋"),
+        new ButtonBuilder()
+          .setLabel(memberCount)
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji("👥")
+          .setDisabled(true)
+      )
+    );
+  return {
+    components: [container],
+    flags: MessageFlags.IsComponentsV2,
+    allowedMentions: { users: [member.id] }
+  };
+}
 
 function ensureData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -278,17 +292,7 @@ function setupWelcome(client) {
       const channel = await member.guild.channels.fetch(channelId).catch(() => null);
       if (!channel || !channel.isTextBased() || !channel.send) return;
 
-      const template =
-        WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)];
-
-      const content = template.replaceAll("{member}", `<@${member.id}>`);
-
-      await channel.send({
-        content,
-        allowedMentions: {
-          users: [member.id],
-        },
-      });
+      await channel.send(buildWelcomeMessage(member));
     } catch (error) {
       console.error("Welcome message error:", error);
     }
