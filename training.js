@@ -247,6 +247,7 @@ function setup(client) {
           data.activeRequests[member.id] = request;
           saveData();
           const sent = await channel.send({
+            content: "<@&" + STAFF_TRAINER_ROLE_ID + "> New training request from <@" + member.id + ">.",
             components: requestPanel(member.id, member.user.username, timezone, teamAccess, availability),
             flags: MessageFlags.IsComponentsV2,
             allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], users: [member.id] }
