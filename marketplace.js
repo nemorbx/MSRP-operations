@@ -73,16 +73,16 @@ function setup(client) {
     if (interaction.values[0] === "donations") {
       title = "Robux Donations";
       body = [
-        "[Donation 100R$](" + DEFAULT_LINK + ")",
-        "[Donation 250R$](" + DEFAULT_LINK + ")",
-        "[Donation 350R$](" + DEFAULT_LINK + ")",
-        "[Donation 500R$](" + DEFAULT_LINK + ")",
-        "[Donation 750R$](" + DEFAULT_LINK + ")",
-        "[Donation 1000R$](" + DEFAULT_LINK + ")",
-        "[Donation 2000R$](" + DEFAULT_LINK + ")",
-        "[Donation 2500R$](" + DEFAULT_LINK + ")",
-        "[Donation 5000R$](" + DEFAULT_LINK + ")",
-        "[Donation 10000R$](" + DEFAULT_LINK + ")"
+        "[Donation 100R$](https://www.roblox.com/game-pass/2037393622/Donation-100)",
+        "[Donation 250R$](https://www.roblox.com/game-pass/2040609100/Donation-250)",
+        "[Donation 350R$](https://www.roblox.com/game-pass/2037951588/Donation-350)",
+        "[Donation 500R$](https://www.roblox.com/game-pass/2036661563/Donation-500)",
+        "[Donation 750R$](https://www.roblox.com/game-pass/2040261141/Donation-750)",
+        "[Donation 1000R$](https://www.roblox.com/game-pass/2037513620/Donation-1000)",
+        "[Donation 2000R$](https://www.roblox.com/game-pass/2037855580/Donation-2000)",
+        "[Donation 2500R$](https://www.roblox.com/game-pass/2037015565/Donation-2500)",
+        "[Donation 5000R$](https://www.roblox.com/game-pass/2039739347/Donation-5000)",
+        "[Donation 10000R$](https://www.roblox.com/game-pass/2039799354/Donation-10000)"
       ].join("\n");
       details = [
         ["Cash Donations", "Coming soon..."],
@@ -90,11 +90,11 @@ function setup(client) {
       ];
     } else if (interaction.values[0] === "custom_roles") {
       title = "Custom Roles";
-      body = "Obtain a custom role.\nMust not contain NSFW content.\nMust not include advertisements.\nMust follow our server regulations.\n\n[Click here to purchase](" + DEFAULT_LINK + ")";
+      body = "Obtain a custom role.\nMust not contain NSFW content.\nMust not include advertisements.\nMust follow our server regulations.\n\n[Click here to purchase](https://www.roblox.com/game-pass/2040753089/Paid-Advertisement)";
       details = [["Purchase Notice", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."]];
     } else {
       title = "Paid Advertisement";
-      body = "Receive an everyone ping to promote your server.\n\n[Click here to purchase](" + DEFAULT_LINK + ")";
+      body = "Receive an everyone ping to promote your server.\n\n[Click here to purchase](https://www.roblox.com/game-pass/2040753089/Paid-Advertisement)";
       details = [["Purchase Notice", "Purchases must be redeemed within 24 hours. You must purchase the assets linked through this page; anything else will be denied as invalid payment."]];
     }
 
