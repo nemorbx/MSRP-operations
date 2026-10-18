@@ -97,6 +97,82 @@ function resultButtons(traineeId, resultId, passed, claimed = false) {
 }
 
 function setup(client) {
+  client.on("messageCreate", async message => {
+    try {
+      if (!message.guild || message.author.bot) return;
+      const command = message.content.trim().toLowerCase();
+      if (command !== "!test training request" && command !== "!clear training requests") return;
+
+      const member = await message.guild.members.fetch(message.author.id);
+      if (!isSeniorHR(member)) {
+        await message.reply("Only Senior HR can use training test and cleanup commands.");
+        return;
+      }
+
+      const channel = message.guild.channels.cache.get(REQUEST_CHANNEL_ID);
+      if (!channel || !channel.isTextBased()) {
+        await message.reply("The training request channel is not configured correctly.");
+        return;
+      }
+
+      if (command === "!test training request") {
+        const testId = message.author.id;
+        const sent = await channel.send({
+          content: "TRAINING REQUEST TEST — this is a preview only; no real request was created.",
+          components: [
+            new ContainerBuilder()
+              .setAccentColor(0xf1c40f)
+              .addTextDisplayComponents(new TextDisplayBuilder().setContent("## Training Request"))
+              .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                "<@" + testId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room located inside the Sheriff's station."
+              ))
+              .addSeparatorComponents(new SeparatorBuilder())
+              .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                "**Trainee**\n<@" + testId + "> (TEST PREVIEW)\n\n**Team Access**\nYes\n\n**Time Zone**\nCDT\n\n**Availability**\nTest preview"
+              ))
+              .addSeparatorComponents(new SeparatorBuilder())
+              .addActionRowComponents(new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId("training_test_accept_disabled").setLabel("Accept Request").setStyle(ButtonStyle.Success).setDisabled(true),
+                new ButtonBuilder().setCustomId("training_test_cancel_disabled").setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(true)
+              ))
+          ],
+          flags: MessageFlags.IsComponentsV2,
+          allowedMentions: { parse: [] }
+        });
+        await message.reply("Test training request posted in <#" + channel.id + ">. It is a preview only and does not create a real request.");
+        return;
+      }
+
+      let deleted = 0;
+      let before;
+      while (true) {
+        const batch = await channel.messages.fetch({ limit: 100, ...(before ? { before } : {}) });
+        if (!batch.size) break;
+        before = batch.last().id;
+        const botMessages = batch.filter(m => m.author.id === client.user.id);
+        for (const botMessage of botMessages.values()) {
+          if (botMessage.content.includes("TRAINING REQUEST TEST") ||
+              botMessage.components?.length ||
+              botMessage.embeds?.some(e => e.title === "Training Request")) {
+            await botMessage.delete().catch(() => {});
+            deleted++;
+          }
+        }
+        if (batch.size < 100) break;
+      }
+      for (const [traineeId, request] of Object.entries(data.activeRequests)) {
+        if (request.guildId === message.guild.id && request.channelId === channel.id) {
+          delete data.activeRequests[traineeId];
+        }
+      }
+      saveData();
+      await message.reply("Cleared " + deleted + " training request/test message(s) posted by MSRP Operations and removed pending training requests from the active queue.");
+    } catch (error) {
+      console.error("Training prefix command error:", error);
+      await message.reply("That training command failed. Check the bot console for details.").catch(() => {});
+    }
+  });
+
   client.on("interactionCreate", async interaction => {
     try {
       if (interaction.isChatInputCommand() && interaction.commandName === "training" && interaction.guild) {
