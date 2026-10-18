@@ -241,7 +241,7 @@ function setup(client) {
           }
           const channel = interaction.guild.channels.cache.get(REQUEST_CHANNEL_ID);
           if (!channel || !channel.isTextBased()) {
-            return interaction.reply({ content: "The training request channel is not configured correctly. Please contact an administrator.", flags: MessageFlags.Ephemeral });
+            return interaction.editReply({ content: "The training request channel is not configured correctly. Please contact an administrator." });
           }
           const request = { traineeId: member.id, guildId: interaction.guild.id, timezone, teamAccess, availability, createdAt: now, status: "pending", messageId: null, channelId: channel.id };
           data.activeRequests[member.id] = request;
