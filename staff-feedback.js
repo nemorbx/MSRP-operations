@@ -189,6 +189,26 @@ function buildRatingProfileCard({ target, ratings }) {
 function setup(client) {
   client.on('interactionCreate', async interaction => {
     try {
+      if (interaction.isChatInputCommand() && interaction.commandName === 'staff-rating') {
+        if (!interaction.guild) {
+          return interaction.reply({ content: 'This command can only be used in the server.', flags: MessageFlags.Ephemeral });
+        }
+
+        const targetUser = interaction.options.getUser('user', true);
+        const target = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+        if (!target) {
+          return interaction.reply({ content: 'That member could not be found in this server.', flags: MessageFlags.Ephemeral });
+        }
+        if (target.user.bot || !target.roles.cache.has(STAFF_TEAM_ROLE_ID)) {
+          return interaction.reply({ content: 'Please choose someone who is part of the staff team.', flags: MessageFlags.Ephemeral });
+        }
+
+        await interaction.deferReply({ flags: MessageFlags.IsComponentsV2 });
+        const ratings = loadFeedback().filter(item => item.targetId === target.id);
+        const card = buildRatingProfileCard({ target, ratings });
+        return interaction.editReply({ components: [card], allowedMentions: { parse: [] } });
+      }
+
       if (interaction.isChatInputCommand() && interaction.commandName === 'staff' && interaction.options.getSubcommand() === 'review') {
         if (!interaction.guild) return interaction.reply({ content: 'This command can only be used in the server.', flags: MessageFlags.Ephemeral });
         const targetUser = interaction.options.getUser('user', true);
