@@ -271,15 +271,20 @@ function setup(client) {
             return interaction.editReply({ content: "The training request channel is not configured correctly. Please contact an administrator." });
           }
           const request = { traineeId: member.id, guildId: interaction.guild.id, timezone, teamAccess, availability, createdAt: now, status: "pending", messageId: null, channelId: channel.id };
-          data.activeRequests[member.id] = request;
-          saveData();
-          const sent = await channel.send({
-            content: "<@&" + STAFF_TRAINER_ROLE_ID + "> New training request from <@" + member.id + ">.",
-            components: requestPanel(member.id, member.user.username, timezone, teamAccess, availability),
-            flags: MessageFlags.IsComponentsV2,
-            allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], users: [member.id] }
-          });
+          let sent;
+          try {
+            sent = await channel.send({
+              content: "<@&" + STAFF_TRAINER_ROLE_ID + "> New training request from <@" + member.id + ">.",
+              components: requestPanel(member.id, member.user.username, timezone, teamAccess, availability),
+              flags: MessageFlags.IsComponentsV2,
+              allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], users: [member.id] }
+            });
+          } catch (error) {
+            console.error("Could not post training request:", error);
+            return interaction.editReply("I couldn't post your training request. No request was saved, so please try again in a moment.");
+          }
           request.messageId = sent.id;
+          data.activeRequests[member.id] = request;
           saveData();
           return interaction.editReply({ content: "Your training request has been submitted. Staff Trainers have been notified." });
         }
@@ -362,7 +367,15 @@ function setup(client) {
         if (trainee) {
           await trainee.send("Your training request has been accepted by <@" + interaction.user.id + ">. Please make your way to the briefing room inside the Sheriff's station.").catch(() => {});
         }
-        await interaction.channel.send({ content: "<@" + traineeId + ">, <@" + interaction.user.id + "> has accepted your training request.", allowedMentions: { users: [traineeId, interaction.user.id] } });
+        const acceptedNotice = new ContainerBuilder()
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+            "## Training Request Accepted\\n\\n<@" + traineeId + ">, <@" + interaction.user.id + "> has accepted your training request. Please make your way to the briefing room inside the Sheriff's station."
+          ));
+        await interaction.channel.send({
+          components: [acceptedNotice],
+          flags: MessageFlags.IsComponentsV2,
+          allowedMentions: { users: [traineeId, interaction.user.id] }
+        });
         return;
       }
 
