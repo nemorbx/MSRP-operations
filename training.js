@@ -123,9 +123,10 @@ function requestButtons(traineeId, accepted = false) {
     new ButtonBuilder().setCustomId("training_cancel_" + traineeId).setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(false)
   );
 }
-function requestPanel(traineeId, traineeName, timezone, teamAccess, availability = "Now", accepted = false, testPreview = false) {
+function requestPanel(traineeId, traineeName, timezone, teamAccess, availability = "Now", accepted = false, testPreview = false, notice = "") {
   const container = new ContainerBuilder()
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+      (notice ? notice + "\n\n" : "") +
       (testPreview ? "**TEST PREVIEW — not a real request**\n\n" : "") +
       "## Training Request\n\n" +
       "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted make your way to the briefing room located inside of the Sheriff's station.\n\n" +
@@ -274,8 +275,10 @@ function setup(client) {
           let sent;
           try {
             sent = await channel.send({
-              content: "<@&" + STAFF_TRAINER_ROLE_ID + "> New training request from <@" + member.id + ">.",
-              components: requestPanel(member.id, member.user.username, timezone, teamAccess, availability),
+              components: requestPanel(
+                member.id, member.user.username, timezone, teamAccess, availability, false, false,
+                "<@&" + STAFF_TRAINER_ROLE_ID + "> New training request from <@" + member.id + ">."
+              ),
               flags: MessageFlags.IsComponentsV2,
               allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], users: [member.id] }
             });
