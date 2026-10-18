@@ -13,6 +13,8 @@ const {
   ContainerBuilder,
   TextDisplayBuilder,
   SeparatorBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
 } = require("discord.js");
 
 const STAFF_TRAINER_ROLE_ID = "1527903039669665853";
@@ -74,19 +76,22 @@ function requestButtons(traineeId, accepted = false) {
 }
 function requestPanel(traineeId, traineeName, timezone, teamAccess, availability, accepted = false, testPreview = false) {
   const container = new ContainerBuilder()
-    .setAccentColor(0x2b2d31)
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      (testPreview ? "**TEST PREVIEW — not a real request**\\n\\n" : "") +
-      "## Training Request\\n\\n" +
-      "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted make your way to the briefing room located inside of the Sheriff's station.\\n\\n" +
-      "**Trainee:** <@" + traineeId + ">\\n" +
-      "**Team Access:** \\u0060\\u0060" + teamAccess + "\\u0060\\u0060\\n" +
-      "**Time Zone:** \\u0060\\u0060" + timezone + "\\u0060\\u0060" +
-      (availability && availability !== "Not provided" ? "\\n**Availability:** " + availability : "")
+      (testPreview ? "**TEST PREVIEW — not a real request**\n\n" : "") +
+      "## Training Request\n\n" +
+      "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted make your way to the briefing room located inside of the Sheriff's station.\n\n" +
+      "**Trainee:** <@" + traineeId + ">\n" +
+      "**Team Access:** ` `" + teamAccess + "` `\n" +
+      "**Time Zone:** ` `" + timezone + "` `"
     ))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
     .addActionRowComponents(requestButtons(traineeId, accepted))
-    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }));
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+    .addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder().setURL("https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/banner.png")
+      )
+    );
   return [container];
 }
 function resultButtons(traineeId, resultId, passed, claimed = false) {
@@ -120,9 +125,7 @@ function setup(client) {
       if (command === "!test training request") {
         const testId = message.author.id;
         const sent = await channel.send({
-          components: requestPanel(testId, message.author.username, "CDT", "Yes", "Test preview", false, true).map(container =>
-            container.setAccentColor(0xf1c40f)
-          ),
+          components: requestPanel(testId, message.author.username, "CDT", "Yes", "Test preview", false, true),
           flags: MessageFlags.IsComponentsV2,
           allowedMentions: { parse: [] }
         });
