@@ -26,7 +26,7 @@ function makePanel(d) {
     .addTextDisplayComponents(new TextDisplayBuilder().setContent("> We'd like to thank all of our donators, the people above are the **top three highest donators** to Missouri State Roleplay."))
     .addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large))
     .addMediaGalleryComponents(banner("attachment://donor-banner.png"));
-  return {components:[c],flags:MessageFlags.IsComponentsV2,files:[new AttachmentBuilder(FOOTER,{name:"donor-banner.png"})]};
+  return {components:[c],flags:MessageFlags.IsComponentsV2,files:[new AttachmentBuilder(FOOTER,{name:"donor-banner.png"})],allowedMentions:{parse:[]}};
 }
 async function refresh(client,guild) {
   const ch = await guild.channels.fetch(LEADERBOARD).catch(()=>null);
