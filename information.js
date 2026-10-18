@@ -15,8 +15,8 @@ const INFORMATION_CHANNEL_ID = "1527394530427666452";
 const INFORMATION_IMAGE_SOURCE = "information.png";
 const WEBSITE_URL = "https://nemorbx.github.io/msrp/";
 // Keep the supplied Roblox group destinations here when available.
-const WHITELISTED_GROUP_URL = "https://www.roblox.com/communities/";
-const ROBLOX_GROUP_URL = "https://www.roblox.com/communities/";
+const WHITELISTED_GROUP_URL = "https://www.roblox.com/communities/974927500/MSRP-WhiteIisted#!/about";
+const ROBLOX_GROUP_URL = "https://www.roblox.com/communities/362792702/Missouri-State-Roleplay-MSRP#!/about";
 const INFORMATION_IMAGE_NAME = "information.png";
 const INFORMATION_PANEL_VERSION = 12;
 const INFORMATION_PANEL_MARKER = "\u200B".repeat(INFORMATION_PANEL_VERSION);
