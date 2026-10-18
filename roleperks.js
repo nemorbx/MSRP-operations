@@ -94,8 +94,22 @@ function perksDetails(type) {
       "Image permissions in all channels.",
       "100 cash daily."
     ],
-    premium: ["175 cash daily."],
-    notable: ["100 cash daily."]
+    premium: [
+      "Access Booster Vehicles.",
+      "Unlocks: Falcon Heritage Track, Surrey 650S, Falcon Heritage, Takeo Experience, Chevlon Corbeta 8, Averon LM/LR, Chevlon Corbeta RZR & Chevlon Corbeta X08.",
+      "Access Booster Weapons.",
+      "Unlocks: PPSH 41, M14, Remington 870 & Colt Python.",
+      "Permissions to stream in all voice channels.",
+      "175 cash daily."
+    ],
+    notable: [
+      "Access Booster Vehicles.",
+      "Unlocks: Falcon Heritage Track, Surrey 650S, Falcon Heritage, Takeo Experience, Chevlon Corbeta 8, Averon LM/LR, Chevlon Corbeta RZR & Chevlon Corbeta X08.",
+      "Access Booster Weapons.",
+      "Unlocks: PPSH 41, M14, Remington 870 & Colt Python.",
+      "Permissions to stream in all voice channels.",
+      "100 cash daily."
+    ]
   };
   return details[type] || null;
 }
