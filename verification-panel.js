@@ -3,13 +3,11 @@ const path = require("path");
 const {
   MessageFlags, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize,
   ContainerBuilder, MediaGalleryBuilder, MediaGalleryItemBuilder,
-  ActionRowBuilder, ButtonBuilder, ButtonStyle,
 } = require("discord.js");
 
 const CHANNEL_ID = "1528566337394446456";
 const VERIFY_IMAGE = "verify.png";
 const BANNER_IMAGE = "banner.png";
-const VERIFY_URL = "https://blox.link/dashboard/user/verifications/verify";
 const MARKER = "\u200B".repeat(3);
 
 function display(content) { return new TextDisplayBuilder().setContent(content); }
@@ -21,19 +19,13 @@ function panel() {
   const container = new ContainerBuilder();
   addImage(container, VERIFY_IMAGE);
   container.addTextDisplayComponents(
-    display("# Verify Your Account"),
-    display("> Welcome to **Missouri State Roleplay**! Please verify your account to gain access to the rest of the server."),
-    display("> Verification is required to view the remaining channels and participate in our community." + MARKER)
+    display("Welcome to **Missouri State Roleplay**! Please verify to get access to the rest of the server."),
+    display("Use **Bloxlink** below to link and verify your Roblox account.")
   );
-  container.addSeparatorComponents(divider());
-  container.addActionRowComponents(new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setLabel("Verify").setStyle(ButtonStyle.Link).setURL(VERIFY_URL).setEmoji("👋")
-  ));
   container.addSeparatorComponents(divider());
   addImage(container, BANNER_IMAGE);
   return container;
 }
-
 async function postOrRefreshVerificationPanel(client) {
   const channel = await client.channels.fetch(CHANNEL_ID).catch(error => { console.error("[Verification] Could not fetch channel:", error); return null; });
   if (!channel || !channel.isTextBased() || !channel.messages) { console.error("[Verification] Channel missing or not text-based:", CHANNEL_ID); return; }
