@@ -57,9 +57,8 @@ function safeName(value) {
     .replace(/@here/gi, "@\u200bhere");
 }
 
-function partnershipMessage(serverName, advertisement, representativeId) {
-  return "**" + safeName(serverName) + "**\n" +
-    advertisement + "\n\n" +
+function partnershipMessage(advertisement, representativeId) {
+  return safeName(advertisement) + "\n\n" +
     "**Representative:** <@" + representativeId + ">";
 }
 
