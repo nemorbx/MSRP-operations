@@ -64,8 +64,8 @@ function buildWelcomeMessage(member) {
     )
     .addActionRowComponents(
       new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setLabel("Verify").setStyle(ButtonStyle.Link).setURL(VERIFY_URL).setEmoji("👋"),
-        new ButtonBuilder().setLabel(memberCount).setStyle(ButtonStyle.Secondary).setEmoji("👥").setDisabled(true)
+        new ButtonBuilder().setCustomId("msrp_welcome_verify_unavailable").setLabel("Verify").setStyle(ButtonStyle.Secondary).setDisabled(true),
+        new ButtonBuilder().setCustomId("msrp_welcome_member_count").setLabel(memberCount).setStyle(ButtonStyle.Secondary).setDisabled(true)
       )
     );
   return { components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { users: [member.id] } };
