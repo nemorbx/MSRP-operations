@@ -19,7 +19,7 @@ const REGULATIONS_CHANNEL_ID = "1527395795035357376";
 const BANNER_NAME = "banner.png";
 const REGULATIONS_BANNER_NAME = "regulations.png";
 const JURISDICTION_NAME = "Jurisdiction.png";
-const REGULATIONS_PANEL_VERSION = 3;
+const REGULATIONS_PANEL_VERSION = 4;
 const REGULATIONS_PANEL_MARKER = "\u200B".repeat(REGULATIONS_PANEL_VERSION);
 
 function display(content) {
@@ -72,12 +72,13 @@ function addBottomBanner(container) {
 
 function mainPanel(guild) {
   const container = new ContainerBuilder();
-  addBanner(container);
-  container.addTextDisplayComponents(
-    display("> Whilst engaging with anyone on our server or playing on our ER:LC server, you're required to follow a strictly moderated set of regulations that **must not be broken**."),
-    display("> The maximum amount of moderation points you can receive is **75**. If you reach this amount, you will be banned from our community." + REGULATIONS_PANEL_MARKER)
-  );
   container.addSeparatorComponents(divider());
+  addBanner(container);
+  container.addSeparatorComponents(divider());
+  container.addTextDisplayComponents(
+    display("> Whilst engaging with anyone on our server or playing our in-game server, you're required to follow a strictly moderated set of regulations that **must not be broken**."),
+    display("> The maximum amount of moderations that you can receive is **``75``**, in the event you reach this amount you will be banned from our community." + REGULATIONS_PANEL_MARKER)
+  );
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
@@ -100,12 +101,10 @@ function mainPanel(guild) {
 
 function privatePage(guild, title, intro, sections) {
   const container = new ContainerBuilder();
+  container.addSeparatorComponents(divider());
   addBanner(container);
-  container.addTextDisplayComponents(
-    display("# " + title),
-    display("*Missouri State Roleplay*"),
-    display(intro)
-  );
+  container.addSeparatorComponents(divider());
+  container.addTextDisplayComponents(display(intro));
   for (const section of sections) {
     container.addSeparatorComponents(divider());
     container.addTextDisplayComponents(
