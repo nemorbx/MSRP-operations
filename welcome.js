@@ -8,10 +8,8 @@ const {
 } = require("discord.js");
 
 const ARRIVALS_CHANNEL_ID = "1527178537600286914";
-function getWelcomeEmoji(guild) {
-  const emoji = guild.emojis.cache.find(item => item.name === "Missouri");
-  return emoji ? `<:${emoji.name}:${emoji.id}>` : "🇺🇸";
-}
+const PEOPLE_EMOJI = "<:people:1556145396294754404>";
+const WAVE_EMOJI = "<:wave:1556366129998332065>";
 
 function ordinal(number) {
   const mod100 = number % 100;
@@ -23,11 +21,10 @@ function ordinal(number) {
 function buildWelcomeMessage(member) {
   const memberCount = member.guild.memberCount;
   const formattedCount = memberCount.toLocaleString("en-US");
-  const welcomeEmoji = getWelcomeEmoji(member.guild);
   const container = new ContainerBuilder()
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `${welcomeEmoji} `` - `` Welcome aboard, <@${member.id}>! Thanks for joining **Missouri State Roleplay** as our **${ordinal(memberCount)}** member!\n-# Please verify to access all channels and stop in-game private messages.`
+        `${PEOPLE_EMOJI} ${WAVE_EMOJI} `` - `` Welcome aboard, <@${member.id}>! Thanks for joining **Missouri State Roleplay** as our **${ordinal(memberCount)}** member!\n-# Please verify to access all channels and stop in-game private messages.`
       )
     )
     .addActionRowComponents(
@@ -36,7 +33,7 @@ function buildWelcomeMessage(member) {
           .setLabel("Verify")
           .setStyle(ButtonStyle.Link)
           .setURL(`https://discord.com/channels/${member.guild.id}/1528566337394446456`),
-        new ButtonBuilder().setLabel(formattedCount).setCustomId("msrp_welcome_member_count").setStyle(ButtonStyle.Secondary).setDisabled(true)
+        new ButtonBuilder().setEmoji({ id: "1556145396294754404", name: "people" }).setLabel(formattedCount).setCustomId("msrp_welcome_member_count").setStyle(ButtonStyle.Secondary).setDisabled(true)
       )
     );
   return { components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { users: [member.id] } };
