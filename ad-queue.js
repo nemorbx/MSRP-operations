@@ -122,7 +122,7 @@ function pendingSummary(queue) {
     "** — Submitted by <@" + item.createdBy + "> — ID: `AD-" + item.id + "`"
   );
   if (queue.items.length > 20) lines.push("\nShowing 20 of " + queue.items.length + " pending ads.");
-  return "## Pending Advertisements (" + queue.items.length + ")\n" + lines.join("\n") +
+  return "## Pending Ads (" + queue.items.length + ")\n" + lines.join("\n") +
     "\n\n**Next scheduled post:** " + (queue.nextPostAt ? centralLabel(queue.nextPostAt) : centralLabel(nextPostingTime()));
 }
 
@@ -245,7 +245,7 @@ function setup(client) {
 
       if (interaction.commandName === "pending-ads") {
         if (!hasSeniorHR(interaction)) {
-          await interaction.reply({ content: "Only Senior High Rank can view pending advertisements.", ephemeral: true });
+          await interaction.reply({ content: "Only Senior High Rank can view pending ads.", ephemeral: true });
           return;
         }
 
