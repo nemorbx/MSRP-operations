@@ -24,6 +24,7 @@ const { setup: setupMarketplace, ensureMarketplacePanel } = require("./marketpla
 const { setup: setupSessions, ensureSessionPanel, startSessionRefresh } = require("./sessions");
 const { setup: setupTraining, commands: trainingCommands } = require("./training");
 const { setup: setupAdQueue, commands: adQueueCommands } = require("./ad-queue");
+const { setup: setupPartnership, commands: partnershipCommands } = require("./partnership");
 
 const afkModule = require("./afk");
 const infractionsModule = require("./infractions");
@@ -66,6 +67,7 @@ setupSuggestions(client);
 setupSessions(client);
 setupTraining(client);
 setupAdQueue(client);
+setupPartnership(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
@@ -299,6 +301,7 @@ client.once("clientReady", async () => {
       ...(welcomeCommands || []),
       ...(trainingCommands || []),
       ...(adQueueCommands || []),
+      ...(partnershipCommands || []),
     ];
 
     const commandDefinitions = rawCommands.map(command =>
