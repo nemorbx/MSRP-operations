@@ -53,9 +53,28 @@ const welcomeTestCommand = {
   }
 };
 
+const welcomeCommand = {
+  toJSON() {
+    return {
+      name: "welcome",
+      description: "Welcome message tools",
+      type: 1,
+      dm_permission: false,
+      options: [
+        {
+          type: 1,
+          name: "test",
+          description: "Send a test welcome message mentioning you"
+        }
+      ]
+    };
+  }
+};
+
 function setupWelcome(client) {
   client.on("interactionCreate", async interaction => {
-    if (!interaction.isChatInputCommand() || interaction.commandName !== "welcome-test") return;
+    if (!interaction.isChatInputCommand() || !["welcome-test", "welcome"].includes(interaction.commandName)) return;
+    if (interaction.commandName === "welcome" && interaction.options.getSubcommand() !== "test") return;
     if (!interaction.inGuild()) {
       return interaction.reply({ content: "This command can only be used in the server.", ephemeral: true });
     }
@@ -106,5 +125,5 @@ function setupWelcome(client) {
 
 module.exports = {
   setup: setupWelcome,
-  commands: [welcomeTestCommand],
+  commands: [welcomeTestCommand, welcomeCommand],
 };
