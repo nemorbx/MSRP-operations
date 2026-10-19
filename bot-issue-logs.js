@@ -7,15 +7,12 @@ function stringifyPart(part) {
 }
 
 function setupBotIssueLogs(client) {
-  let flushing = false;
   const pending = [];
+  let flushing = false;
   const originalError = console.error.bind(console);
   const originalWarn = console.warn.bind(console);
 
-  async function sendLog(level, parts, options = {}) {
-    const detail = parts.map(stringifyPart).join(" ").trim();
-    if (!detail) return;
-    pending.push({ level, detail: detail.length > 3500 ? detail.slice(0, 3500) + "… (truncated)" : detail, at: new Date().toISOString() });
+  async function flushPending() {
     if (flushing || !client.isReady()) return;
     flushing = true;
     try {
@@ -27,7 +24,7 @@ function setupBotIssueLogs(client) {
             originalError("[Bot Issue Logs] Configured issue-log channel is unavailable: " + ISSUE_LOG_CHANNEL_ID);
             continue;
           }
-          const safeDetail = item.detail.replace(/```/g, "'''");
+          const safeDetail = item.detail.replace(/\x60\x60\x60/g, "'''");
           await channel.send({
             allowedMentions: { parse: [] },
             embeds: [{
@@ -39,19 +36,40 @@ function setupBotIssueLogs(client) {
             }]
           });
         } catch (error) {
-          // Do not recursively send logger delivery failures back through this logger.
+          // Do not route logger delivery failures back through this logger.
           originalError("[Bot Issue Logs] Could not send an issue log:", error);
         }
       }
-    } finally { flushing = false; }
+    } finally {
+      flushing = false;
+      if (pending.length && client.isReady()) void flushPending();
+    }
   }
 
-  console.error = (...parts) => { originalError(...parts); void sendLog("ERROR", parts); };
-  console.warn = (...parts) => { originalWarn(...parts); void sendLog("WARNING", parts); };
-  client.on("error", error => void sendLog("ERROR", ["Discord client error:", error]));
-  client.on("shardError", error => void sendLog("ERROR", ["Discord gateway shard error:", error]));
-  client.on("invalidated", () => void sendLog("ERROR", ["Discord session invalidated."]));
-  client.once("clientReady", () => {\n    if (!pending.length) return;\n    // Trigger the normal queue drain using the first real startup item, not a synthetic warning.\n    const first = pending.shift();\n    void sendLog(first.level, [first.detail]);\n  });
+  function queueLog(level, parts) {
+    const detail = parts.map(stringifyPart).join(" ").trim();
+    if (!detail) return;
+    pending.push({
+      level,
+      detail: detail.length > 3500 ? detail.slice(0, 3500) + "… (truncated)" : detail,
+      at: new Date().toISOString()
+    });
+    void flushPending();
+  }
+
+  console.error = (...parts) => {
+    originalError(...parts);
+    queueLog("ERROR", parts);
+  };
+  console.warn = (...parts) => {
+    originalWarn(...parts);
+    queueLog("WARNING", parts);
+  };
+
+  client.on("error", error => queueLog("ERROR", ["Discord client error:", error]));
+  client.on("shardError", error => queueLog("ERROR", ["Discord gateway shard error:", error]));
+  client.on("invalidated", () => queueLog("ERROR", ["Discord session invalidated."]));
+  client.once("clientReady", () => { void flushPending(); });
 }
 
 module.exports = { setupBotIssueLogs };
