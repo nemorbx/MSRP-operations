@@ -26,7 +26,8 @@ function panel() {
   addImage(container, BANNER_IMAGE);
   return container;
 }
-async function postOrRefreshVerificationPanel(client, options = {}) {\n  const forceRefresh = options.forceRefresh === true;
+async function postOrRefreshVerificationPanel(client, options = {}) {
+  const forceRefresh = options.forceRefresh === true;
   const channel = await client.channels.fetch(CHANNEL_ID).catch(error => { console.error("[Verification] Could not fetch channel:", error); return null; });
   if (!channel || !channel.isTextBased() || !channel.messages) { console.error("[Verification] Channel missing or not text-based:", CHANNEL_ID); return; }
   const verifyPath = path.join(__dirname, VERIFY_IMAGE);
