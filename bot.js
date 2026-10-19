@@ -23,6 +23,7 @@ const { setup: setupSticky } = require("./sticky");
 const { setup: setupMarketplace, ensureMarketplacePanel } = require("./marketplace");
 const { setup: setupSessions, ensureSessionPanel, startSessionRefresh } = require("./sessions");
 const { setup: setupTraining, commands: trainingCommands } = require("./training");
+const { setup: setupAdQueue, commands: adQueueCommands } = require("./ad-queue");
 
 const afkModule = require("./afk");
 const infractionsModule = require("./infractions");
@@ -64,6 +65,7 @@ setupSay(client);
 setupSuggestions(client);
 setupSessions(client);
 setupTraining(client);
+setupAdQueue(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
@@ -296,6 +298,7 @@ client.once("clientReady", async () => {
       ...(sayCommand ? [sayCommand] : []),
       ...(welcomeCommands || []),
       ...(trainingCommands || []),
+      ...(adQueueCommands || []),
     ];
 
     const commandDefinitions = rawCommands.map(command =>
