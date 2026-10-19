@@ -68,13 +68,17 @@ function addBottomBanner(container) {
 
 function mainPanel(guild) {
   const container = new ContainerBuilder();
-  container.addSeparatorComponents(divider());
+
+  // Match the reference layout: banner first, with no title or divider above it.
   addBanner(container);
   container.addSeparatorComponents(divider());
   container.addTextDisplayComponents(
     display("> Whilst engaging with anyone on our server or playing our in-game server, you're required to follow a strictly moderated set of regulations that **must not be broken**."),
     display("> The maximum amount of moderations that you can receive is **``75``**, in the event you reach this amount you will be banned from our community." + REGULATIONS_PANEL_MARKER)
   );
+
+  // Keep the two categories in separate, emoji-free dropdown menus.
+  container.addSeparatorComponents(divider());
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
@@ -84,13 +88,27 @@ function mainPanel(guild) {
         .setMaxValues(1)
         .addOptions(
           { label: "Discord Regulations", description: "View our Discord Regulations...", value: "discord" },
-          { label: "In-game Regulations", description: "View our In-game Regulations...", value: "game" },
-          { label: "Vehicle Regulations", description: "View our Vehicle Regulations...", value: "vehicles" },
-          { label: "Weapon Regulations", description: "View our Weapon Regulations...", value: "weapons" },
+          { label: "In-game Regulations", description: "View our In-game Regulations...", value: "game" }
+        )
+    )
+  );
+
+  container.addSeparatorComponents(divider());
+  container.addActionRowComponents(
+    new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId("msrp_reg_select_banned")
+        .setPlaceholder("Banned Items")
+        .setMinValues(1)
+        .setMaxValues(1)
+        .addOptions(
+          { label: "Banned Weapons", description: "View our Banned Weapons...", value: "weapons" },
+          { label: "Banned Vehicles", description: "View our Banned Vehicles...", value: "vehicles" },
           { label: "Banned Roleplays", description: "View our Banned Roleplays...", value: "roleplays" }
         )
     )
   );
+  container.addSeparatorComponents(divider());
   addBottomBanner(container);
   return container;
 }
@@ -374,9 +392,17 @@ async function postOrRefreshPanel(client) {
 
   // THIS FUNCTION IS ONLY FOR AN EXPLICIT REGULATIONS UPDATE.
   // When updating, remove the existing bot panel(s), then post exactly one replacement.
-  const oldPanels = messages.filter(
-    message => message.author?.id === client.user.id && message.components?.length
-  );
+  const oldPanels = messages.filter(message => {
+    if (message.author?.id !== client.user.id || !message.components?.length) return false;
+    const hasBanner = message.attachments?.some(attachment => attachment.name === REGULATIONS_BANNER_NAME);
+    const hasRegulationsMenu = message.components.some(row =>
+      (row.components || []).some(component =>
+        component.customId === "msrp_reg_select_server" ||
+        component.customId === "msrp_reg_select_banned"
+      )
+    );
+    return Boolean(hasBanner || hasRegulationsMenu);
+  });
 
   for (const panel of oldPanels.values()) {
     try {
