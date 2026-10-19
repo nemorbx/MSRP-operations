@@ -332,79 +332,17 @@ async function sendJurisdiction(interaction) {
 }
 
 async function ensureRegulationsPanel(client) {
+  // Regulations is intentionally NOT created or refreshed during startup.
+  // This panel is managed only through the explicit !update-regulations command,
+  // preventing restarts/deploys from ever stacking another copy.
   const channel = await client.channels.fetch(REGULATIONS_CHANNEL_ID).catch(() => null);
-  if (!channel || !channel.isTextBased() || typeof channel.messages?.fetch !== "function") {
-    console.error("Regulations channel could not be found or is not a readable text channel.");
+  if (!channel || !channel.isTextBased()) {
+    console.error("Regulations channel could not be found; startup panel creation remains disabled.");
     return;
   }
 
-  // Scan channel history in pages so an older existing panel is still found.
-  // This prevents a new panel being posted just because the original is older than the last 100 messages.
-  const messages = new Map();
-  let before;
-  try {
-    for (;;) {
-      const page = await channel.messages.fetch({ limit: 100, ...(before ? { before } : {}) });
-      for (const message of page.values()) messages.set(message.id, message);
-      if (page.size < 100) break;
-      before = page.last().id;
-    }
-  } catch (error) {
-    console.error("Could not inspect the Regulations channel history; refusing to post another panel:", error);
-    return;
-  }
-
-  const isRegulationsPanel = message => {
-    if (message.author?.id !== client.user.id) return false;
-
-    const hasBanner = message.attachments?.some(attachment =>
-      [REGULATIONS_BANNER_NAME, BANNER_NAME].includes(attachment.name)
-    );
-
-    // Match every version of this panel, including older layouts with renamed
-    // select menus or buttons, so restarts never mistake an existing panel for
-    // a missing one and send another copy.
-    const hasRegulationsComponent = (message.components || []).some(row =>
-      (row.components || []).some(component =>
-        typeof component.customId === "string" &&
-        component.customId.startsWith("msrp_reg_")
-      )
-    );
-
-    return Boolean(hasBanner || hasRegulationsComponent);
-  };
-
-  const panels = [...messages.values()].filter(isRegulationsPanel);
-  const keep = panels[0];
-  const regulationsBannerPath = path.join(__dirname, REGULATIONS_BANNER_NAME);
-  const bannerPath = path.join(__dirname, BANNER_NAME);
-
-  if (!fs.existsSync(regulationsBannerPath)) {
-    console.error(`Missing ${REGULATIONS_BANNER_NAME}; cannot create or update the Regulations panel.`);
-    return;
-  }
-
-  const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
-  if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
-
-  if (keep) {
-    // Persistent panel: leave the existing message untouched during startup.
-    // Only the explicit panel-update command may replace it.
-    for (const duplicate of panels.filter(message => message.id !== keep.id)) {
-      await duplicate.delete().catch(error => console.error("Failed to remove duplicate Regulations panel:", error));
-    }
-    console.log("[Panel Startup] Regulations panel already exists; no panel sent or edited.");
-    return;
-  }
-
-  await channel.send({
-    components: [mainPanel(channel.guild)],
-    files,
-    flags: MessageFlags.IsComponentsV2,
-  });
-  console.log("Regulations panel was missing, so one panel was posted.");
+  console.log("[Panel Startup] Regulations panel startup posting disabled; existing panel left untouched. Use !update-regulations only when intentionally updating it.");
 }
-
 async function postOrRefreshPanel(client) {
   const guild = client.guilds.cache.first();
   if (!guild) return;
