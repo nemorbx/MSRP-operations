@@ -24,7 +24,7 @@ function buildWelcomeMessage(member) {
   const container = new ContainerBuilder()
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        `${PEOPLE_EMOJI} ${WAVE_EMOJI} `` - `` Welcome aboard, <@${member.id}>! Thanks for joining **Missouri State Roleplay** as our **${ordinal(memberCount)}** member!\n-# Please verify to access all channels and stop in-game private messages.`
+        `${PEOPLE_EMOJI} ${WAVE_EMOJI} - Welcome aboard, <@${member.id}>! Thanks for joining **Missouri State Roleplay** as our **${ordinal(memberCount)}** member!\n-# Please verify to access all channels and stop in-game private messages.`
       )
     )
     .addActionRowComponents(
