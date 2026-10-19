@@ -48,7 +48,7 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
-// Centralized logging for errors and warnings across all bot systems.
+// Each feature module registers intentional handlers on this shared client.\n// Raise the threshold to prevent false-positive warnings for the modular event setup.\nclient.setMaxListeners(30);\n\n// Centralized logging for errors and warnings across all bot systems.
 setupBotIssueLogs(client);
 
 setupInfractions(client);
@@ -341,6 +341,25 @@ client.once("clientReady", async () => {
   setInterval(updateBotStatus, 60 * 1000);
 });
 
+
+client.on("messageCreate", async message => {
+  if (message.author.bot || !message.guild) return;
+  if (message.content.trim().toLowerCase() !== "!update-verification") return;
+
+  if (!message.member.permissions.has(PermissionsBitField.Flags.ManageGuild)) {
+    await message.reply("You don't have permission to update the Verification panel.").catch(() => {});
+    return;
+  }
+
+  try {
+    await postOrRefreshVerificationPanel(client, { forceRefresh: true });
+    const confirmation = await message.reply("Verification panel refreshed; duplicate panels were removed.").catch(() => null);
+    if (confirmation) setTimeout(() => confirmation.delete().catch(() => {}), 3000);
+  } catch (error) {
+    console.error("Verification update command error:", error);
+    await message.reply("I could not update the Verification panel. Check the Central Issue Log.").catch(() => {});
+  }
+});
 
 client.on("messageCreate", async message => {
   if (message.author.bot || !message.guild) return;
