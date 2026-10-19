@@ -33,10 +33,6 @@ function divider() {
 
 function privateTextPage(title, body) {
   const container = new ContainerBuilder();
-  container.addTextDisplayComponents(
-    display(`# ${title}`),
-    display("*Missouri State Roleplay • Official Regulations*"),
-  );
   container.addSeparatorComponents(divider());
   container.addTextDisplayComponents(display(body));
   return container;
@@ -275,11 +271,8 @@ async function sendJurisdiction(interaction) {
   }
 
   const container = new ContainerBuilder();
-  container.addTextDisplayComponents(
-    display("# JURISDICTION"),
-    display("*Missouri State Roleplay*"),
-    display("Official MSRP jurisdiction map."),
-  );
+  container.addSeparatorComponents(divider());
+  container.addTextDisplayComponents(display("Official MSRP jurisdiction map."));
   container.addSeparatorComponents(divider());
   container.addMediaGalleryComponents(
     new MediaGalleryBuilder().addItems(
