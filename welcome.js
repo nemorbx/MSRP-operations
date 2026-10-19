@@ -1,5 +1,3 @@
-const fs = require("fs");
-const path = require("path");
 const {
   MessageFlags,
   ActionRowBuilder,
@@ -10,7 +8,6 @@ const {
 } = require("discord.js");
 
 const ARRIVALS_CHANNEL_ID = "1527178537600286914";
-const VERIFY_URL = "https://blox.link/dashboard/user/verifications/verify";
 const WELCOME_EMOJI = "<:image_20260331_002936379:1488319316247183434>";
 
 const WELCOME_MESSAGES = [
@@ -40,95 +37,21 @@ function buildWelcomeMessage(member) {
     );
   return { components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { users: [member.id] } };
 }
-function buildWelcomeMessage(member) {
-  const memberCount = member.guild.memberCount.toLocaleString("en-US");
-  const selected = WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)]
-    .replaceAll("{member}", member.id)
-    .replaceAll("{count}", memberCount);
-  const container = new ContainerBuilder()
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        WELCOME_EMOJI + " `` - `` " + selected + "\n-# Please verify to access all channels and stop in-game private messages."
-      )
-    )
-    .addActionRowComponents(
-      new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId("msrp_welcome_verify_unavailable").setLabel("Verify").setStyle(ButtonStyle.Secondary).setDisabled(true),
-        new ButtonBuilder().setCustomId("msrp_welcome_member_count").setLabel(memberCount).setStyle(ButtonStyle.Secondary).setDisabled(true)
-      )
-    );
-  return { components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { users: [member.id] } };
-}
-function ensureData() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ autoNicknameEnabled: false }, null, 2), "utf8");
-  }
-}
-
-function loadData() {
-  ensureData();
-  try {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    return { autoNicknameEnabled: data.autoNicknameEnabled === true };
-  } catch {
-    return { autoNicknameEnabled: false };
-  }
-}
-
-function saveData(data) {
-  ensureData();
-  fs.writeFileSync(DATA_FILE, JSON.stringify({ autoNicknameEnabled: data.autoNicknameEnabled === true }, null, 2), "utf8");
-}
-
-async function isBotOwner(interaction) {
-  try {
-    const application = await interaction.client.application.fetch();
-    const owner = application.owner;
-
-    if (!owner) return false;
-
-    if (owner.members) {
-      return owner.members.has(interaction.user.id);
-    }
-
-    return owner.id === interaction.user.id;
-  } catch (error) {
-    console.error("Unable to verify bot owner:", error);
-    return false;
-  }
-}
-
-
-const autoNicknameCommand = new SlashCommandBuilder()
-  .setName("autonickname")
-  .setDescription("Enable or disable automatic random nicknames for new members.")
-  .addStringOption(option =>
-    option
-      .setName("action")
-      .setDescription("Choose whether automatic random nicknames are enabled or disabled.")
-      .setRequired(true)
-      .addChoices(
-        { name: "Enable", value: "enable" },
-        { name: "Disable", value: "disable" }
-      )
-  );
 
 function setupWelcome(client) {
   client.on("guildMemberAdd", async member => {
     try {
-      const channelId = ARRIVALS_CHANNEL_ID;
-      const channel = await member.guild.channels.fetch(channelId).catch(error => {
-        console.error("[Welcome] Could not fetch welcome channel " + channelId + ":", error);
+      const channel = await member.guild.channels.fetch(ARRIVALS_CHANNEL_ID).catch(error => {
+        console.error("[Welcome] Could not fetch welcome channel " + ARRIVALS_CHANNEL_ID + ":", error);
         return null;
       });
 
       if (!channel) {
-        console.error("[Welcome] Welcome channel " + channelId + " was not found or is inaccessible.");
+        console.error("[Welcome] Welcome channel " + ARRIVALS_CHANNEL_ID + " was not found or is inaccessible.");
         return;
       }
-      if (!channel.isTextBased() || !channel.send) {
-        console.error("[Welcome] Configured welcome channel " + channelId + " is not a sendable text channel.");
+      if (!channel.isTextBased() || typeof channel.send !== "function") {
+        console.error("[Welcome] Configured welcome channel " + ARRIVALS_CHANNEL_ID + " is not a sendable text channel.");
         return;
       }
 
