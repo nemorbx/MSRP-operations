@@ -113,17 +113,33 @@ function mainPanel(guild) {
   return container;
 }
 
+function splitTextDisplay(content, maxLength = 3900) {
+  const chunks = [];
+  let remaining = String(content ?? "");
+
+  while (remaining.length > maxLength) {
+    let splitAt = remaining.lastIndexOf("\n", maxLength);
+    if (splitAt < Math.floor(maxLength * 0.5)) splitAt = remaining.lastIndexOf(" ", maxLength);
+    if (splitAt < Math.floor(maxLength * 0.5)) splitAt = maxLength;
+    chunks.push(remaining.slice(0, splitAt).trimEnd());
+    remaining = remaining.slice(splitAt).trimStart();
+  }
+
+  if (remaining.length || chunks.length === 0) chunks.push(remaining);
+  return chunks.map(display);
+}
+
 function privatePage(guild, title, intro, sections) {
   const container = new ContainerBuilder();
   container.addSeparatorComponents(divider());
   addBanner(container);
   container.addSeparatorComponents(divider());
-  container.addTextDisplayComponents(display(intro));
+  container.addTextDisplayComponents(...splitTextDisplay(intro));
   for (const section of sections) {
     container.addSeparatorComponents(divider());
     container.addTextDisplayComponents(
       display("### " + section.title),
-      display(section.body)
+      ...splitTextDisplay(section.body)
     );
   }
   addBottomBanner(container);
