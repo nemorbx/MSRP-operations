@@ -27,6 +27,7 @@ const { setup: setupTraining, commands: trainingCommands } = require("./training
 const { setup: setupAdQueue, commands: adQueueCommands } = require("./ad-queue");
 const { setup: setupPartnership, commands: partnershipCommands } = require("./partnership");
 const { setupBotIssueLogs } = require("./bot-issue-logs");
+const { setup: setupSyncUsername, commands: syncUsernameCommands } = require("./sync-username");
 
 const afkModule = require("./afk");
 const infractionsModule = require("./infractions");
@@ -77,6 +78,7 @@ setupSessions(client);
 setupTraining(client);
 setupAdQueue(client);
 setupPartnership(client);
+setupSyncUsername(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
@@ -345,6 +347,7 @@ client.once("clientReady", async () => {
       ...(trainingCommands || []),
       ...(adQueueCommands || []),
       ...(partnershipCommands || []),
+      ...(syncUsernameCommands || []),
     ];
 
     const commandDefinitions = rawCommands.map(command =>
