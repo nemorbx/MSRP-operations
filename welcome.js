@@ -287,12 +287,30 @@ function setupWelcome(client) {
         });
       }
 
-      const channelId = ARRIVALS_CHANNEL_ID;
+      const channelId = client.welcomeData?.channelId || ARRIVALS_CHANNEL_ID;
+      const channel = await member.guild.channels.fetch(channelId).catch(error => {
+        console.error("[Welcome] Could not fetch welcome channel " + channelId + ":", error);
+        return null;
+      });
 
-      const channel = await member.guild.channels.fetch(channelId).catch(() => null);
-      if (!channel || !channel.isTextBased() || !channel.send) return;
+      if (!channel) {
+        console.error("[Welcome] Welcome channel " + channelId + " was not found or is inaccessible.");
+        return;
+      }
+      if (!channel.isTextBased() || !channel.send) {
+        console.error("[Welcome] Configured welcome channel " + channelId + " is not a sendable text channel.");
+        return;
+      }
+
+      const botMember = member.guild.members.me;
+      const permissions = botMember ? channel.permissionsFor(botMember) : null;
+      if (!permissions?.has(["ViewChannel", "SendMessages"])) {
+        console.error("[Welcome] Missing View Channel or Send Messages permission in #" + channel.name + " (" + channel.id + ").");
+        return;
+      }
 
       await channel.send(buildWelcomeMessage(member));
+      console.log("[Welcome] Sent welcome message for " + member.user.tag + " in #" + channel.name + ".");
     } catch (error) {
       console.error("Welcome message error:", error);
     }
