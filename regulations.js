@@ -338,11 +338,21 @@ async function ensureRegulationsPanel(client) {
     return;
   }
 
-  const messages = await channel.messages.fetch({ limit: 100 }).catch(error => {
-    console.error("Could not inspect the Regulations channel:", error);
-    return null;
-  });
-  if (!messages) return;
+  // Scan channel history in pages so an older existing panel is still found.
+  // This prevents a new panel being posted just because the original is older than the last 100 messages.
+  const messages = new Map();
+  let before;
+  try {
+    for (;;) {
+      const page = await channel.messages.fetch({ limit: 100, ...(before ? { before } : {}) });
+      for (const message of page.values()) messages.set(message.id, message);
+      if (page.size < 100) break;
+      before = page.last().id;
+    }
+  } catch (error) {
+    console.error("Could not inspect the Regulations channel history; refusing to post another panel:", error);
+    return;
+  }
 
   const isRegulationsPanel = message => {
     if (message.author?.id !== client.user.id) return false;
@@ -364,8 +374,8 @@ async function ensureRegulationsPanel(client) {
     return Boolean(hasBanner || hasRegulationsComponent);
   };
 
-  const panels = messages.filter(isRegulationsPanel);
-  const keep = panels.first();
+  const panels = [...messages.values()].filter(isRegulationsPanel);
+  const keep = panels[0];
   const regulationsBannerPath = path.join(__dirname, REGULATIONS_BANNER_NAME);
   const bannerPath = path.join(__dirname, BANNER_NAME);
 
@@ -380,7 +390,7 @@ async function ensureRegulationsPanel(client) {
   if (keep) {
     // Persistent panel: leave the existing message untouched during startup.
     // Only the explicit panel-update command may replace it.
-    for (const duplicate of panels.filter(message => message.id !== keep.id).values()) {
+    for (const duplicate of panels.filter(message => message.id !== keep.id)) {
       await duplicate.delete().catch(error => console.error("Failed to remove duplicate Regulations panel:", error));
     }
     console.log("[Panel Startup] Regulations panel already exists; no panel sent or edited.");
