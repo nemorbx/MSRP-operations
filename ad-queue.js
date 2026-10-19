@@ -33,7 +33,7 @@ const adCommand = new SlashCommandBuilder()
     .addStringOption(option => option.setName("advertisement")
       .setDescription("Full advertisement text to post when its turn arrives.")
       .setRequired(true)
-      .setMaxLength(4000))
+      .setMaxLength(1900))
   );
 
 const pendingCommand = new SlashCommandBuilder()
