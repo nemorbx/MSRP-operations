@@ -37,8 +37,8 @@ const adCommand = new SlashCommandBuilder()
   );
 
 const pendingCommand = new SlashCommandBuilder()
-  .setName("pending-advertisements")
-  .setDescription("View pending advertisements. Senior High Rank only.")
+  .setName("pending-ads")
+  .setDescription("View pending ads. Senior High Rank only.")
   .setDMPermission(false)
   .addSubcommand(subcommand => subcommand
     .setName("view")
@@ -115,7 +115,7 @@ function safeText(value) {
 }
 
 function pendingSummary(queue) {
-  if (!queue.items.length) return "## Pending Advertisements\nThe queue is currently empty.";
+  if (!queue.items.length) return "## Pending Ads\nThe queue is currently empty.";
   const lines = queue.items.slice(0, 20).map((item, index) =>
     "**" + (index + 1) + ". " + safeText(item.serverName) + "** — Type: **" +
     (item.type === "none" ? "No ping" : item.type === "here" ? "@here" : "@everyone") +
@@ -243,7 +243,7 @@ function setup(client) {
         return;
       }
 
-      if (interaction.commandName === "pending-advertisements") {
+      if (interaction.commandName === "pending-ads") {
         if (!hasSeniorHR(interaction)) {
           await interaction.reply({ content: "Only Senior High Rank can view pending advertisements.", ephemeral: true });
           return;
