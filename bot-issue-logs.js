@@ -12,7 +12,7 @@ function setupBotIssueLogs(client) {
   const originalError = console.error.bind(console);
   const originalWarn = console.warn.bind(console);
 
-  async function sendLog(level, parts) {
+  async function sendLog(level, parts, options = {}) {
     const detail = parts.map(stringifyPart).join(" ").trim();
     if (!detail) return;
     pending.push({ level, detail: detail.length > 3500 ? detail.slice(0, 3500) + "… (truncated)" : detail, at: new Date().toISOString() });
@@ -51,7 +51,7 @@ function setupBotIssueLogs(client) {
   client.on("error", error => void sendLog("ERROR", ["Discord client error:", error]));
   client.on("shardError", error => void sendLog("ERROR", ["Discord gateway shard error:", error]));
   client.on("invalidated", () => void sendLog("ERROR", ["Discord session invalidated."]));
-  client.once("clientReady", () => { if (pending.length) void sendLog("WARNING", ["Flushing queued startup issues."]); });
+  client.once("clientReady", () => {\n    if (!pending.length) return;\n    // Drain startup logs directly; do not create a new warning that re-enters the queue.\n    void sendLog("INFO", ["Startup issue-log queue is being delivered."], { queueOnly: false });\n  });
 }
 
 module.exports = { setupBotIssueLogs };
