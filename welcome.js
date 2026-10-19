@@ -42,17 +42,6 @@ function buildWelcomeMessage(member) {
   return { components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { users: [member.id] } };
 }
 
-const welcomeTestCommand = {
-  toJSON() {
-    return {
-      name: "welcome-test",
-      description: "Preview the welcome message as if you just joined",
-      type: 1,
-      dm_permission: false
-    };
-  }
-};
-
 const welcomeCommand = {
   toJSON() {
     return {
@@ -73,7 +62,7 @@ const welcomeCommand = {
 
 function setupWelcome(client) {
   client.on("interactionCreate", async interaction => {
-    if (!interaction.isChatInputCommand() || !["welcome-test", "welcome"].includes(interaction.commandName)) return;
+    if (!interaction.isChatInputCommand() || interaction.commandName !== "welcome") return;
     if (interaction.commandName === "welcome" && interaction.options.getSubcommand() !== "test") return;
     if (!interaction.inGuild()) {
       return interaction.reply({ content: "This command can only be used in the server.", ephemeral: true });
@@ -125,5 +114,5 @@ function setupWelcome(client) {
 
 module.exports = {
   setup: setupWelcome,
-  commands: [welcomeTestCommand, welcomeCommand],
+  commands: [welcomeCommand],
 };
