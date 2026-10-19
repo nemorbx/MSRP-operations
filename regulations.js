@@ -188,7 +188,7 @@ function getPage(guild, id) {
           { title: "Unrealistic Avatars", body: "You must wear a realistic avatar whilst in-game. Extra-large avatars, animals, femboys, furries, and similar unrealistic avatars are not permitted." },
           { title: "Cuff Rushing", body: "You are required to say some form of “cuffs” before or shortly after detaining someone." },
           { title: "Restricted Roleplays", body: "You must have permission to conduct **Hostage**, **Bank**, **Jewellery**, and **Roadwork/Construction** roleplays. Request permission using `/roleplay request` before starting one." },
-          { title: "Cuff Motion", body: "MSRP no longer moderates **Cuff Motion** following Roblox's age-group changes. This behavior will not be moderated under this rule." },
+          { title: "Cuff Rushing / Cuff Motion", body: "MSRP no longer moderates **cuff rushing or cuff motion** following Roblox's age-group changes. These behaviors will not be moderated by our staff." },
           { title: "314 Cave", body: "Roleplaying inside the **314 cave** may result in a warning or further moderation because it creates unrealistic and unfair advantages over whitelisted members and others." },
           { title: "Terms of Service", body: "Violating Roblox's or the Police Roleplay Community's Terms of Service will result in a ban from our server." }
         ]);
