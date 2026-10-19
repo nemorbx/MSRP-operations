@@ -15,6 +15,7 @@ const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
 const { setup: setupInformation, postOrRefreshInformationPanel } = require("./information");
 const { setup: setupRolePerks, postOrRefreshRolePerksPanel } = require("./roleperks");
 const { setup: setupWelcome, commands: welcomeCommands } = require("./welcome");
+const { postOrRefreshVerificationPanel } = require("./verification-panel");
 const { setup: setupBooster } = require("./booster");
 const { setup: setupDonations, ensureDonationPanel } = require("./donations");
 const { setup: setupSay, command: sayCommand } = require("./say");
@@ -270,6 +271,12 @@ client.once("clientReady", async () => {
     await postOrRefreshInformationPanel(client);
   } catch (error) {
     console.error("Information panel refresh error:", error);
+  }
+
+  try {
+    await postOrRefreshVerificationPanel(client);
+  } catch (error) {
+    console.error("Verification panel refresh error:", error);
   }
 
   try {
