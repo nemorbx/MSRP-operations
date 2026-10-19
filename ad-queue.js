@@ -113,7 +113,7 @@ function safeText(value) {
 function pendingSummary(queue) {
   if (!queue.items.length) return "## Pending Ads\nThe queue is currently empty.";
   const lines = queue.items.slice(0, 20).map((item, index) =>
-    "**" + (index + 1) + ". " + safeText(item.serverName) + "** — Type: **" +
+    "**" + (index + 1) + ". " + safeText(item.representativeName || item.serverName || "Advertisement") + "** — Type: **" +
     (item.type === "none" ? "No ping" : item.type === "here" ? "@here" : "@everyone") +
     "** — Submitted by <@" + item.createdBy + "> — ID: `AD-" + item.id + "`"
   );
@@ -221,6 +221,7 @@ function setup(client) {
           type,
           advertisement,
           createdBy: interaction.user.id,
+          representativeName: interaction.member?.displayName || interaction.user.username,
           createdAt: Date.now()
         };
         queue.items.push(item);
@@ -228,8 +229,7 @@ function setup(client) {
         writeQueue(queue);
 
         await interaction.reply({
-          content: "Advertisement **AD-" + item.id + "** for **" + safeText(serverName) +
-            "** was added to the queue at position **" + queue.items.length + "**.\n" +
+          content: "Advertisement **AD-" + item.id + "** was added to the queue at position **" + queue.items.length + "**.\n" +
             "Posting window: daily at **5:00 PM Central**.\n" +
             "Ping type: **" + (type === "none" ? "No ping" : type === "here" ? "@here" : "@everyone") + "**.",
           ephemeral: true
