@@ -184,6 +184,9 @@ function getPage(guild, id) {
           { title: "In-game Assets", body: "You are required to use the in-game assets provided by MSRP, not the basic ER:LC assets. Using unauthorized liveries or uniforms may result in moderation." },
           { title: "Unrealistic Avatars", body: "You must wear a realistic avatar whilst in-game. Extra-large avatars, animals, femboys, furries, and similar unrealistic avatars are not permitted." },
           { title: "Cuff Rushing", body: "You are required to say some form of “cuffs” before or shortly after detaining someone." },
+          { title: "Restricted Roleplays", body: "You must have permission to conduct **Hostage**, **Bank**, **Jewellery**, and **Roadwork/Construction** roleplays. Request permission using `/roleplay request` before starting one." },
+          { title: "Cuff Motion", body: "MSRP no longer moderates **Cuff Motion** following Roblox's age-group changes. This behavior will not be moderated under this rule." },
+          { title: "314 Cave", body: "Roleplaying inside the **314 cave** may result in a warning or further moderation because it creates unrealistic and unfair advantages over whitelisted members and others." },
           { title: "Terms of Service", body: "Violating Roblox's or the Police Roleplay Community's Terms of Service will result in a ban from our server." }
         ]);
 
@@ -204,11 +207,11 @@ function getPage(guild, id) {
             "Chevlon Corbeta 8",
             "Averon LM/LM R",
             "Chevlon Corbeta RZR",
-            "Chevlon Corbeta X08"
+            "Chevlon Corbeta X08",
+            "Strugatti Ettore (High Ranking members must also be boosters)",
+            "Kovac Heledera (High Ranking members must also be boosters)"
           ]) },
           { title: "Banned Vehicles", body: bullets([
-            "Strugatti Ettore",
-            "Kovac Heledara",
             "Poa Car",
             "Redline Rearmount Ladder",
             "Falcon Advance 600 Pumper",
