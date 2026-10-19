@@ -51,7 +51,7 @@ function setupBotIssueLogs(client) {
   client.on("error", error => void sendLog("ERROR", ["Discord client error:", error]));
   client.on("shardError", error => void sendLog("ERROR", ["Discord gateway shard error:", error]));
   client.on("invalidated", () => void sendLog("ERROR", ["Discord session invalidated."]));
-  client.once("clientReady", () => {\n    if (!pending.length) return;\n    // Drain startup logs directly; do not create a new warning that re-enters the queue.\n    void sendLog("INFO", ["Startup issue-log queue is being delivered."], { queueOnly: false });\n  });
+  client.once("clientReady", () => {\n    if (!pending.length) return;\n    // Trigger the normal queue drain using the first real startup item, not a synthetic warning.\n    const first = pending.shift();\n    void sendLog(first.level, [first.detail]);\n  });
 }
 
 module.exports = { setupBotIssueLogs };
