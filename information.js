@@ -113,11 +113,31 @@ async function refreshInformationPanel(client) {
   const botMessages = messages.filter(message => message.author?.id === client.user.id);
   const isInformationPanel = message => {
     const components = JSON.stringify(message.components || []);
-    return components.includes("Default kick timer") ||
-      components.includes(INFORMATION_PANEL_MARKER) ||
-      message.attachments?.some(attachment => attachment.name === INFORMATION_IMAGE_NAME);
+    const hasInformationText =
+      components.includes("Default kick timer") ||
+      components.includes("Los Angeles Roleplay") ||
+      components.includes(INFORMATION_PANEL_MARKER);
+    const hasInformationImage = message.attachments?.some(attachment =>
+      attachment.name === INFORMATION_IMAGE_NAME
+    );
+    return hasInformationText || hasInformationImage;
   };
   const panels = [...botMessages.values()].filter(isInformationPanel);
+  const currentPanel = panels.find(message =>
+    JSON.stringify(message.components || []).includes(INFORMATION_PANEL_MARKER)
+  );
+
+  if (currentPanel) {
+    for (const duplicate of panels) {
+      if (duplicate.id === currentPanel.id) continue;
+      await duplicate.delete().catch(error =>
+        console.error("Failed to remove duplicate Information panel:", error)
+      );
+    }
+    console.log("Information panel is current. Leaving it unchanged; duplicate panels checked.");
+    return;
+  }
+
   const payload = {
     components: [informationPanel(channel.guild)],
     files: [
@@ -130,11 +150,18 @@ async function refreshInformationPanel(client) {
 
   if (panels.length) {
     const existingPanel = panels[0];
-    await existingPanel.edit(payload);
-    for (const duplicate of panels.slice(1)) {
-      await duplicate.delete().catch(error => console.error("Failed to remove duplicate Information panel:", error));
+    try {
+      await existingPanel.edit(payload);
+    } catch (error) {
+      console.error("Failed to update existing Information panel; not posting a replacement to prevent duplicates:", error);
+      return;
     }
-    console.log("Information panel edited in place; duplicate panels cleaned up.");
+    for (const duplicate of panels.slice(1)) {
+      await duplicate.delete().catch(error =>
+        console.error("Failed to remove duplicate Information panel:", error)
+      );
+    }
+    console.log("Information panel updated in place; duplicate panels cleaned up.");
   } else {
     await channel.send(payload);
     console.log("Information panel posted because none was detected.");
