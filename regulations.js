@@ -19,40 +19,8 @@ const REGULATIONS_CHANNEL_ID = "1527395795035357376";
 const BANNER_NAME = "banner.png";
 const REGULATIONS_BANNER_NAME = "regulations.png";
 const JURISDICTION_NAME = "Jurisdiction.png";
-const REGULATIONS_PANEL_VERSION = 2;
+const REGULATIONS_PANEL_VERSION = 3;
 const REGULATIONS_PANEL_MARKER = "\u200B".repeat(REGULATIONS_PANEL_VERSION);
-
-const EMOJIS = {
-  letter: "letter",
-  bulletin: "bulletin",
-  arrow: "arrow",
-  info: "info",
-  ticket: "ticket",
-  bell: "bell",
-  roblox: "roblox",
-  shield: "shield",
-  people: "people",
-  pin: "pin",
-  board: "board",
-  discord: "discord",
-  police: "police",
-  stateLogo: "state_logo",
-  trophy: "trophy",
-  rocket: "rocket",
-};
-
-function findEmoji(guild, name) {
-  const configured = EMOJIS[name];
-  if (!configured) return null;
-
-  const names = Array.isArray(configured) ? configured : [configured];
-  return guild?.emojis.cache.find(e => names.includes(e.name)) || null;
-}
-
-function emoji(guild, name) {
-  const found = findEmoji(guild, name);
-  return found ? `<:${found.name}:${found.id}>` : "•";
-}
 
 function display(content) {
   return new TextDisplayBuilder().setContent(content);
@@ -104,17 +72,11 @@ function addBottomBanner(container) {
 
 function mainPanel(guild) {
   const container = new ContainerBuilder();
-
-  // Keep the banner directly before the description without an extra component.
   addBanner(container);
-
-  // Keep the banner-to-description spacing minimal.
   container.addTextDisplayComponents(
-    display(`> Whilst engaging with anyone on our server or playing on our ER:LC server, you're required to follow a strictly moderated set of regulations that **must not be broken**.`),
-    display(`> The maximum amount of moderation points you can receive is **75**. If you reach this amount, you will be banned from our community.` + REGULATIONS_PANEL_MARKER)
+    display("> Whilst engaging with anyone on our server or playing on our ER:LC server, you're required to follow a strictly moderated set of regulations that **must not be broken**."),
+    display("> The maximum amount of moderation points you can receive is **75**. If you reach this amount, you will be banned from our community." + REGULATIONS_PANEL_MARKER)
   );
-
-  // Divider between the description and first dropdown.
   container.addSeparatorComponents(divider());
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
@@ -124,73 +86,14 @@ function mainPanel(guild) {
         .setMinValues(1)
         .setMaxValues(1)
         .addOptions(
-          {
-            label: "In-game Regulations",
-            description: "View our In-game Regulations...",
-            value: "game",
-            emoji: findEmoji(guild, "roblox") ? { id: findEmoji(guild, "roblox").id } : undefined,
-          },
-          {
-            label: "Discord Regulations",
-            description: "View our Discord Regulations...",
-            value: "discord",
-            emoji: findEmoji(guild, "discord") ? { id: findEmoji(guild, "discord").id } : undefined,
-          },
-          {
-            label: "Priority Regulations",
-            description: "View our Priority Regulations...",
-            value: "priorities",
-            emoji: findEmoji(guild, "police") ? { id: findEmoji(guild, "police").id } : undefined,
-          }
+          { label: "Discord Regulations", description: "View our Discord Regulations...", value: "discord" },
+          { label: "In-game Regulations", description: "View our In-game Regulations...", value: "game" },
+          { label: "Vehicle Regulations", description: "View our Vehicle Regulations...", value: "vehicles" },
+          { label: "Weapon Regulations", description: "View our Weapon Regulations...", value: "weapons" },
+          { label: "Banned Roleplays", description: "View our Banned Roleplays...", value: "roleplays" }
         )
     )
   );
-
-  // Second dropdown: banned/restricted items
-  container.addSeparatorComponents(divider());
-  container.addActionRowComponents(
-    new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
-        .setCustomId("msrp_reg_select_banned")
-        .setPlaceholder("Banned Items")
-        .setMinValues(1)
-        .setMaxValues(1)
-        .addOptions(
-          {
-            label: "Banned Weapons",
-            description: "View our Banned Weapons...",
-            value: "weapons",
-            emoji: findEmoji(guild, "shield") ? { id: findEmoji(guild, "shield").id } : undefined,
-          },
-          {
-            label: "Banned Vehicles",
-            description: "View our Banned Vehicles...",
-            value: "vehicles",
-            emoji: findEmoji(guild, "police") ? { id: findEmoji(guild, "police").id } : undefined,
-          },
-          {
-            label: "Banned Roleplays",
-            description: "View our Banned Roleplays...",
-            value: "roleplays",
-            emoji: findEmoji(guild, "roblox") ? { id: findEmoji(guild, "roblox").id } : undefined,
-          },
-          {
-            label: "Departments",
-            description: "View department regulations...",
-            value: "departments",
-            emoji: findEmoji(guild, "people") ? { id: findEmoji(guild, "people").id } : undefined,
-          },
-          {
-            label: "Jurisdiction",
-            description: "View the official MSRP jurisdiction map...",
-            value: "jurisdiction",
-            emoji: findEmoji(guild, "pin") ? { id: findEmoji(guild, "pin").id } : undefined,
-          }
-        )
-    )
-  );
-
-  // Bottom banner, separated from the controls like the reference.
   addBottomBanner(container);
   return container;
 }
@@ -198,419 +101,140 @@ function mainPanel(guild) {
 function privatePage(guild, title, intro, sections) {
   const container = new ContainerBuilder();
   addBanner(container);
-
   container.addTextDisplayComponents(
-    display(`# ${title}`),
+    display("# " + title),
     display("*Missouri State Roleplay*"),
     display(intro)
   );
-
   for (const section of sections) {
     container.addSeparatorComponents(divider());
     container.addTextDisplayComponents(
-      display(`### ${emoji(guild, section.emoji || "bulletin")} ${section.title}`),
-      display(`*${section.subtitle || "MSRP regulation and requirements"}*`),
+      display("### " + section.title),
       display(section.body)
     );
   }
-
   addBottomBanner(container);
   return container;
 }
 
-function arrows(guild, lines) {
-  return lines.map(line => `${emoji(guild, "arrow")} ${line}`).join("\n");
+function bullets(lines) {
+  return lines.map(line => "- " + line).join("\n");
 }
 
 function getPage(guild, id) {
   switch (id) {
     case "discord":
-      return privatePage(
-        guild,
-        "DISCORD REGULATIONS",
-        "While participating in the MSRP Discord community, you are required to follow the regulations listed below. Failure to follow them may result in moderation action.",
+      return privatePage(guild, "DISCORD REGULATIONS",
+        "Whilst engaging with anyone in our Discord server, you must follow these regulations.",
         [
-          {
-            title: "Prohibitions",
-            emoji: "board",
-            body: arrows(guild, [
-              "Harassment, bullying, or targeted disruption is prohibited.",
-              "Spam, flooding, or intentionally disruptive behavior is prohibited.",
-              "Disrespect toward members or staff is not permitted.",
-              "Unauthorized advertising or promotion is prohibited.",
-              "Inappropriate or prohibited content is not allowed.",
-              "Attempting to evade moderation through alternate accounts is prohibited.",
-              "Intentionally creating drama or disrupting staff operations is prohibited.",
-            ]),
-          },
-          {
-            title: "Information",
-            emoji: "info",
-            body: arrows(guild, [
-              "Members must follow Discord's Terms of Service and Community Guidelines.",
-              "Report community concerns through the appropriate support process.",
-              "Do not attempt to resolve staff matters through public arguments or disruption.",
-              "Staff may take action when behavior negatively affects the MSRP community.",
-            ]),
-          },
-        ]
-      );
+          { title: "Display Names", body: "You are required to have your Discord display name match your Roblox username. You will be automatically loaded in-game if you do not link your account." },
+          { title: "Respect Others", body: "Remain respectful to both members and staff inside our community. We will moderate you if we find you being disrespectful." },
+          { title: "Hate Speech", body: "Racist, homophobic, or genderphobic comments are prohibited. Keep these comments outside of our community." },
+          { title: "NSFW Content", body: "Sharing content made for adults will result in a permanent ban. We do not condone this inside our community." },
+          { title: "Self Promotion", body: "DM advertising or advertising inside any of our channels will result in a ban from our communications." },
+          { title: "Rule Enforcement", body: "Staff reserve the right to moderate you if you violate our server regulations." },
+          { title: "Language", body: "Our community is English only. You are only permitted to speak English within our channels." },
+          { title: "Alt Accounts", body: "You are allowed one account per person inside our server. If you are found to have multiple accounts, we will remove all accounts." },
+          { title: "Common Sense", body: "Just because a rule is not written down does not mean we do not moderate it. Use common sense." },
+          { title: "Voice Chat", body: "Do not abuse soundboards, voice calls, or voice filters inside our calls." },
+          { title: "Causing Drama", body: "Keep drama outside of our server. This keeps our community clean without having outside drama constantly brought to our chats." },
+          { title: "Terms of Service", body: "You are required to follow Discord's Terms of Service at all times whilst on our community." },
+          { title: "Direct Message Moderation", body: "We do not moderate members' DMs unless it violates Discord's Terms of Service or involves a staff member. If DMs involve a staff member, staff may initiate an investigation." }
+        ]);
 
     case "game":
-      return privatePage(
-        guild,
-        "IN-GAME REGULATIONS",
-        "These rules apply to all members participating in MSRP roleplay. They are intended to keep roleplay realistic, fair, organized, and enjoyable.",
+      return privatePage(guild, "IN-GAME REGULATIONS",
+        "These regulations apply to all members playing on the MSRP ER:LC server.",
         [
-          {
-            title: "Fail Roleplay (FRP)",
-            emoji: "roblox",
-            body: arrows(guild, [
-              "All actions taken by your character must remain realistic and appropriate for the situation.",
-              "Ignoring injuries, crashes, or realistic consequences may be considered Fail Roleplay.",
-            ]),
-          },
-          {
-            title: "Random Deathmatch (RDM)",
-            emoji: "shield",
-            body: arrows(guild, [
-              "Do not intentionally injure or kill another player without a valid roleplay reason.",
-              "Randomly attacking players without legitimate roleplay intent is prohibited.",
-            ]),
-          },
-          {
-            title: "Vehicle Deathmatch (VDM)",
-            emoji: "police",
-            body: arrows(guild, [
-              "Do not intentionally use a vehicle to damage, ram, or run over another player or vehicle without a valid roleplay reason.",
-            ]),
-          },
-          {
-            title: "Metagaming",
-            emoji: "info",
-            body: arrows(guild, [
-              "Do not use information obtained outside of roleplay to gain an in-game advantage.",
-            ]),
-          },
-          {
-            title: "Cop Baiting",
-            emoji: "police",
-            body: arrows(guild, [
-              "Do not intentionally provoke law enforcement into an interaction or pursuit without a legitimate roleplay reason.",
-            ]),
-          },
-          {
-            title: "Unrealistic Driving",
-            emoji: "roblox",
-            body: arrows(guild, [
-              "Vehicles must be driven realistically.",
-              "Do not drive erratically, recklessly, or unrealistically unless you have a valid roleplay reason.",
-            ]),
-          },
-          {
-            title: "New Life Rule (NLR)",
-            emoji: "info",
-            body: arrows(guild, [
-              "After your character dies, you must forget the events leading up to their death.",
-              "You may not immediately return to the scene where you died or use your previous knowledge to influence the scene.",
-            ]),
-          },
-          {
-            title: "Fear Roleplay",
-            emoji: "shield",
-            body: arrows(guild, [
-              "When your character's life is reasonably threatened, you must act as though you value your life.",
-            ]),
-          },
-          {
-            title: "No Intent To Roleplay (NITRP)",
-            emoji: "board",
-            body: arrows(guild, [
-              "Players who intentionally troll, disrupt, or show a complete disregard for the roleplay environment may be punished.",
-              "Repeated RDM, VDM, unrealistic driving, or other disruptive behavior may be treated as NITRP.",
-            ]),
-          },
-          {
-            title: "Pointless Pursuits",
-            emoji: "police",
-            body: arrows(guild, [
-              "You must have a valid roleplay reason to flee from law enforcement.",
-              "Do not start or extend pursuits simply to create a chase.",
-            ]),
-          },
-          {
-            title: "Group Sizes",
-            emoji: "people",
-            body: arrows(guild, [
-              "Groups must remain within reasonable limits for the situation.",
-              "Large-scale or organized scenarios may require prior staff approval.",
-            ]),
-          },
-          {
-            title: "Roleplay Scenario Requirements",
-            emoji: "ticket",
-            body: arrows(guild, [
-              "Major scenarios may require approval from an in-game staff member before they begin.",
-              "This may include hostage situations, kidnappings, jewelry store robberies, bank robberies, and other large-scale scenarios.",
-              "Fire and EMS personnel may not be kidnapped or taken hostage unless a specific scenario has been approved by staff.",
-            ]),
-          },
-          {
-            title: "Priorities & Peacetimes",
-            emoji: "pin",
-            body: arrows(guild, [
-              "Follow all active priority and peacetime restrictions.",
-              "Do not start a restricted scenario during an active priority timer or peacetime.",
-              "If you are planning to start a priority, review the applicable priority rules first.",
-            ]),
-          },
-          {
-            title: "Safe Zones",
-            emoji: "shield",
-            body: arrows(guild, [
-              "Violent or criminal roleplay is prohibited within designated safe zones.",
-              "Safe zones may include police stations, fire stations, hospitals, courthouses, jails, civilian spawn areas, and other areas designated by staff.",
-            ]),
-          },
-          {
-            title: "Alternate Agencies & Impersonation",
-            emoji: "people",
-            body: arrows(guild, [
-              "Do not roleplay as an agency or department that is not represented in MSRP.",
-              "Do not impersonate law enforcement, fire, EMS, DOT, or other official personnel without authorization.",
-              "Legitimate civilian businesses and civilian roleplays are permitted when they follow MSRP rules.",
-            ]),
-          },
-          {
-            title: "Unrealistic Avatars",
-            emoji: "people",
-            body: arrows(guild, [
-              "Avatars must remain reasonably realistic for the roleplay environment.",
-              "Civilians may not use excessive tactical equipment unless their civilian roleplay reasonably requires it.",
-              "Unrealistic accessories, appearances, and animal/furry avatars are prohibited.",
-            ]),
-          },
-          {
-            title: "Restricted Communications",
-            emoji: "bell",
-            body: arrows(guild, [
-              "Civilians may not intentionally listen to restricted law-enforcement communications.",
-              "Restricted communications may not be used to gain an in-game roleplay advantage.",
-            ]),
-          },
-          {
-            title: "Leaving To Avoid Punishment (LTAP)",
-            emoji: "arrow",
-            body: arrows(guild, [
-              "Leaving the game to avoid a moderator interaction, punishment, arrest, or roleplay consequence is prohibited.",
-            ]),
-          },
-          {
-            title: "Common Sense",
-            emoji: "info",
-            body: arrows(guild, [
-              "Use common sense in all roleplay situations.",
-              "If an action would not realistically occur in real life, do not do it in MSRP.",
-            ]),
-          },
-        ]
-      );
-
-    case "priorities":
-      return privatePage(
-        guild,
-        "PRIORITY REGULATIONS",
-        "Priority situations require realistic coordination and consideration for active scenes.",
-        [
-          {
-            title: "Priority Situations",
-            emoji: "pin",
-            body: arrows(guild, [
-              "Active emergency scenes should be given appropriate priority.",
-              "Do not intentionally interfere with another active scene.",
-              "Emergency responses should remain realistic and proportional to the situation.",
-              "Follow authorized staff direction when priority conflicts need to be resolved.",
-              "Do not abuse priority situations to gain an unfair roleplay advantage.",
-            ]),
-          },
-          {
-            title: "Pursuits & Emergencies",
-            emoji: "bell",
-            body: arrows(guild, [
-              "Units should coordinate appropriately during active pursuits and emergency responses.",
-              "Do not intentionally create unnecessary emergency situations.",
-              "Members should respect active scenes and avoid unrealistic interference.",
-            ]),
-          },
-        ]
-      );
-
-    case "weapons":
-      return privatePage(
-        guild,
-        "BANNED WEAPONS",
-        "Weapons and weapon-related roleplay must follow MSRP's in-game rules and any active staff instructions.",
-        [
-          {
-            title: "Weapon Restrictions",
-            emoji: "shield",
-            body: arrows(guild, [
-              "Do not use weapons to randomly attack or threaten players without a valid roleplay reason.",
-              "Do not use weapons to disrupt scenes or evade roleplay consequences.",
-              "Follow all active priority, peacetime, and scenario restrictions before using weapons.",
-              "Weapon use during major or restricted scenarios may require staff approval.",
-              "Staff may stop weapon-related roleplay that is unrealistic, unauthorized, or disruptive.",
-            ]),
-          },
-        ]
-      );
+          { title: "Random Deathmatch", body: "You must only kill someone with valid reasoning or roleplay intent behind it." },
+          { title: "Vehicle Deathmatch", body: "You must have a valid reason when pitting, damaging, ramming, or spiking a player's vehicle." },
+          { title: "New Life Rule", body: "You cannot continue the same life after you die. You must forget all details and roleplay as a new person when you die. NLR can be voided after 5 minutes." },
+          { title: "Fear Roleplay", body: "When a player is holding your character at gunpoint, you must roleplay some level of fear, even if you do not feel majorly threatened." },
+          { title: "Meta-Gaming", body: "Using details obtained from staff or through outside means, such as Discord, cannot be used whilst inside your roleplay." },
+          { title: "Safe Zones", body: "All spawn zones are classified as safe zones. Damaging players, vehicles, or roleplaying in these zones is strictly prohibited." },
+          { title: "In-game Assets", body: "You are required to use the in-game assets provided by MSRP, not the basic ER:LC assets. Using unauthorized liveries or uniforms may result in moderation." },
+          { title: "Unrealistic Avatars", body: "You must wear a realistic avatar whilst in-game. Extra-large avatars, animals, femboys, furries, and similar unrealistic avatars are not permitted." },
+          { title: "Cuff Rushing", body: "You are required to say some form of “cuffs” before or shortly after detaining someone." },
+          { title: "Terms of Service", body: "Violating Roblox's or the Police Roleplay Community's Terms of Service will result in a ban from our server." }
+        ]);
 
     case "vehicles":
-      return privatePage(
-        guild,
-        "VEHICLE RESTRICTIONS",
-        "This section outlines vehicles that are restricted within MSRP. Restrictions may be based on department, rank, assignment, VIP/Premium membership, Server Booster status, or staff authorization.",
+      return privatePage(guild, "VEHICLE REGULATIONS",
+        "Vehicles inside MSRP are subject to separate sets of regulations. You must meet at least one of the applicable requirements to use a restricted vehicle; otherwise, you may be moderated and expected to change it.",
         [
-          {
-            title: "Law Enforcement Restrictions",
-            emoji: "shield",
-            body: arrows(guild, [
-              "Unmarked / Undercover Vehicles",
-              "Slicktop Vehicles",
-              "Supervisor Vehicles",
-              "Command Vehicles",
-              "SWAT / Tactical Vehicles",
-              "Specialty Unit Vehicles",
-              "Mobile Command Vehicles",
-              "ATVs / Utility Vehicles",
-              "Marine Vehicles",
-              "Any vehicle designated RANKED is restricted to authorized ranked members.",
-            ]),
-          },
-          {
-            title: "Fire & EMS Restrictions",
-            emoji: "bell",
-            body: arrows(guild, [
-              "Specialty / Critical Care Ambulances",
-              "Rescue Vehicles",
-              "Heavy Rescue",
-              "Ladder / Aerial Vehicles",
-              "Command Vehicles",
-              "Hazmat Vehicles",
-              "Brush / Wildland Vehicles",
-              "Special Operations Vehicles",
-              "Marine Rescue Vehicles",
-              "Any vehicle designated RANKED is restricted to authorized ranked members.",
-            ]),
-          },
-          {
-            title: "DOT Restrictions",
-            emoji: "board",
-            body: arrows(guild, [
-              "Heavy Tow Trucks",
-              "Flatbed Trucks",
-              "Specialty Tow Vehicles",
-              "Traffic Control Vehicles",
-              "Maintenance Vehicles",
-              "Utility Vehicles",
-              "HAZMAT / Specialty Vehicles",
-              "Any vehicle designated RANKED is restricted to authorized ranked members.",
-            ]),
-          },
-          {
-            title: "Civilian Restrictions",
-            emoji: "people",
-            body: [
-              `${emoji(guild, "trophy")} **VIP / Premium Members** — Vehicles marked with the Trophy emoji may only be used by members with an active VIP / Premium membership.`,
-              `${emoji(guild, "rocket")} **Server Boosters** — Vehicles marked with the Rocket emoji may only be used by members who are actively boosting the MSRP Discord server.`,
-              "",
-              "**Restricted Vehicles**",
-              `${emoji(guild, "trophy")} **Strugatti Ettore**`,
-              `${emoji(guild, "trophy")} **Kovac Helladara**`,
-              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Falcon Heritage**`,
-              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Falcon Heritage Track**`,
-              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Takao Experience**`,
-              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Navarra Horizon**`,
-              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Averon LMR 2020**`,
-              `${emoji(guild, "rocket")} ${emoji(guild, "trophy")} **Surrey 650S**`,
-            ].join("\n")
-          },
-          {
-            title: "Vehicle Usage",
-            emoji: "info",
-            body: arrows(guild, [
-              "Do not use a restricted vehicle without meeting its requirements.",
-              "Restricted vehicles may not be used to gain an unfair roleplay advantage.",
-              "Do not use department-only or specialty vehicles while roleplaying as an unauthorized civilian.",
-              "Access to a restricted vehicle does not exempt you from any MSRP rule or staff instruction.",
-              "Vehicle access may be revoked if a vehicle is misused or used outside its intended purpose.",
-            ]),
-          },
-        ]
-      );
+          { title: "Whitelisted Vehicles", body: bullets([
+            "Emergency Services Falcon Advance+",
+            "SWAT Armored Truck",
+            "Mobile Command Center"
+          ]) },
+          { title: "Booster Vehicles", body: bullets([
+            "Falcon Heritage Track",
+            "Surrey 650S",
+            "Falcon Heritage",
+            "Takeo Experience",
+            "Chevlon Corbeta 8",
+            "Averon LM/LM R",
+            "Chevlon Corbeta RZR",
+            "Chevlon Corbeta X08"
+          ]) },
+          { title: "Banned Vehicles", body: bullets([
+            "Strugatti Ettore",
+            "Kovac Heledara",
+            "Poa Car",
+            "Redline Rearmount Ladder",
+            "Falcon Advance 600 Pumper",
+            "Chevlon L15 Brush Truck",
+            "Chevlon Corbeta 1M Edition",
+            "Lawn Mower"
+          ]) }
+        ]);
 
-    case "departments":
-      return privatePage(
-        guild,
-        "DEPARTMENT REGULATIONS",
-        "Missouri State Roleplay currently centers its law-enforcement roleplay around the Missouri State Highway Patrol and St. Louis County Police Department, along with authorized staff operations.",
+    case "weapons":
+      return privatePage(guild, "WEAPON REGULATIONS",
+        "Weapons inside MSRP are subject to separate sets of regulations. You must meet at least one of the applicable requirements to use a restricted weapon; otherwise, you may be moderated and expected to change it.",
         [
-          {
-            title: "Missouri State Highway Patrol",
-            emoji: "shield",
-            body: arrows(guild, [
-              "MSHP roleplay is primarily focused on statewide and highway law-enforcement operations.",
-              "Members must remain within the duties and equipment authorized for their position.",
-              "Troopers should maintain realistic traffic enforcement, pursuits, and emergency responses.",
-            ]),
-          },
-          {
-            title: "St. Louis County Police Department",
-            emoji: "shield",
-            body: arrows(guild, [
-              "SLCPD roleplay is primarily focused on St. Louis County law-enforcement operations.",
-              "Members must remain within the duties and equipment authorized for their position.",
-              "Officers should maintain realistic patrol, traffic enforcement, pursuits, and emergency responses.",
-            ]),
-          },
-          {
-            title: "Staff Operations",
-            emoji: "people",
-            body: arrows(guild, [
-              "Staff-only functions and permissions are restricted to authorized staff members.",
-              "Staff should not use administrative permissions to interfere with roleplay unnecessarily.",
-              "Follow the MSRP staff chain of command when handling staff matters.",
-            ]),
-          },
-        ]
-      );
+          { title: "Whitelisted Weapons", body: bullets([
+            "Orsis T 5000",
+            "Benelli M4",
+            "G36C",
+            "Kahr CW9",
+            "Fabarm FP6"
+          ]) },
+          { title: "Booster Weapons", body: bullets([
+            "PPSH 41",
+            "M14",
+            "Remington 870",
+            "Colt Python"
+          ]) },
+          { title: "Banned Weapons", body: bullets([
+            "M249",
+            "Remington MSR",
+            "Remington 700",
+            "SPAS 12"
+          ]) }
+        ]);
 
     case "roleplays":
-      return privatePage(
-        guild,
-        "ROLEPLAY RESTRICTIONS",
-        "Certain roleplays may require additional authorization to keep sessions realistic, organized, and enjoyable for the community.",
+      return privatePage(guild, "BANNED ROLEPLAYS",
+        "Conducting any of the roleplays listed below will result in a permanent ban from MSRP. These roleplays are heavily restricted and will not be tolerated under any circumstances.",
         [
-          {
-            title: "Restricted Roleplays",
-            emoji: "board",
-            body: arrows(guild, [
-              "Do not begin a restricted or permission-based roleplay without the required authorization.",
-              "Roleplays must remain realistic and must not be used to disrupt other members.",
-              "Do not intentionally create scenarios designed only to provoke or interfere with active roleplay.",
-              "Follow any additional instructions provided by authorized MSRP staff.",
-            ]),
-          },
-          {
-            title: "Staff Authorization",
-            emoji: "info",
-            body: arrows(guild, [
-              "If a roleplay requires staff approval, request permission through the appropriate support process before starting it.",
-              "Staff may deny or stop a roleplay when it conflicts with current scenes, server rules, or community operations.",
-            ]),
-          },
-        ]
-      );
+          { title: "Appealable Ban", body: bullets([
+            "Animal Abuse Roleplay",
+            "Suicide Roleplay",
+            "ICE Roleplay",
+            "Torture Roleplay",
+            "Animal Roleplay",
+            "DUI Roleplay"
+          ]) },
+          { title: "Un-appealable Ban", body: bullets([
+            "Furry Roleplay",
+            "Femboy Roleplay",
+            "Drug Roleplay",
+            "Bomb Roleplay",
+            "Terrorism Roleplay",
+            "NSFW Roleplay"
+          ]) }
+        ]);
 
     default:
       return null;
