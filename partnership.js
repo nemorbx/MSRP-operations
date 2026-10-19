@@ -86,19 +86,46 @@ async function deleteRepresentativeAds(client, guild, userId) {
   }
 
   let deleted = 0;
+  let recordsChanged = false;
   for (const [key, record] of records) {
-    const message = await channel.messages.fetch(record.messageId).catch(() => null);
+    const message = await channel.messages.fetch(record.messageId).catch(error => {
+      // Discord error code 10008 means the message is already gone.
+      if (error?.code === 10008) {
+        delete stored[key];
+        recordsChanged = true;
+      } else {
+        console.error("[Partnership] Failed to fetch message " + record.messageId + ":", error);
+      }
+      return null;
+    });
+
     if (message) {
       const ok = await message.delete().then(() => true).catch(error => {
         console.error("[Partnership] Failed to delete message " + record.messageId + ":", error);
         return false;
       });
-      if (ok) deleted++;
+      if (ok) {
+        deleted++;
+        delete stored[key];
+        recordsChanged = true;
+      }
     }
-    delete stored[key];
   }
-  writePartnerships(stored);
+
+  if (recordsChanged) writePartnerships(stored);
   console.log("[Partnership] Removed " + deleted + " ads for departing representative " + userId + ".");
+
+  // Notify the departing representative after attempting to remove their partnership ad.
+  try {
+    const user = await client.users.fetch(userId);
+    await user.send(
+      "Your partnership with **Missouri State Roleplay** has been terminated because you left our Discord server. " +
+      "Your partnership advertisement has been removed. If you believe this happened by mistake, please contact our staff."
+    );
+  } catch (error) {
+    console.warn("[Partnership] Could not DM departing representative " + userId + "; their DMs may be closed.", error);
+  }
+
   return deleted;
 }
 
@@ -195,7 +222,6 @@ function setup(client) {
           await representative.roles.add(role, "Assigned as a partnership advertisement representative");
         }
       } catch (error) {
-        // Keep the successfully posted ad recorded, and tell the issuer that role assignment failed.
         console.error("[Partnership] Ad posted but role assignment failed:", error);
         await interaction.editReply({
           content: "The partnership ad was posted, but I could not assign the Partnership role. Check my role hierarchy and Manage Roles permission."
