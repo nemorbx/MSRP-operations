@@ -68,10 +68,20 @@ function setup(client) {
     if (interaction.commandName === "sync-all-usernames") {
       await interaction.deferReply({ ephemeral: true });
       try {
-        await interaction.guild.members.fetch();
-        const members = [...interaction.guild.members.cache.values()].filter(member => !member.user.bot);
+        // Use Discord's paginated REST member-list endpoint instead of a full
+        // gateway member request, which can trigger opcode 8 rate limits.
+        const members = [];
+        let after = "0";
+        while (true) {
+          const batch = await interaction.guild.members.fetch({ limit: 1000, after });
+          if (batch.size === 0) break;
+          members.push(...batch.values());
+          after = batch.last().id;
+          if (batch.size < 1000) break;
+        }
+        const humanMembers = members.filter(member => !member.user.bot);
         let updated = 0, unlinked = 0, unchanged = 0, failed = 0;
-        for (const member of members) {
+        for (const member of humanMembers) {
           try {
             const username = await lookupRobloxUser(interaction.guildId, member.id);
             if (!username) { unlinked++; continue; }
@@ -83,12 +93,16 @@ function setup(client) {
             failed++;
             console.error("[Sync All Usernames] Failed for " + member.user.tag + ":", error?.message || error);
           }
-          await new Promise(resolve => setTimeout(resolve, 350));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
         return interaction.editReply("✅ **Username sync completed.**\\nUpdated: **" + updated + "**\\nAlready correct: **" + unchanged + "**\\nNot linked through Bloxlink: **" + unlinked + "**\\nCould not update: **" + failed + "**");
       } catch (error) {
         console.error("[Sync All Usernames] Bulk sync failed:", error?.message || error);
-        return interaction.editReply("❌ I couldn't complete the bulk sync. Check the Central Issue Log and confirm Bloxlink is configured.");
+        const detail = String(error?.message || error);
+        if (/rate.?limit|opcode 8/i.test(detail)) {
+          return interaction.editReply("⚠️ Discord rate-limited the member-list request. The sync stopped safely; wait for the limit to clear, then try again.");
+        }
+        return interaction.editReply("❌ I couldn't complete the bulk sync. Check the Central Issue Log and confirm Bloxlink is configured. Error: " + detail.slice(0, 300));
       }
     }
 
