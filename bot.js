@@ -246,14 +246,17 @@ client.once("clientReady", async () => {
 
   await testMelonlyApi();
 
-  async function logPanelStartup(panelName, channelId) {
+  async function logPanelStartup(panelName, channelId, outcome = "checked") {
+    const messages = {
+      skipped: `**Skipped panel creation — an existing panel was found.**\\nPanel: ${panelName}\\nChannel: <#${channelId}>\\nNo new panel was sent.`,
+      created: `**Panel created — no existing panel was found.**\\nPanel: ${panelName}\\nChannel: <#${channelId}>`,
+      updated: `**Existing panel updated in place.**\\nPanel: ${panelName}\\nChannel: <#${channelId}>`,
+      checked: `**Panel check completed.**\\nPanel: ${panelName}\\nChannel: <#${channelId}>`
+    };
     try {
       const logChannel = await client.channels.fetch("1561762073971531857").catch(() => null);
       if (!logChannel || !logChannel.isTextBased()) return;
-      await logChannel.send({
-        content: `**Panel Startup Log — ${panelName}**\\nChannel: <#${channelId}>\\nStartup check completed. Existing panels should be retained instead of sending duplicates; see the bot console for the exact action.`,
-        allowedMentions: { parse: [] }
-      });
+      await logChannel.send({ content: messages[outcome] || messages.checked, allowedMentions: { parse: [] } });
     } catch (error) {
       console.error("[Panel Startup Logs] Could not log " + panelName + ":", error);
     }
