@@ -26,6 +26,7 @@ const { setup: setupSessions, ensureSessionPanel, startSessionRefresh } = requir
 const { setup: setupTraining, commands: trainingCommands } = require("./training");
 const { setup: setupAdQueue, commands: adQueueCommands } = require("./ad-queue");
 const { setup: setupPartnership, commands: partnershipCommands } = require("./partnership");
+const { setupBotIssueLogs } = require("./bot-issue-logs");
 
 const afkModule = require("./afk");
 const infractionsModule = require("./infractions");
@@ -46,6 +47,9 @@ const client = new Client({
   ],
   partials: [Partials.Channel],
 });
+
+// Centralized logging for errors and warnings across all bot systems.
+setupBotIssueLogs(client);
 
 setupInfractions(client);
 setupPromotions(client);
