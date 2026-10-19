@@ -139,9 +139,10 @@ function privatePage(guild, title, intro, sections) {
   for (const section of sections) {
     container.addSeparatorComponents(divider());
     const heading = String(section.title || "Regulations").slice(0, 40);
+    // Keep the heading and body in the same text display to reduce the total
+    // number of container components. Discord limits each container to 40.
     container.addTextDisplayComponents(
-      display("### " + heading),
-      ...splitTextDisplay(section.body, 3500)
+      ...splitTextDisplay("### " + heading + "\n" + String(section.body ?? ""), 3500)
     );
   }
   addBottomBanner(container);
