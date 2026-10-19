@@ -23,7 +23,7 @@ function ordinal(number) {
 function buildWelcomeMessage(member) {
   const memberCount = member.guild.memberCount;
   const formattedCount = memberCount.toLocaleString("en-US");
-  const welcomeEmoji = typeof getWelcomeEmoji === "function" ? getWelcomeEmoji(member.guild) : "🇺🇸";
+  const welcomeEmoji = getWelcomeEmoji(member.guild);
   const container = new ContainerBuilder()
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
@@ -65,14 +65,14 @@ function setupWelcome(client) {
     if (!interaction.isChatInputCommand() || interaction.commandName !== "welcome") return;
     if (interaction.commandName === "welcome" && interaction.options.getSubcommand() !== "test") return;
     if (!interaction.inGuild()) {
-      return interaction.reply({ content: "This command can only be used in the server.", ephemeral: true });
+      return interaction.reply({ content: "This command can only be used in the server.", flags: MessageFlags.Ephemeral });
     }
     const member = await interaction.guild.members.fetch(interaction.user.id);
     const channel = await interaction.guild.channels.fetch(ARRIVALS_CHANNEL_ID).catch(() => null);
     if (!channel || !channel.isTextBased() || typeof channel.send !== "function") {
-      return interaction.reply({ content: "I couldn't find or send messages to the arrivals channel.", ephemeral: true });
+      return interaction.reply({ content: "I couldn't find or send messages to the arrivals channel.", flags: MessageFlags.Ephemeral });
     }
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
       await channel.send(buildWelcomeMessage(member));
       return interaction.editReply("✅ Test welcome message sent in <#" + ARRIVALS_CHANNEL_ID + ">.");
