@@ -126,14 +126,14 @@ function requestButtons(traineeId, accepted = false) {
     new ButtonBuilder().setCustomId("training_cancel_" + traineeId).setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(false)
   );
 }
-function requestPanel(traineeId, traineeName, timezone, teamAccess, availability = "Now", accepted = false, testPreview = false) {
+function requestPanel(traineeId, traineeName, timezone, teamAccess, availability = "Now", accepted = false, testPreview = false, acceptedBy = null) {
   const container = new ContainerBuilder()
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      (testPreview ? "**TEST PREVIEW — not a real request**\\n\\n" : "") +
-      "## Training Request\\n\\n" +
-      "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\\n\\n" +
-      "**Trainee:** <@" + traineeId + ">\\n" +
-      "**Team Access:** ``" + teamAccess + "``\\n" +
+      (testPreview ? "**TEST PREVIEW — not a real request**\n\n" : "") +
+      (accepted ? "## Training Request Accepted\n\n" : "## Training Request\n\n") +
+      "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\n\n" +
+      "**Trainee:** <@" + traineeId + ">\n" +
+      "**Team Access:** ``" + teamAccess + "``\n" +
       "**Time Zone:** ``" + timezone + "``"
     ))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
@@ -155,17 +155,17 @@ function resultButtons(traineeId, resultId, passed, claimed = false) {
 }
 function resultPanel(record) {
   const passed = record.passed;
-  const notes = String(record.notes || "No additional notes.").replace(/\\n/g, " ").slice(0, 1000);
+  const notes = String(record.notes || "No additional notes.").replace(/\n/g, " ").slice(0, 1000);
   const container = new ContainerBuilder()
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      "## Training Results\\n" +
-      "> <@" + record.trainerId + "> has sent the results for <@" + record.traineeId + ">'s training. They scored a total of **``" + record.total + "/30``**, this means that the user has **``" + (passed ? "passed" : "failed") + "``**.\\n\\n" +
-      "> **Trainee:** <@" + record.traineeId + ">\\n" +
-      "> **Trainer:** <@" + record.trainerId + ">\\n\\n" +
-      "> **Driving Ability:** ``" + record.driving + "``\\n" +
-      "> **SPaG Ability:** ``" + record.spag + "``\\n" +
-      "> **Moderation Ability:** ``" + record.moderation + "``\\n" +
-      "> **Total Score:** ``" + record.total + "/30``\\n\\n" +
+      "## Training Results\n" +
+      "> <@" + record.trainerId + "> has sent the results for <@" + record.traineeId + ">'s training. They scored a total of **``" + record.total + "/30``**, this means that the user has **``" + (passed ? "passed" : "failed") + "``**.\n\n" +
+      "> **Trainee:** <@" + record.traineeId + ">\n" +
+      "> **Trainer:** <@" + record.trainerId + ">\n\n" +
+      "> **Driving Ability:** ``" + record.driving + "``\n" +
+      "> **SPaG Ability:** ``" + record.spag + "``\n" +
+      "> **Moderation Ability:** ``" + record.moderation + "``\n" +
+      "> **Total Score:** ``" + record.total + "/30``\n\n" +
       "> **Training Notes:** ``" + notes + "``"
     ))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
