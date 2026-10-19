@@ -20,13 +20,13 @@ function panel() {
   addImage(container, VERIFY_IMAGE);
   container.addTextDisplayComponents(
     display("Welcome to **Missouri State Roleplay**! Please verify to get access to the rest of the server."),
-    display("Use **Bloxlink** below to link and verify your Roblox account.")
+    display("Use **Bloxlink** below to link and verify your Roblox account. " + MARKER)
   );
   container.addSeparatorComponents(divider());
   addImage(container, BANNER_IMAGE);
   return container;
 }
-async function postOrRefreshVerificationPanel(client) {
+async function postOrRefreshVerificationPanel(client, options = {}) {\n  const forceRefresh = options.forceRefresh === true;
   const channel = await client.channels.fetch(CHANNEL_ID).catch(error => { console.error("[Verification] Could not fetch channel:", error); return null; });
   if (!channel || !channel.isTextBased() || !channel.messages) { console.error("[Verification] Channel missing or not text-based:", CHANNEL_ID); return; }
   const verifyPath = path.join(__dirname, VERIFY_IMAGE);
@@ -37,15 +37,38 @@ async function postOrRefreshVerificationPanel(client) {
   }
   const messages = await channel.messages.fetch({ limit: 100 }).catch(error => { console.error("[Verification] Could not read channel history:", error); return null; });
   if (!messages) return;
-  const panels = [...messages.values()].filter(message => message.author?.id === client.user.id && (JSON.stringify(message.components || []).includes(MARKER) || message.attachments?.some(a => a.name === VERIFY_IMAGE)));
-  if (panels.length) {
-    // Keep the existing panel untouched on startup. This prevents restarts from
-    // re-uploading images or reposting an unchanged verification panel.
+  const panels = [...messages.values()]
+    .filter(message => message.author?.id === client.user.id && (
+      JSON.stringify(message.components || []).includes(MARKER) ||
+      message.attachments?.some(a => a.name === VERIFY_IMAGE) ||
+      JSON.stringify(message.components || []).includes("verify.png")
+    ))
+    .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+  if (panels.length && !forceRefresh) {
+    // Keep the oldest known panel and remove every later duplicate.
+    const keep = panels[0];
+    let failed = false;
     for (const duplicate of panels.slice(1)) {
-      await duplicate.delete().catch(error => console.error("[Verification] Could not remove duplicate panel:", error));
+      try { await duplicate.delete(); }
+      catch (error) { failed = true; console.error("[Verification] Could not remove duplicate panel " + duplicate.id + ":", error); }
     }
-    console.log("[Verification] Existing panel found; left unchanged.");
+    if (failed) {
+      console.error("[Verification] Duplicate cleanup was incomplete; not posting another panel.");
+      return;
+    }
+    console.log("[Verification] Existing panel " + keep.id + " retained; duplicates removed: " + (panels.length - 1) + ".");
     return;
+  }
+
+  if (forceRefresh) {
+    for (const oldPanel of panels) {
+      try { await oldPanel.delete(); }
+      catch (error) {
+        console.error("[Verification] Could not delete old panel " + oldPanel.id + "; replacement cancelled:", error);
+        return;
+      }
+    }
   }
 
   await channel.send({
@@ -53,7 +76,7 @@ async function postOrRefreshVerificationPanel(client) {
     files: [{ attachment: verifyPath, name: VERIFY_IMAGE }, { attachment: bannerPath, name: BANNER_IMAGE }],
     flags: MessageFlags.IsComponentsV2,
   });
-  console.log("[Verification] Panel posted because no existing panel was found.");
+  console.log(forceRefresh ? "[Verification] Panel force-refreshed; one replacement posted." : "[Verification] Panel posted because no existing panel was found.");
 }
 
 module.exports = { postOrRefreshVerificationPanel };
