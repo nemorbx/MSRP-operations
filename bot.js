@@ -6,7 +6,6 @@ const { setup: setupInfractions } = require("./infractions");
 const { setup: setupPromotions } = require("./promotions");
 const { setup: setupApplications, ensureApplicationPanel } = require("./applications");
 const { setup: setupSupport, ensureSupportPanel } = require("./support");
-const { setup: setupCounting } = require("./counting");
 const { setup: setupAFK } = require("./afk");
 const { setup: setupStaffFeedback } = require("./staff-feedback");
 const { setup: setupRegulations, ensureRegulationsPanel, postOrRefreshPanel } = require("./regulations");
@@ -28,7 +27,6 @@ const { setup: setupTraining, commands: trainingCommands } = require("./training
 const afkModule = require("./afk");
 const infractionsModule = require("./infractions");
 const promotionsModule = require("./promotions");
-const countingModule = require("./counting");
 const giveawayModule = require("./giveaway");
 const staffFeedbackModule = require("./staff-feedback");
 
@@ -50,7 +48,6 @@ setupInfractions(client);
 setupPromotions(client);
 setupApplications(client);
 setupSupport(client);
-setupCounting(client);
 setupAFK(client);
 setupStaffFeedback(client);
 setupRegulations(client);
@@ -231,7 +228,7 @@ client.once("clientReady", async () => {
   console.log("Logged in as " + client.user.tag);
   console.log("Missouri State Roleplay Operations is online.");
   console.log("GitHub deployment test: successful.");
-  console.log("Features loaded: Applications, Support, Infractions, Promotions, Counting, AFK, Staff Feedback, Regulations, Information, Role Perks, Marketplace, Purge, Booster, Say, Suggestions, Sticky, Welcome");
+  console.log("Features loaded: Applications, Support, Infractions, Promotions, AFK, Staff Feedback, Regulations, Information, Role Perks, Marketplace, Purge, Booster, Say, Suggestions, Sticky, Welcome");
   console.log("========================================");
 
   await testMelonlyApi();
@@ -292,7 +289,6 @@ client.once("clientReady", async () => {
       ...(infractionsModule.commands || []),
       ...(promotionsModule.promoteCommand ? [promotionsModule.promoteCommand] : []),
       ...(afkModule.commands || []),
-      ...(countingModule.commands || []),
       ...(giveawayModule.giveawayCommand ? [giveawayModule.giveawayCommand] : []),
       ...(staffFeedbackModule.feedbackCommand ? [staffFeedbackModule.feedbackCommand] : []),
       ...(staffFeedbackModule.staffRatingCommand ? [staffFeedbackModule.staffRatingCommand] : []),
