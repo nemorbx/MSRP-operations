@@ -38,20 +38,22 @@ async function postOrRefreshVerificationPanel(client) {
   const messages = await channel.messages.fetch({ limit: 100 }).catch(error => { console.error("[Verification] Could not read channel history:", error); return null; });
   if (!messages) return;
   const panels = [...messages.values()].filter(message => message.author?.id === client.user.id && (JSON.stringify(message.components || []).includes(MARKER) || message.attachments?.some(a => a.name === VERIFY_IMAGE)));
-  const payload = {
+  if (panels.length) {
+    // Keep the existing panel untouched on startup. This prevents restarts from
+    // re-uploading images or reposting an unchanged verification panel.
+    for (const duplicate of panels.slice(1)) {
+      await duplicate.delete().catch(error => console.error("[Verification] Could not remove duplicate panel:", error));
+    }
+    console.log("[Verification] Existing panel found; left unchanged.");
+    return;
+  }
+
+  await channel.send({
     components: [panel()],
     files: [{ attachment: verifyPath, name: VERIFY_IMAGE }, { attachment: bannerPath, name: BANNER_IMAGE }],
-    attachments: [],
     flags: MessageFlags.IsComponentsV2,
-  };
-  if (panels.length) {
-    await panels[0].edit(payload);
-    for (const duplicate of panels.slice(1)) await duplicate.delete().catch(error => console.error("[Verification] Could not remove duplicate panel:", error));
-    console.log("[Verification] Panel refreshed in place.");
-  } else {
-    await channel.send(payload);
-    console.log("[Verification] Panel posted.");
-  }
+  });
+  console.log("[Verification] Panel posted because no existing panel was found.");
 }
 
 module.exports = { postOrRefreshVerificationPanel };
