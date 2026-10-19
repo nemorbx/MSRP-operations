@@ -115,16 +115,7 @@ async function deleteRepresentativeAds(client, guild, userId) {
   if (recordsChanged) writePartnerships(stored);
   console.log("[Partnership] Removed " + deleted + " ads for departing representative " + userId + ".");
 
-  // Notify the departing representative after attempting to remove their partnership ad.
-  try {
-    const user = await client.users.fetch(userId);
-    await user.send(
-      "Your partnership with **Missouri State Roleplay** has been terminated because you left our Discord server. " +
-      "Your partnership advertisement has been removed. If you believe this happened by mistake, please contact our staff."
-    );
-  } catch (error) {
-    console.warn("[Partnership] Could not DM departing representative " + userId + "; their DMs may be closed.", error);
-  }
+  // Do not DM representatives when they leave; only remove their partnership ads.
 
   return deleted;
 }
