@@ -271,7 +271,11 @@ client.once("clientReady", async () => {
     console.error("Support panel refresh error:", error);
   }
 
-  // Regulations is persistent; only the explicit update command may change it.
+  try {
+    await ensureRegulationsPanel(client);
+  } catch (error) {
+    console.error("Regulations panel restore/update error:", error);
+  }
 
   // Marketplace is persistent; do not edit or repost it during startup.
 
