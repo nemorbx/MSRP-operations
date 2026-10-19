@@ -246,14 +246,29 @@ client.once("clientReady", async () => {
 
   await testMelonlyApi();
 
+  async function logPanelStartup(panelName, channelId) {
+    try {
+      const logChannel = await client.channels.fetch("1561762073971531857").catch(() => null);
+      if (!logChannel || !logChannel.isTextBased()) return;
+      await logChannel.send({
+        content: `**Panel Startup Log — ${panelName}**\\nChannel: <#${channelId}>\\nStartup check completed. Existing panels should be retained instead of sending duplicates; see the bot console for the exact action.`,
+        allowedMentions: { parse: [] }
+      });
+    } catch (error) {
+      console.error("[Panel Startup Logs] Could not log " + panelName + ":", error);
+    }
+  }
+
   try {
     await ensureDonationPanel(client);
+    await logPanelStartup("Donation Leaderboard", "1560123150635630672");
   } catch (error) {
     console.error("Donation leaderboard startup error:", error);
   }
 
   try {
     await ensureSessionPanel(client);
+    await logPanelStartup("Sessions", "1527179992398692353");
     startSessionRefresh(client);
   } catch (error) {
     console.error("Session panel startup error:", error);
@@ -261,18 +276,21 @@ client.once("clientReady", async () => {
 
   try {
     await ensureApplicationPanel(client);
+    await logPanelStartup("Application Center", "1551975176084656209");
   } catch (error) {
     console.error("Application panel refresh error:", error);
   }
 
   try {
     await ensureSupportPanel(client);
+    await logPanelStartup("Support", "1527396975295856810");
   } catch (error) {
     console.error("Support panel refresh error:", error);
   }
 
   try {
     await ensureRegulationsPanel(client);
+    await logPanelStartup("Regulations", "1527395795035357376");
   } catch (error) {
     console.error("Regulations panel restore/update error:", error);
   }
@@ -281,18 +299,21 @@ client.once("clientReady", async () => {
 
   try {
     await postOrRefreshInformationPanel(client);
+    await logPanelStartup("Information", "1527394530427666452");
   } catch (error) {
     console.error("Information panel refresh error:", error);
   }
 
   try {
     await postOrRefreshVerificationPanel(client);
+    await logPanelStartup("Verification", "1528566337394446456");
   } catch (error) {
     console.error("Verification panel refresh error:", error);
   }
 
   try {
     await postOrRefreshRolePerksPanel(client);
+    await logPanelStartup("Role Perks", "1560123150635630672");
   } catch (error) {
     console.error("Role Perks panel refresh error:", error);
   }
