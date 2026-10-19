@@ -132,12 +132,12 @@ function requestPanel(traineeId, traineeName, timezone, teamAccess, availability
       (testPreview ? "**TEST PREVIEW — not a real request**\n\n" : "") +
       (accepted ? "## Training Request Accepted\n\n" : "## Training Request\n\n") +
       (accepted
-        ? "> <@" + traineeId + ">, your training request has been accepted. Please make your way to the briefing room inside the Sheriff's station.\\n\\n"
-        : "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\\n\\n") +
+        ? "> <@" + traineeId + ">, your training request has been accepted. Please make your way to the briefing room inside the Sheriff's station.\n\n"
+        : "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\n\n") +
       "**Trainee:** <@" + traineeId + ">\n" +
       "**Team Access:** ``" + teamAccess + "``\n" +
       "**Time Zone:** ``" + timezone + "``" +
-      (accepted && acceptedBy ? "\\n\\n**Accepted By:** <@" + acceptedBy + ">" : "")
+      (accepted && acceptedBy ? "\n\n**Accepted By:** <@" + acceptedBy + ">" : "")
     ))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
     .addActionRowComponents(requestButtons(traineeId, accepted))
@@ -202,7 +202,7 @@ function setup(client) {
       if (command === "!test training request") {
         const testId = message.author.id;
         const sent = await channel.send({
-          components: requestPanel(testId, message.author.username, "CDT", "No", "Now", false, true),
+          components: requestPanel(testId, message.author.username, "CDT", "No", "Now", false, false),
           flags: MessageFlags.IsComponentsV2,
           allowedMentions: { parse: [] }
         });
