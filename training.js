@@ -131,10 +131,13 @@ function requestPanel(traineeId, traineeName, timezone, teamAccess, availability
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
       (testPreview ? "**TEST PREVIEW — not a real request**\n\n" : "") +
       (accepted ? "## Training Request Accepted\n\n" : "## Training Request\n\n") +
-      "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\n\n" +
+      (accepted
+        ? "> <@" + traineeId + ">, your training request has been accepted. Please make your way to the briefing room inside the Sheriff's station.\\n\\n"
+        : "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\\n\\n") +
       "**Trainee:** <@" + traineeId + ">\n" +
       "**Team Access:** ``" + teamAccess + "``\n" +
-      "**Time Zone:** ``" + timezone + "``"
+      "**Time Zone:** ``" + timezone + "``" +
+      (accepted && acceptedBy ? "\\n\\n**Accepted By:** <@" + acceptedBy + ">" : "")
     ))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
     .addActionRowComponents(requestButtons(traineeId, accepted))
