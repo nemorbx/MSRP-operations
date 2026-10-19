@@ -20,11 +20,6 @@ const partnershipCommand = new SlashCommandBuilder()
     .setName("ad")
     .setDescription("Post a partnership ad and assign its representative.")
     .addStringOption(option => option
-      .setName("server_name")
-      .setDescription("Name of the partner server.")
-      .setRequired(true)
-      .setMaxLength(100))
-    .addStringOption(option => option
       .setName("advertisement")
       .setDescription("Full partnership advertisement text.")
       .setRequired(true)
@@ -135,13 +130,12 @@ function setup(client) {
 
       if (interaction.options.getSubcommand() !== "ad") return;
 
-      const serverName = interaction.options.getString("server_name", true).trim();
       const advertisement = interaction.options.getString("advertisement", true).trim();
       const representativeUser = interaction.options.getUser("representative", true);
 
-      if (!serverName || !advertisement) {
+      if (!advertisement) {
         await interaction.reply({
-          content: "Server name and advertisement text cannot be empty.",
+          content: "Advertisement text cannot be empty.",
           ephemeral: true
         });
         return;
@@ -193,7 +187,7 @@ function setup(client) {
 
       const recordId = guild.id + ":" + representative.id + ":" + Date.now();
       const message = await channel.send({
-        content: partnershipMessage(serverName, advertisement, representative.id),
+        content: partnershipMessage(advertisement, representative.id),
         allowedMentions: { parse: [], users: [representative.id] }
       });
 
@@ -202,7 +196,6 @@ function setup(client) {
         guildId: guild.id,
         messageId: message.id,
         representativeId: representative.id,
-        serverName,
         createdBy: interaction.user.id,
         createdAt: Date.now()
       };
@@ -221,8 +214,7 @@ function setup(client) {
       }
 
       await interaction.editReply({
-        content: "Partnership advertisement posted in <#" + PARTNERSHIP_CHANNEL_ID + "> for **" +
-          safeName(serverName) + "**. <@" + representative.id + "> was assigned the Partnership role."
+        content: "Partnership advertisement posted in <#" + PARTNERSHIP_CHANNEL_ID + ">. <@" + representative.id + "> was assigned the Partnership role."
       });
     } catch (error) {
       console.error("[Partnership] Command failed:", error);
