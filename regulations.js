@@ -380,9 +380,12 @@ async function postOrRefreshPanel(client) {
   );
 
   for (const panel of oldPanels.values()) {
-    await panel.delete().catch(error => {
-      console.error("Failed to delete old Regulations panel:", error);
-    });
+    try {
+      await panel.delete();
+    } catch (error) {
+      console.error("Failed to delete old Regulations panel " + panel.id + "; update cancelled to prevent stacking:", error);
+      throw new Error("Could not remove every old Regulations panel. Check bot permissions in the regulations channel.");
+    }
   }
 
   const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
