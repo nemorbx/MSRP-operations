@@ -49,15 +49,47 @@ async function lookupRobloxUser(guildId, discordUserId) {
   return user.name;
 }
 
+const syncAllCommand = new SlashCommandBuilder()
+  .setName("sync-all-usernames")
+  .setDescription("Sync nicknames for all members linked through Bloxlink");
+
 function setup(client) {
   client.on("interactionCreate", async interaction => {
-    if (!interaction.isChatInputCommand() || interaction.commandName !== "sync-username") return;
+    if (!interaction.isChatInputCommand() || !["sync-username", "sync-all-usernames"].includes(interaction.commandName)) return;
 
     if (!interaction.inGuild() || !interaction.member?.roles?.cache?.has(SENIOR_HR_ROLE_ID)) {
       return interaction.reply({
         content: "You must have the **Senior High Rank** role to use this command.",
         ephemeral: true,
       });
+    }
+
+
+    if (interaction.commandName === "sync-all-usernames") {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        await interaction.guild.members.fetch();
+        const members = [...interaction.guild.members.cache.values()].filter(member => !member.user.bot);
+        let updated = 0, unlinked = 0, unchanged = 0, failed = 0;
+        for (const member of members) {
+          try {
+            const username = await lookupRobloxUser(interaction.guildId, member.id);
+            if (!username) { unlinked++; continue; }
+            if (!member.manageable) { failed++; continue; }
+            if (member.nickname === username) { unchanged++; continue; }
+            await member.setNickname(username, "Senior High Rank bulk sync to linked Roblox username");
+            updated++;
+          } catch (error) {
+            failed++;
+            console.error("[Sync All Usernames] Failed for " + member.user.tag + ":", error?.message || error);
+          }
+          await new Promise(resolve => setTimeout(resolve, 350));
+        }
+        return interaction.editReply("✅ **Username sync completed.**\\nUpdated: **" + updated + "**\\nAlready correct: **" + unchanged + "**\\nNot linked through Bloxlink: **" + unlinked + "**\\nCould not update: **" + failed + "**");
+      } catch (error) {
+        console.error("[Sync All Usernames] Bulk sync failed:", error?.message || error);
+        return interaction.editReply("❌ I couldn't complete the bulk sync. Check the Central Issue Log and confirm Bloxlink is configured.");
+      }
     }
 
     const target = interaction.options.getMember("user");
@@ -96,4 +128,4 @@ function setup(client) {
   });
 }
 
-module.exports = { setup, commands: [command] };
+module.exports = { setup, commands: [command, syncAllCommand] };
