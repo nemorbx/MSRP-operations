@@ -10,8 +10,6 @@ const {
   TextDisplayBuilder,
 } = require("discord.js");
 
-const DATA_DIR = path.join(__dirname, "data");
-const DATA_FILE = path.join(DATA_DIR, "welcome.json");
 const ARRIVALS_CHANNEL_ID = "1527178537600286914";
 const VERIFY_URL = "https://blox.link/dashboard/user/verifications/verify";
 const WELCOME_EMOJI = "<:image_20260331_002936379:1488319316247183434>";
@@ -43,61 +41,33 @@ function generateNickname() {
   return first + second;
 }
 
+const WELCOME_MESSAGES = [
+  "Welcome to **Missouri State Roleplay**, <@{member}>! You’re our **{count}th** member. We’re glad you’re here!",
+  "Hey <@{member}>, welcome to **Missouri State Roleplay**! You’re member **#{count}**. Have a great time with us!",
+  "A new member has arrived! Welcome, <@{member}>, to **Missouri State Roleplay** — member **#{count}**!",
+  "Welcome aboard, <@{member}>! Thanks for joining **Missouri State Roleplay** as our **{count}th** member!",
+  "Everyone give a warm welcome to <@{member}>! You’re now part of **Missouri State Roleplay**, member **#{count}**!"
+];
+
 function buildWelcomeMessage(member) {
   const memberCount = member.guild.memberCount.toLocaleString("en-US");
+  const selected = WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)]
+    .replaceAll("{member}", member.id)
+    .replaceAll("{count}", memberCount);
   const container = new ContainerBuilder()
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        WELCOME_EMOJI + " `` - `` Welcome <@" + member.id + "> to **Missouri State Roleplay!** You are our **" +
-        memberCount + "th** member, we hope you enjoy your stay!\n-# Ensure to verify to gain access to all of our channels and stop in-game Private Messages."
+        WELCOME_EMOJI + " `` - `` " + selected + "\n-# Please verify to access all channels and stop in-game private messages."
       )
     )
     .addActionRowComponents(
       new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setLabel("Verify")
-          .setStyle(ButtonStyle.Link)
-          .setURL(VERIFY_URL)
-          .setEmoji("👋"),
-        new ButtonBuilder()
-          .setLabel(memberCount)
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji("👥")
-          .setDisabled(true)
+        new ButtonBuilder().setLabel("Verify").setStyle(ButtonStyle.Link).setURL(VERIFY_URL).setEmoji("👋"),
+        new ButtonBuilder().setLabel(memberCount).setStyle(ButtonStyle.Secondary).setEmoji("👥").setDisabled(true)
       )
     );
-  return {
-    components: [container],
-    flags: MessageFlags.IsComponentsV2,
-    allowedMentions: { users: [member.id] }
-  };
+  return { components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { users: [member.id] } };
 }
-
-function ensureData() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ channelId: null, autoNicknameEnabled: false }, null, 2), "utf8");
-  }
-}
-
-function loadData() {
-  ensureData();
-  try {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    return {
-      channelId: data.channelId ?? ARRIVALS_CHANNEL_ID,
-      autoNicknameEnabled: data.autoNicknameEnabled === true,
-    };
-  } catch {
-    return { channelId: null, autoNicknameEnabled: false };
-  }
-}
-
-function saveData(data) {
-  ensureData();
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
-}
-
 async function isBotOwner(interaction) {
   try {
     const application = await interaction.client.application.fetch();
@@ -131,19 +101,8 @@ const autoNicknameCommand = new SlashCommandBuilder()
       )
   );
 
-const command = new SlashCommandBuilder()
-  .setName("welcome")
-  .setDescription("Configure the server welcome channel.")
-  .addChannelOption(option =>
-    option
-      .setName("channel")
-      .setDescription("The channel where new members will be welcomed.")
-      .setRequired(true)
-  );
-
 function setupWelcome(client) {
-  client.welcomeData = loadData();
-  // MSRP arrivals channel: always use the designated channel unless explicitly changed by the owner.
+  client.welcomeData = { channelId: ARRIVALS_CHANNEL_ID, autoNicknameEnabled: false };
 
   client.on("interactionCreate", async interaction => {
     if (interaction.isChatInputCommand() && interaction.commandName === "autonickname") {
@@ -167,35 +126,7 @@ function setupWelcome(client) {
       });
       return;
     }
-    if (!interaction.isChatInputCommand() || interaction.commandName !== "welcome") {
-      return;
-    }
 
-    if (!(await isBotOwner(interaction))) {
-      await interaction.reply({
-        content: "You don't have permission to use this command.",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
-
-    const channel = interaction.options.getChannel("channel", true);
-
-    if (!channel.isTextBased() || !channel.send) {
-      await interaction.reply({
-        content: "Please choose a text channel.",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
-
-    client.welcomeData.channelId = channel.id;
-    saveData(client.welcomeData);
-
-    await interaction.reply({
-      content: `Welcome messages will now be sent in <#${channel.id}>.`,
-      flags: MessageFlags.Ephemeral,
-    });
   });
 
   client.on("messageCreate", async message => {
@@ -287,7 +218,7 @@ function setupWelcome(client) {
         });
       }
 
-      const channelId = client.welcomeData?.channelId || ARRIVALS_CHANNEL_ID;
+      const channelId = ARRIVALS_CHANNEL_ID;
       const channel = await member.guild.channels.fetch(channelId).catch(error => {
         console.error("[Welcome] Could not fetch welcome channel " + channelId + ":", error);
         return null;
@@ -317,15 +248,7 @@ function setupWelcome(client) {
   });
 }
 
-function setWelcomeChannel(client, channelId) {
-  client.welcomeData = client.welcomeData || loadData();
-  client.welcomeData.channelId = channelId;
-  saveData(client.welcomeData);
-}
-
 module.exports = {
   setup: setupWelcome,
-  command,
-  commands: [command.toJSON(), autoNicknameCommand.toJSON()],
-  setWelcomeChannel,
+  commands: [autoNicknameCommand.toJSON()],
 };
