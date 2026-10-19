@@ -23,7 +23,7 @@ function ordinal(number) {
 function buildWelcomeMessage(member) {
   const memberCount = member.guild.memberCount;
   const formattedCount = memberCount.toLocaleString("en-US");
-  const welcomeEmoji = getWelcomeEmoji(member.guild);
+  const welcomeEmoji = typeof getWelcomeEmoji === "function" ? getWelcomeEmoji(member.guild) : "🇺🇸";
   const container = new ContainerBuilder()
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
