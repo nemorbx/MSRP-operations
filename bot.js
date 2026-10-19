@@ -48,7 +48,11 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
-// Each feature module registers intentional handlers on this shared client.\n// Raise the threshold to prevent false-positive warnings for the modular event setup.\nclient.setMaxListeners(30);\n\n// Centralized logging for errors and warnings across all bot systems.
+// Each feature module registers intentional handlers on this shared client.
+// Raise the threshold to prevent false-positive warnings for the modular event setup.
+client.setMaxListeners(30);
+
+// Centralized logging for errors and warnings across all bot systems.
 setupBotIssueLogs(client);
 
 setupInfractions(client);
