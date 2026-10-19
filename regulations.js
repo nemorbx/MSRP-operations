@@ -345,12 +345,23 @@ async function ensureRegulationsPanel(client) {
   if (!messages) return;
 
   const isRegulationsPanel = message => {
-    if (message.author?.id !== client.user.id || !message.components?.length) return false;
-    const hasBanner = message.attachments?.some(attachment => attachment.name === REGULATIONS_BANNER_NAME);
-    const hasRegulationsMenu = message.components.some(row =>
-      (row.components || []).some(component => component.customId === "msrp_reg_select_server")
+    if (message.author?.id !== client.user.id) return false;
+
+    const hasBanner = message.attachments?.some(attachment =>
+      [REGULATIONS_BANNER_NAME, BANNER_NAME].includes(attachment.name)
     );
-    return Boolean(hasBanner || hasRegulationsMenu);
+
+    // Match every version of this panel, including older layouts with renamed
+    // select menus or buttons, so restarts never mistake an existing panel for
+    // a missing one and send another copy.
+    const hasRegulationsComponent = (message.components || []).some(row =>
+      (row.components || []).some(component =>
+        typeof component.customId === "string" &&
+        component.customId.startsWith("msrp_reg_")
+      )
+    );
+
+    return Boolean(hasBanner || hasRegulationsComponent);
   };
 
   const panels = messages.filter(isRegulationsPanel);
