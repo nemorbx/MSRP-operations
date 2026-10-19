@@ -131,15 +131,17 @@ function splitTextDisplay(content, maxLength = 3900) {
 
 function privatePage(guild, title, intro, sections) {
   const container = new ContainerBuilder();
+  // Keep each text display comfortably within Discord's component limits.
   container.addSeparatorComponents(divider());
   addBanner(container);
   container.addSeparatorComponents(divider());
-  container.addTextDisplayComponents(...splitTextDisplay(intro));
+  container.addTextDisplayComponents(...splitTextDisplay(intro, 3500));
   for (const section of sections) {
     container.addSeparatorComponents(divider());
+    const heading = String(section.title || "Regulations").slice(0, 40);
     container.addTextDisplayComponents(
-      display("### " + section.title),
-      ...splitTextDisplay(section.body)
+      display("### " + heading),
+      ...splitTextDisplay(section.body, 3500)
     );
   }
   addBottomBanner(container);
@@ -496,7 +498,10 @@ function setup(client) {
         flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
       });
     } catch (error) {
-      console.error("Regulations button error:", error);
+      console.error("[Regulations] Failed to render dropdown page", {
+        selectedValue: interaction.isStringSelectMenu() ? interaction.values?.[0] : interaction.customId,
+        error: error?.stack || error?.message || String(error)
+      });
 
       try {
         if (interaction.deferred || interaction.replied) {
