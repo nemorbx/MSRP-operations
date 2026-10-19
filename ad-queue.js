@@ -26,10 +26,6 @@ const adCommand = new SlashCommandBuilder()
         { name: "@here", value: "here" },
         { name: "@everyone", value: "everyone" }
       ))
-    .addStringOption(option => option.setName("server_name")
-      .setDescription("Name of the server being advertised.")
-      .setRequired(true)
-      .setMaxLength(100))
     .addStringOption(option => option.setName("advertisement")
       .setDescription("Full advertisement text to post when its turn arrives.")
       .setRequired(true)
@@ -161,7 +157,7 @@ async function postNextAd(client) {
     queue.items.shift();
     queue.nextPostAt = nextPostingTime(Date.now());
     writeQueue(queue);
-    console.log("[Ad Queue] Posted AD-" + ad.id + " for " + ad.serverName + ". Remaining: " + queue.items.length);
+    console.log("[Ad Queue] Posted AD-" + ad.id + ". Remaining: " + queue.items.length);
   } catch (error) {
     console.error("[Ad Queue] Posting failed; the ad remains queued:", error);
   } finally {
@@ -213,10 +209,9 @@ function setup(client) {
         }
 
         const type = interaction.options.getString("type", true);
-        const serverName = interaction.options.getString("server_name", true).trim();
         const advertisement = interaction.options.getString("advertisement", true).trim();
-        if (!serverName || !advertisement) {
-          await interaction.reply({ content: "Server name and advertisement text cannot be empty.", ephemeral: true });
+        if (!advertisement) {
+          await interaction.reply({ content: "Advertisement text cannot be empty.", ephemeral: true });
           return;
         }
 
@@ -224,7 +219,6 @@ function setup(client) {
         const item = {
           id: queue.nextId++,
           type,
-          serverName,
           advertisement,
           createdBy: interaction.user.id,
           createdAt: Date.now()
