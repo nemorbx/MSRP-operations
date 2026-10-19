@@ -40,10 +40,10 @@ function buildBoosterMessage(member, boostCount) {
   const displayName = member.displayName || member.user.username;
   const mention = `<@${member.id}>`;
   const perks = [
-    "> Access to exclusive booster vehicles, including the **Falcon Heritage Track**, **Chevlon Corbeta 8**, and **Chevrolet Corvette**.",
-    "> Access to exclusive booster weapons and more unlocks.",
-    "> Permission to stream in all voice-perks channels.",
-    "> 75,000 in-game economy cash.",
+    "> Access to booster vehicles.",
+    "> Access to exclusive booster weapons.",
+    "> Permission to stream in all voice channels.",
+    "> 350 economy cash.",
   ].join("\n");
 
   const container = new ContainerBuilder()
