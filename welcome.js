@@ -11,6 +11,8 @@ const {
 } = require("discord.js");
 
 const ARRIVALS_CHANNEL_ID = "1527178537600286914";
+const DATA_DIR = path.join(__dirname, "data");
+const DATA_FILE = path.join(DATA_DIR, "welcome.json");
 const VERIFY_URL = "https://blox.link/dashboard/user/verifications/verify";
 const WELCOME_EMOJI = "<:image_20260331_002936379:1488319316247183434>";
 
@@ -68,6 +70,28 @@ function buildWelcomeMessage(member) {
     );
   return { components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { users: [member.id] } };
 }
+function ensureData() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(DATA_FILE)) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify({ autoNicknameEnabled: false }, null, 2), "utf8");
+  }
+}
+
+function loadData() {
+  ensureData();
+  try {
+    const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+    return { autoNicknameEnabled: data.autoNicknameEnabled === true };
+  } catch {
+    return { autoNicknameEnabled: false };
+  }
+}
+
+function saveData(data) {
+  ensureData();
+  fs.writeFileSync(DATA_FILE, JSON.stringify({ autoNicknameEnabled: data.autoNicknameEnabled === true }, null, 2), "utf8");
+}
+
 async function isBotOwner(interaction) {
   try {
     const application = await interaction.client.application.fetch();
@@ -102,7 +126,7 @@ const autoNicknameCommand = new SlashCommandBuilder()
   );
 
 function setupWelcome(client) {
-  client.welcomeData = { channelId: ARRIVALS_CHANNEL_ID, autoNicknameEnabled: false };
+  client.welcomeData = loadData();
 
   client.on("interactionCreate", async interaction => {
     if (interaction.isChatInputCommand() && interaction.commandName === "autonickname") {
