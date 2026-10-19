@@ -364,16 +364,12 @@ async function ensureRegulationsPanel(client) {
   if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
 
   if (keep) {
-    // Edit the existing message in place so updates never stack another panel.
-    await keep.edit({
-      components: [mainPanel(channel.guild)],
-      files,
-      flags: MessageFlags.IsComponentsV2,
-    });
+    // Persistent panel: leave the existing message untouched during startup.
+    // Only the explicit panel-update command may replace it.
     for (const duplicate of panels.filter(message => message.id !== keep.id).values()) {
       await duplicate.delete().catch(error => console.error("Failed to remove duplicate Regulations panel:", error));
     }
-    console.log("Regulations panel updated in place; duplicate panels cleaned up.");
+    console.log("[Panel Startup] Regulations panel already exists; no panel sent or edited.");
     return;
   }
 
