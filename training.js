@@ -113,9 +113,12 @@ async function getTeamAccess(discordUserId, guildId) {
     throw new Error("Roblox returned an unexpected group membership response.");
   }
 
-  return groupResult.data.some(entry =>
-    String(entry.group?.id ?? entry.groupId ?? entry.group_id) === ROBLOX_GROUP_ID
-  ) ? "Yes" : "No";
+  const isInWhitelistedGroup = groupResult.data.some(entry => {
+    const ids = [entry?.group?.id, entry?.group?.groupId, entry?.groupId, entry?.group_id, entry?.id]
+      .filter(value => value !== undefined && value !== null);
+    return ids.some(id => String(id) === ROBLOX_GROUP_ID);
+  });
+  return isInWhitelistedGroup ? "Yes" : "No";
 }
 function requestButtons(traineeId, accepted = false) {
   return new ActionRowBuilder().addComponents(
@@ -123,27 +126,25 @@ function requestButtons(traineeId, accepted = false) {
     new ButtonBuilder().setCustomId("training_cancel_" + traineeId).setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(false)
   );
 }
-function requestPanel(traineeId, traineeName, timezone, teamAccess, availability = "Now", accepted = false, testPreview = false, notice = "") {
+function requestPanel(traineeId, traineeName, timezone, teamAccess, availability = "Now", accepted = false, testPreview = false) {
   const container = new ContainerBuilder()
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      (notice ? notice + "\n\n" : "") +
-      (testPreview ? "**TEST PREVIEW — not a real request**\n\n" : "") +
-      "## Training Request\n\n" +
-      "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted make your way to the briefing room located inside of the Sheriff's station.\n\n" +
-      "**Trainee:** <@" + traineeId + ">\n" +
-      "**Team Access:** ``" + teamAccess + "``\n" +
+      (testPreview ? "**TEST PREVIEW — not a real request**\\n\\n" : "") +
+      "## Training Request\\n\\n" +
+      "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\\n\\n" +
+      "**Trainee:** <@" + traineeId + ">\\n" +
+      "**Team Access:** ``" + teamAccess + "``\\n" +
       "**Time Zone:** ``" + timezone + "``"
     ))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
     .addActionRowComponents(requestButtons(traineeId, accepted))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder().setURL("https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/banner.PNG")
-      )
-    );
+    .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder().setURL("https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/banner.PNG")
+    ));
   return [container];
 }
+
 function resultButtons(traineeId, resultId, passed, claimed = false) {
   const row = new ActionRowBuilder();
   if (passed) {
@@ -154,29 +155,25 @@ function resultButtons(traineeId, resultId, passed, claimed = false) {
 }
 function resultPanel(record) {
   const passed = record.passed;
+  const notes = String(record.notes || "No additional notes.").replace(/\\n/g, " ").slice(0, 1000);
   const container = new ContainerBuilder()
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      "## Training Results\\n\\n" +
-      "<@" + record.trainerId + "> has sent the results for <@" + record.traineeId + ">'s training. They scored a total of **" + record.total + "/30**, which means the trainee has **" + (passed ? "passed" : "failed") + "**."
+      "## Training Results\\n" +
+      "> <@" + record.trainerId + "> has sent the results for <@" + record.traineeId + ">'s training. They scored a total of **``" + record.total + "/30``**, this means that the user has **``" + (passed ? "passed" : "failed") + "``**.\\n\\n" +
+      "> **Trainee:** <@" + record.traineeId + ">\\n" +
+      "> **Trainer:** <@" + record.trainerId + ">\\n\\n" +
+      "> **Driving Ability:** ``" + record.driving + "``\\n" +
+      "> **SPaG Ability:** ``" + record.spag + "``\\n" +
+      "> **Moderation Ability:** ``" + record.moderation + "``\\n" +
+      "> **Total Score:** ``" + record.total + "/30``\\n\\n" +
+      "> **Training Notes:** ``" + notes + "``"
     ))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      "**Trainee:** <@" + record.traineeId + ">\\n" +
-      "**Trainer:** <@" + record.trainerId + ">"
-    ))
+    .addActionRowComponents(resultButtons(record.traineeId, record.resultId, passed, record.claimed))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      "**Driving Ability:** " + record.driving + "\\n" +
-      "**SPaG Ability:** " + record.spag + "\\n" +
-      "**Moderation Ability:** " + record.moderation + "\\n" +
-      "**Total Score:** " + record.total + "/30"
-    ))
-    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
-    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-      "**Training Notes:** " + String(record.notes || "No additional notes.").slice(0, 1000)
-    ))
-    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
-    .addActionRowComponents(resultButtons(record.traineeId, record.resultId, passed, record.claimed));
+    .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder().setURL("https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/banner.PNG")
+    ));
   return [container];
 }
 
@@ -274,14 +271,16 @@ function setup(client) {
           const request = { traineeId: member.id, guildId: interaction.guild.id, timezone, teamAccess, availability, createdAt: now, status: "pending", messageId: null, channelId: channel.id };
           let sent;
           try {
-            sent = await channel.send({
-              components: requestPanel(
-                member.id, member.user.username, timezone, teamAccess, availability, false, false,
-                "<@&" + STAFF_TRAINER_ROLE_ID + "> New training request from <@" + member.id + ">."
-              ),
-              flags: MessageFlags.IsComponentsV2,
-              allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], users: [member.id] }
+            const pingMessage = await channel.send({
+              content: "<@&" + STAFF_TRAINER_ROLE_ID + ">",
+              allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID] }
             });
+            sent = await channel.send({
+              components: requestPanel(member.id, member.user.username, timezone, teamAccess, availability, false, false),
+              flags: MessageFlags.IsComponentsV2,
+              allowedMentions: { parse: [] }
+            });
+            request.pingMessageId = pingMessage.id;
           } catch (error) {
             console.error("Could not post training request:", error);
             return interaction.editReply("I couldn't post your training request. No request was saved, so please try again in a moment.");
@@ -355,8 +354,12 @@ function setup(client) {
         request.acceptedBy = interaction.user.id;
         request.acceptedAt = Date.now();
         saveData();
-        const panelText = interaction.message.components?.[0]?.components || [];
         const trainee = await interaction.guild.members.fetch(traineeId).catch(() => null);
+        if (request.pingMessageId) {
+          await interaction.channel.messages.delete(request.pingMessageId).catch(() => {});
+          request.pingMessageId = null;
+          saveData();
+        }
         const requestPanelComponents = requestPanel(
           traineeId,
           trainee?.user?.username || "Unknown user",
@@ -370,14 +373,9 @@ function setup(client) {
         if (trainee) {
           await trainee.send("Your training request has been accepted by <@" + interaction.user.id + ">. Please make your way to the briefing room inside the Sheriff's station.").catch(() => {});
         }
-        const acceptedNotice = new ContainerBuilder()
-          .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-            "## Training Request Accepted\\n\\n<@" + traineeId + ">, <@" + interaction.user.id + "> has accepted your training request. Please make your way to the briefing room inside the Sheriff's station."
-          ));
         await interaction.channel.send({
-          components: [acceptedNotice],
-          flags: MessageFlags.IsComponentsV2,
-          allowedMentions: { users: [traineeId, interaction.user.id] }
+          content: "<@" + interaction.user.id + "> has accepted this training request.",
+          allowedMentions: { users: [interaction.user.id] }
         });
         return;
       }
