@@ -292,54 +292,60 @@ async function sendJurisdiction(interaction) {
 }
 
 async function ensureRegulationsPanel(client) {
-  // Fetch by channel ID directly rather than relying on the first cached guild.
   const channel = await client.channels.fetch(REGULATIONS_CHANNEL_ID).catch(() => null);
-  if (!channel || !channel.isTextBased()) {
-    console.error("Regulations channel could not be found or is not text-based.");
+  if (!channel || !channel.isTextBased() || typeof channel.messages?.fetch !== "function") {
+    console.error("Regulations channel could not be found or is not a readable text channel.");
     return;
   }
-  const messages = await channel.messages.fetch({ limit: 100 }).catch(() => null);
+
+  const messages = await channel.messages.fetch({ limit: 100 }).catch(error => {
+    console.error("Could not inspect the Regulations channel:", error);
+    return null;
+  });
   if (!messages) return;
 
-  const botPanels = messages.filter(message =>
-    message.author?.id === client.user.id &&
-    message.components?.length &&
-    message.attachments?.some(attachment => attachment.name === REGULATIONS_BANNER_NAME)
-  );
+  const isRegulationsPanel = message => {
+    if (message.author?.id !== client.user.id || !message.components?.length) return false;
+    const hasBanner = message.attachments?.some(attachment => attachment.name === REGULATIONS_BANNER_NAME);
+    const hasRegulationsMenu = message.components.some(row =>
+      (row.components || []).some(component => component.customId === "msrp_reg_select_server")
+    );
+    return Boolean(hasBanner || hasRegulationsMenu);
+  };
 
-  // Do not delete and repost an existing panel on every restart.
-  // Only create one if the channel does not already contain a Regulations panel.
-  if (botPanels.size) {
-    const keep = botPanels.first();
-    for (const duplicate of botPanels.filter(message => message.id !== keep.id).values()) {
-      await duplicate.delete().catch(error => console.error("Failed to remove duplicate Regulations panel:", error));
-    }
-    console.log("Existing Regulations panel detected; duplicate panels cleaned up.");
-    return;
-  }
-
+  const panels = messages.filter(isRegulationsPanel);
+  const keep = panels.first();
   const regulationsBannerPath = path.join(__dirname, REGULATIONS_BANNER_NAME);
   const bannerPath = path.join(__dirname, BANNER_NAME);
+
   if (!fs.existsSync(regulationsBannerPath)) {
-    console.error(`Missing ${REGULATIONS_BANNER_NAME}. The regulations panel requires this top image.`);
+    console.error(`Missing ${REGULATIONS_BANNER_NAME}; cannot create or update the Regulations panel.`);
     return;
-  }
-  for (const panel of botPanels.values()) {
-    await panel.delete().catch(error => {
-      console.error("Failed to replace outdated Regulations panel:", error);
-    });
   }
 
   const files = [{ attachment: regulationsBannerPath, name: REGULATIONS_BANNER_NAME }];
   if (fs.existsSync(bannerPath)) files.push({ attachment: bannerPath, name: BANNER_NAME });
+
+  if (keep) {
+    // Edit the existing message in place so updates never stack another panel.
+    await keep.edit({
+      components: [mainPanel(channel.guild)],
+      files,
+      flags: MessageFlags.IsComponentsV2,
+    });
+    for (const duplicate of panels.filter(message => message.id !== keep.id).values()) {
+      await duplicate.delete().catch(error => console.error("Failed to remove duplicate Regulations panel:", error));
+    }
+    console.log("Regulations panel updated in place; duplicate panels cleaned up.");
+    return;
+  }
+
   await channel.send({
     components: [mainPanel(channel.guild)],
     files,
     flags: MessageFlags.IsComponentsV2,
   });
-  console.log(botPanels.size
-    ? "Outdated Regulations panel replaced with the current footer layout."
-    : "Regulations panel was missing, so one replacement was posted.");
+  console.log("Regulations panel was missing, so one panel was posted.");
 }
 
 async function postOrRefreshPanel(client) {
