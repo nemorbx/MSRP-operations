@@ -1,0 +1,233 @@
+const fs = require("fs");
+const path = require("path");
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require("discord.js");
+
+const GROUP_ID = "974927500";
+const STAFF_ROLE_ID = "896330003";
+const LOG_CHANNEL_ID = "1561919652655796244";
+const SENIOR_HR_ROLE_ID = "1551704056991318191";
+const STAFF_ROLE_IDS = new Set([
+  "1528242210871447672", // Staff Team
+  "1527385806895976590", // Highway Patrol
+  "1527385974290776144", // St. Louis County Police
+  "1551985353802518588", // Awaiting Training (Trainee Staff)
+]);
+const DATA_PATH = path.join(__dirname, "roblox-group-sync-data.json");
+const API_BASE = "https://apis.roblox.com/cloud/v2/groups/" + GROUP_ID;
+
+function loadData() {
+  try {
+    const data = JSON.parse(fs.readFileSync(DATA_PATH, "utf8"));
+    return { removalReviews: data.removalReviews || {}, confirmedReviews: data.confirmedReviews || {} };
+  } catch {
+    return { removalReviews: {}, confirmedReviews: {} };
+  }
+}
+const data = loadData();
+function saveData() {
+  fs.writeFileSync(DATA_PATH, JSON.stringify(data, null, 2));
+}
+function isEligible(member) {
+  return [...STAFF_ROLE_IDS].some(roleId => member.roles.cache.has(roleId));
+}
+function isSeniorHROrAbove(member) {
+  if (!member) return false;
+  if (member.permissions.has("Administrator")) return true;
+  if (member.roles.cache.has(SENIOR_HR_ROLE_ID)) return true;
+  // Roles higher than Senior HR are expected to be above it in the configured Discord hierarchy.
+  const seniorRole = member.guild.roles.cache.get(SENIOR_HR_ROLE_ID);
+  return Boolean(seniorRole && member.roles.highest.position > seniorRole.position);
+}
+function getBloxlinkKey() {
+  return process.env.BLOXLINK_API_KEY;
+}
+function getRobloxKey() {
+  return process.env.ROBLOX_GROUP_API_KEY;
+}
+async function lookupRobloxId(discordId, guildId) {
+  const key = getBloxlinkKey();
+  if (!key) throw new Error("BLOXLINK_API_KEY is not configured.");
+  const response = await fetch(
+    "https://api.blox.link/v4/public/guilds/" + encodeURIComponent(guildId) +
+    "/discord-to-roblox/" + encodeURIComponent(discordId),
+    { headers: { Authorization: key, Accept: "application/json" }, signal: AbortSignal.timeout(12000) }
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error("Bloxlink lookup returned HTTP " + response.status + ".");
+  const result = await response.json();
+  const value = result && (result.robloxID || result.robloxId || result.roblox_id ||
+    result.primaryAccount || result.primary_account || result.user?.robloxID ||
+    result.user?.robloxId || result.user?.roblox_id || result.user?.id);
+  const id = typeof value === "object" && value ? (value.robloxID || value.robloxId || value.id || value.roblox_id) : value;
+  return id && /^\d+$/.test(String(id)) ? String(id) : null;
+}
+async function robloxRequest(pathname, options = {}) {
+  const key = getRobloxKey();
+  if (!key) throw new Error("ROBLOX_GROUP_API_KEY is not configured.");
+  const response = await fetch(API_BASE + pathname, {
+    ...options,
+    headers: { "x-api-key": key, Accept: "application/json", ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) },
+    signal: options.signal || AbortSignal.timeout(15000),
+  });
+  const body = await response.text();
+  if (!response.ok) throw new Error("Roblox Open Cloud returned HTTP " + response.status + (body ? ": " + body.slice(0, 250) : ""));
+  if (!body) return {};
+  try { return JSON.parse(body); } catch { return {}; }
+}
+async function findMembership(robloxId) {
+  const filter = encodeURIComponent("user == 'users/" + robloxId + "'");
+  const result = await robloxRequest("/memberships?filter=" + filter);
+  const memberships = result.groupMemberships || result.memberships || result.data || [];
+  return memberships.find(item => item && (item.user?.path === "users/" + robloxId ||
+    item.user?.id === robloxId || item.userId === robloxId)) || memberships[0] || null;
+}
+async function setStaffRole(robloxId) {
+  const membership = await findMembership(robloxId);
+  if (!membership) return { status: "not-in-group" };
+  const membershipId = membership.path ? membership.path.split("/").pop() : membership.id;
+  if (!membershipId) throw new Error("Roblox returned a membership without an ID.");
+  const currentRole = membership.role;
+  if (currentRole && (currentRole.path === "groups/" + GROUP_ID + "/roles/" + STAFF_ROLE_ID ||
+      currentRole.id === STAFF_ROLE_ID || currentRole.roleId === STAFF_ROLE_ID)) {
+    return { status: "already-correct" };
+  }
+  await robloxRequest("/memberships/" + encodeURIComponent(membershipId), {
+    method: "PATCH",
+    body: JSON.stringify({ role: "groups/" + GROUP_ID + "/roles/" + STAFF_ROLE_ID }),
+  });
+  return { status: "role-assigned" };
+}
+async function sendLog(client, message) {
+  try {
+    const channel = await client.channels.fetch(LOG_CHANNEL_ID);
+    if (channel?.isTextBased()) await channel.send({ content: message, allowedMentions: { parse: [] } });
+  } catch (error) {
+    console.error("[Roblox Group Sync] Could not send log:", error?.message || error);
+  }
+}
+function queueRemoval(discordId, robloxId, reason) {
+  data.removalReviews[discordId] = {
+    discordId, robloxId: robloxId || null, reason,
+    createdAt: new Date().toISOString(), confirmedBy: null,
+  };
+  saveData();
+}
+const syncCommand = new SlashCommandBuilder()
+  .setName("roblox-sync")
+  .setDescription("Synchronize a staff member's Roblox group role")
+  .addUserOption(option => option.setName("member").setDescription("Staff member to sync; omit to sync yourself").setRequired(false));
+const reviewCommand = new SlashCommandBuilder()
+  .setName("roblox-review")
+  .setDescription("Review pending Roblox group removal checks");
+
+async function handleSync(interaction) {
+  const target = interaction.options.getMember("member") || interaction.member;
+  if (!isSeniorHROrAbove(interaction.member)) {
+    await interaction.reply({ content: "Only Senior HR and above can use Roblox sync commands.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  if (!target || !target.roles) {
+    await interaction.reply({ content: "I couldn't resolve that Discord member. Try again.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  if (!isEligible(target)) {
+    await interaction.reply({ content: "That member does not currently have a qualifying staff role. No Roblox changes were made.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  try {
+    const robloxId = await lookupRobloxId(target.id, interaction.guildId);
+    if (!robloxId) {
+      await interaction.editReply("No Bloxlink-linked Roblox account was found. Ask the member to link their account; no changes were made.");
+      await sendLog(interaction.client, "⚠️ Roblox sync skipped for <@" + target.id + ">: no Bloxlink-linked account.");
+      return;
+    }
+    const result = await setStaffRole(robloxId);
+    if (result.status === "not-in-group") {
+      await interaction.editReply("The linked Roblox account is not currently in group " + GROUP_ID + ". Ask them to request to join; eligible join requests can be handled by the automation.");
+      await sendLog(interaction.client, "ℹ️ Roblox sync for <@" + target.id + "> (Roblox ID " + robloxId + "): not currently a group member.");
+      return;
+    }
+    await interaction.editReply(result.status === "already-correct"
+      ? "This member already has the configured staff Roblox role."
+      : "Successfully assigned the configured staff Roblox role.");
+    await sendLog(interaction.client, "✅ Roblox role sync for <@" + target.id + "> (Roblox ID " + robloxId + "): " + result.status + ".");
+  } catch (error) {
+    console.error("[Roblox Group Sync]", error);
+    await interaction.editReply("Roblox sync failed safely. No removal was attempted. The error was logged; try again later.");
+    await sendLog(interaction.client, "❌ Roblox sync failed for <@" + target.id + ">: " + String(error?.message || error).slice(0, 500));
+  }
+}
+async function handleReview(interaction) {
+  if (!isSeniorHROrAbove(interaction.member)) {
+    await interaction.reply({ content: "Only Senior HR and above can review Roblox removal checks.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const entries = Object.values(data.removalReviews);
+  if (!entries.length) {
+    await interaction.reply({ content: "There are no pending Roblox removal reviews.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const lines = entries.slice(0, 15).map((entry, index) =>
+    (index + 1) + ". Discord: <@" + entry.discordId + "> • Roblox ID: " + (entry.robloxId || "unresolved") +
+    "\n   Reason: " + entry.reason + " • Since: " + entry.createdAt.slice(0, 10) +
+    (entry.confirmedBy ? " • Confirmed by <@" + entry.confirmedBy + ">" : " • Awaiting confirmation")
+  );
+  await interaction.reply({
+    content: "**Pending Roblox removal reviews**\n" + lines.join("\n"),
+    flags: MessageFlags.Ephemeral,
+  });
+}
+async function syncMember(client, member, reason = "staff role update") {
+  if (!member?.guild || member.guild.id !== process.env.DISCORD_GUILD_ID && process.env.DISCORD_GUILD_ID) return;
+  if (!isEligible(member)) {
+    if (member.roles.cache.size > 0) {
+      try {
+        const robloxId = await lookupRobloxId(member.id, member.guild.id);
+        queueRemoval(member.id, robloxId, reason + ": no qualifying staff role remains");
+        await sendLog(client, "🟠 Roblox removal review queued for <@" + member.id + "> (Roblox ID " + (robloxId || "unresolved") + "). Reason: " + reason + ". Staff confirmation is required. This bot will not remove group membership because the documented Open Cloud API does not expose a supported membership-removal endpoint.");
+      } catch (error) {
+        await sendLog(client, "⚠️ Could not resolve Roblox account for removal review for <@" + member.id + ">. No destructive change was made. Error: " + String(error?.message || error).slice(0, 300));
+      }
+    }
+    return;
+  }
+  try {
+    const robloxId = await lookupRobloxId(member.id, member.guild.id);
+    if (!robloxId) {
+      await sendLog(client, "⚠️ Staff member <@" + member.id + "> has no Bloxlink-linked Roblox account. Link required; no Roblox change made.");
+      return;
+    }
+    const result = await setStaffRole(robloxId);
+    await sendLog(client, result.status === "not-in-group"
+      ? "ℹ️ <@" + member.id + "> is eligible, but their linked Roblox account is not in group " + GROUP_ID + "."
+      : "✅ Staff role sync for <@" + member.id + "> (Roblox ID " + robloxId + "): " + result.status + ".");
+  } catch (error) {
+    await sendLog(client, "❌ Roblox sync failed safely for <@" + member.id + ">: " + String(error?.message || error).slice(0, 400));
+  }
+}
+function setup(client) {
+  client.on("guildMemberUpdate", async (oldMember, newMember) => {
+    const before = [...STAFF_ROLE_IDS].some(id => oldMember.roles.cache.has(id));
+    const after = isEligible(newMember);
+    if (before === after && ![...STAFF_ROLE_IDS].some(id => oldMember.roles.cache.has(id) !== newMember.roles.cache.has(id))) return;
+    await syncMember(client, newMember, "qualifying role changed");
+  });
+  client.on("guildMemberRemove", async member => {
+    if (!isEligible(member)) return;
+    try {
+      const robloxId = await lookupRobloxId(member.id, member.guild.id);
+      queueRemoval(member.id, robloxId, "left the main Discord server");
+      await sendLog(client, "🟠 Roblox removal review queued for departed member <@" + member.id + "> (Roblox ID " + (robloxId || "unresolved") + "). Second check and staff confirmation are required. Automatic group removal is not available through the documented Open Cloud membership endpoints, so no destructive change was made.");
+    } catch (error) {
+      queueRemoval(member.id, null, "left the main Discord server; Bloxlink lookup failed");
+      await sendLog(client, "⚠️ Departed Discord member <@" + member.id + "> queued for Roblox removal review, but Bloxlink lookup failed. No destructive change was made.");
+    }
+  });
+  client.on("interactionCreate", async interaction => {
+    if (!interaction.isChatInputCommand() || !interaction.guild) return;
+    if (interaction.commandName === "roblox-sync") await handleSync(interaction);
+    if (interaction.commandName === "roblox-review") await handleReview(interaction);
+  });
+}
+module.exports = { setup, commands: [syncCommand, reviewCommand] };
