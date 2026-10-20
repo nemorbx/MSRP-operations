@@ -97,6 +97,66 @@ async function setStaffRole(robloxId) {
   });
   return { status: "role-assigned" };
 }
+
+async function lookupDiscordIds(robloxId, guildId) {
+  const key = getBloxlinkKey();
+  if (!key) throw new Error("BLOXLINK_API_KEY is not configured.");
+  const response = await fetch(
+    "https://api.blox.link/v4/public/guilds/" + encodeURIComponent(guildId) +
+    "/roblox-to-discord/" + encodeURIComponent(robloxId),
+    { headers: { Authorization: key, Accept: "application/json" }, signal: AbortSignal.timeout(12000) }
+  );
+  if (response.status === 404) return [];
+  if (!response.ok) throw new Error("Bloxlink reverse lookup returned HTTP " + response.status + ".");
+  const result = await response.json();
+  const ids = [
+    ...(Array.isArray(result?.discordIDs) ? result.discordIDs : []),
+    ...(Array.isArray(result?.discordIds) ? result.discordIds : []),
+    ...(Array.isArray(result?.discord_ids) ? result.discord_ids : []),
+    result?.discordID, result?.discordId, result?.discord_id,
+    result?.primaryDiscordID, result?.primaryDiscordId, result?.primary_discord_id,
+  ];
+  return [...new Set(ids.filter(id => /^\\d+$/.test(String(id || ""))).map(String))];
+}
+async function pollJoinRequests(client) {
+  const guild = (process.env.DISCORD_GUILD_ID && client.guilds.cache.get(process.env.DISCORD_GUILD_ID)) ||
+    client.guilds.cache.first();
+  if (!guild || !getBloxlinkKey() || !getRobloxKey()) return;
+  let pageToken = "";
+  let scanned = 0;
+  try {
+    do {
+      const query = pageToken ? "?pageToken=" + encodeURIComponent(pageToken) : "";
+      const result = await robloxRequest("/join-requests" + query);
+      const requests = result.groupJoinRequests || result.joinRequests || result.data || [];
+      for (const request of requests) {
+        if (scanned++ >= 100) return;
+        const rawUser = request.user || request.requester || {};
+        const path = rawUser.path || request.userPath || "";
+        const robloxId = String(rawUser.id || rawUser.userId || request.userId || path.split("/").pop() || "");
+        const requestPath = request.path || "";
+        const requestId = request.id || request.joinRequestId || requestPath.split("/").pop();
+        if (!/^\\d+$/.test(robloxId) || !requestId) continue;
+        const discordIds = await lookupDiscordIds(robloxId, guild.id);
+        let eligibleMember = null;
+        for (const discordId of discordIds) {
+          const member = await guild.members.fetch(discordId).catch(() => null);
+          if (member && isEligible(member)) { eligibleMember = member; break; }
+        }
+        if (!eligibleMember) continue; // Ineligible or unlinked requests intentionally remain pending.
+        await robloxRequest("/join-requests/" + encodeURIComponent(requestId) + ":accept", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        await sendLog(client, "✅ Automatically accepted Roblox group join request for eligible staff member <@" + eligibleMember.id + "> (Roblox ID " + robloxId + ").");
+      }
+      pageToken = result.nextPageToken || "";
+    } while (pageToken);
+  } catch (error) {
+    await sendLog(client, "⚠️ Roblox join-request check failed safely; requests were not declined. Error: " + String(error?.message || error).slice(0, 400));
+  }
+}
+
 async function sendLog(client, message) {
   try {
     const channel = await client.channels.fetch(LOG_CHANNEL_ID);
@@ -206,7 +266,7 @@ async function syncMember(client, member, reason = "staff role update") {
     await sendLog(client, "❌ Roblox sync failed safely for <@" + member.id + ">: " + String(error?.message || error).slice(0, 400));
   }
 }
-function setup(client) {
+function setup(client) {\n  client.once("clientReady", () => {\n    // Poll only after the bot is ready; unlinked/ineligible requests are left pending.\n    pollJoinRequests(client).catch(error => console.error("[Roblox Group Sync] Join-request poll failed:", error));\n    setInterval(() => pollJoinRequests(client).catch(error => console.error("[Roblox Group Sync] Join-request poll failed:", error)), 5 * 60 * 1000);\n  });
   client.on("guildMemberUpdate", async (oldMember, newMember) => {
     const before = [...STAFF_ROLE_IDS].some(id => oldMember.roles.cache.has(id));
     const after = isEligible(newMember);
