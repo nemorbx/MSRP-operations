@@ -189,8 +189,12 @@ const reviewCommand = new SlashCommandBuilder()
   .setDescription("Review pending Roblox group removal checks");
 
 async function handleSync(interaction) {
-  const target = interaction.options.getMember("member") || interaction.member;
-  if (!isSeniorHROrAbove(interaction.member)) {
+  const actor = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+  const selectedUser = interaction.options.getUser("member");
+  const target = selectedUser
+    ? await interaction.guild.members.fetch(selectedUser.id).catch(() => null)
+    : actor;
+  if (!isSeniorHROrAbove(actor)) {
     await interaction.reply({ content: "Only Senior HR and above can use Roblox sync commands.", flags: MessageFlags.Ephemeral });
     return;
   }
@@ -227,7 +231,8 @@ async function handleSync(interaction) {
   }
 }
 async function handleReview(interaction) {
-  if (!isSeniorHROrAbove(interaction.member)) {
+  const actor = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+  if (!isSeniorHROrAbove(actor)) {
     await interaction.reply({ content: "Only Senior HR and above can review Roblox removal checks.", flags: MessageFlags.Ephemeral });
     return;
   }
