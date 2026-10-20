@@ -276,18 +276,15 @@ async function handleConfirmRemoval(interaction) {
     await sendLog(interaction.client, "✅ Roblox removal review cancelled for <@" + user.id + ">: second check found a qualifying role.");
     return;
   }
-  let latestRobloxId = review.robloxId;
-  if (currentMember) {
-    latestRobloxId = await lookupRobloxId(user.id, interaction.guildId).catch(() => review.robloxId);
-    if (review.robloxId && latestRobloxId && String(review.robloxId) !== String(latestRobloxId)) {
-      review.robloxId = latestRobloxId;
-      review.confirmedBy = null;
-      review.createdAt = new Date().toISOString();
-      saveData();
-      await interaction.editReply("The linked Roblox account changed. The review was refreshed and must be checked again before confirmation.");
-      await sendLog(interaction.client, "⚠️ Roblox removal review refreshed for <@" + user.id + "> because their linked Roblox account changed.");
-      return;
-    }
+  let latestRobloxId = await lookupRobloxId(user.id, interaction.guildId).catch(() => review.robloxId);
+  if (review.robloxId && latestRobloxId && String(review.robloxId) !== String(latestRobloxId)) {
+    review.robloxId = latestRobloxId;
+    review.confirmedBy = null;
+    review.createdAt = new Date().toISOString();
+    saveData();
+    await interaction.editReply("The linked Roblox account changed. The review was refreshed and must be checked again before confirmation.");
+    await sendLog(interaction.client, "⚠️ Roblox removal review refreshed for <@" + user.id + "> because their linked Roblox account changed.");
+    return;
   }
   review.robloxId = latestRobloxId || null;
   review.confirmedBy = actor.id;
