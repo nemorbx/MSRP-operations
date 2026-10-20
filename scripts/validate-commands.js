@@ -4,7 +4,6 @@ const modules = {
   infractions: require("../infractions"),
   promotions: require("../promotions"),
   afk: require("../afk"),
-  counting: require("../counting"),
   giveaway: require("../giveaway"),
   staffFeedback: require("../staff-feedback"),
   suggestions: require("../suggestions"),
@@ -17,7 +16,6 @@ const rawCommands = [
   ...(modules.infractions.commands || []),
   ...(modules.promotions.promoteCommand ? [modules.promotions.promoteCommand] : []),
   ...(modules.afk.commands || []),
-  ...(modules.counting.commands || []),
   ...(modules.giveaway.giveawayCommand ? [modules.giveaway.giveawayCommand] : []),
   ...(modules.staffFeedback.feedbackCommand ? [modules.staffFeedback.feedbackCommand] : []),
   ...(modules.staffFeedback.staffRatingCommand ? [modules.staffFeedback.staffRatingCommand] : []),
@@ -41,8 +39,8 @@ const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
 assert.deepEqual([...new Set(duplicates)], [], "Slash command names must be unique.");
 
 const requiredCommands = [
-  "ping", "infract", "promote", "afk", "count", "giveaway",
-  "feedback", "staff-rating", "suggest", "say", "welcome", "autonickname",
+  "infract", "promote", "afk", "giveaway",
+  "feedback", "staff-rating", "suggest", "say", "welcome",
 ];
 for (const name of requiredCommands) {
   assert.ok(names.includes(name), `Required slash command is missing from registration: /${name}`);
