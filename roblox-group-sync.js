@@ -116,7 +116,7 @@ async function lookupDiscordIds(robloxId, guildId) {
     result?.discordID, result?.discordId, result?.discord_id,
     result?.primaryDiscordID, result?.primaryDiscordId, result?.primary_discord_id,
   ];
-  return [...new Set(ids.filter(id => /^\\d+$/.test(String(id || ""))).map(String))];
+  return [...new Set(ids.filter(id => /^\d+$/.test(String(id || ""))).map(String))];
 }
 async function pollJoinRequests(client) {
   const guild = (process.env.DISCORD_GUILD_ID && client.guilds.cache.get(process.env.DISCORD_GUILD_ID)) ||
@@ -136,7 +136,7 @@ async function pollJoinRequests(client) {
         const robloxId = String(rawUser.id || rawUser.userId || request.userId || path.split("/").pop() || "");
         const requestPath = request.path || "";
         const requestId = request.id || request.joinRequestId || requestPath.split("/").pop();
-        if (!/^\\d+$/.test(robloxId) || !requestId) continue;
+        if (!/^\d+$/.test(robloxId) || !requestId) continue;
         const discordIds = await lookupDiscordIds(robloxId, guild.id);
         let eligibleMember = null;
         for (const discordId of discordIds) {
