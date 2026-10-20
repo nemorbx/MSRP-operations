@@ -144,11 +144,19 @@ async function pollJoinRequests(client) {
           if (member && isEligible(member)) { eligibleMember = member; break; }
         }
         if (!eligibleMember) continue; // Ineligible or unlinked requests intentionally remain pending.
-        await robloxRequest("/join-requests/" + encodeURIComponent(requestId) + ":accept", {
-          method: "POST",
-          body: JSON.stringify({}),
-        });
-        await sendLog(client, "✅ Automatically accepted Roblox group join request for eligible staff member <@" + eligibleMember.id + "> (Roblox ID " + robloxId + ").");
+        await robloxRequest("/join-requests/" + encodeURIComponent(requestId) + ":accept", { method: "POST" });
+        let assigned = false;
+        for (let attempt = 0; attempt < 3 && !assigned; attempt++) {
+          if (attempt) await new Promise(resolve => setTimeout(resolve, 1500));
+          try {
+            const syncResult = await setStaffRole(robloxId);
+            assigned = syncResult.status === "role-assigned" || syncResult.status === "already-correct";
+            if (syncResult.status === "not-in-group") continue;
+          } catch (error) {
+            if (attempt === 2) throw error;
+          }
+        }
+        await sendLog(client, "✅ Automatically accepted Roblox group join request for eligible staff member <@" + eligibleMember.id + "> (Roblox ID " + robloxId + "). " + (assigned ? "Staff role assignment verified." : "Role assignment will need a retry after Roblox membership finishes processing."));
       }
       pageToken = result.nextPageToken || "";
     } while (pageToken);
