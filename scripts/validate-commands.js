@@ -9,6 +9,7 @@ const modules = {
   suggestions: require("../suggestions"),
   say: require("../say"),
   welcome: require("../welcome"),
+  support: require("../support"),
   robloxGroupSync: require("../roblox-group-sync"),
 };
 
@@ -22,6 +23,7 @@ const rawCommands = [
   ...(modules.suggestions.commands || []),
   ...(modules.say.command ? [modules.say.command] : []),
   ...(modules.welcome.commands || []),
+  ...(modules.support.commands || []),
   ...(modules.robloxGroupSync.commands || []),
 ];
 
@@ -40,7 +42,7 @@ assert.deepEqual([...new Set(duplicates)], [], "Slash command names must be uniq
 
 const requiredCommands = [
   "infract", "promote", "afk", "giveaway",
-  "feedback", "staff-rating", "suggest", "say", "welcome",
+  "feedback", "staff-rating", "suggest", "say", "welcome", "escalate",
 ];
 for (const name of requiredCommands) {
   assert.ok(names.includes(name), `Required slash command is missing from registration: /${name}`);
