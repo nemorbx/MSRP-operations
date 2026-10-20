@@ -321,7 +321,8 @@ async function syncMember(client, member, reason = "staff role update") {
     await sendLog(client, "❌ Roblox sync failed safely for <@" + member.id + ">: " + String(error?.message || error).slice(0, 400));
   }
 }
-function setup(client) {\n  client.once("clientReady", () => {\n    // Poll only after the bot is ready; unlinked/ineligible requests are left pending.\n    pollJoinRequests(client).catch(error => console.error("[Roblox Group Sync] Join-request poll failed:", error));\n    setInterval(() => pollJoinRequests(client).catch(error => console.error("[Roblox Group Sync] Join-request poll failed:", error)), 5 * 60 * 1000);\n  });
+function setup(client) {
+  client.once("clientReady", () => {\n    // Poll only after the bot is ready; unlinked/ineligible requests are left pending.\n    pollJoinRequests(client).catch(error => console.error("[Roblox Group Sync] Join-request poll failed:", error));\n    setInterval(() => pollJoinRequests(client).catch(error => console.error("[Roblox Group Sync] Join-request poll failed:", error)), 5 * 60 * 1000);\n  });
   client.on("guildMemberUpdate", async (oldMember, newMember) => {
     const before = [...STAFF_ROLE_IDS].some(id => oldMember.roles.cache.has(id));
     const after = isEligible(newMember);
