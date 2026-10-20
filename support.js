@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const {
+  SlashCommandBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -585,11 +586,12 @@ async function submitTicket(interaction, typeKey) {
   const ping = await channel.send({ content: `<@&${type.roleId}>` }).catch(() => null);
   if (ping) setTimeout(() => ping.delete().catch(() => {}), 1500);
 
-  await channel.send({
+  const panelMessage = await channel.send({
     components: ticketPanelComponents(ticket),
     files: ticketPanelFiles(),
     flags: MessageFlags.IsComponentsV2,
   });
+  ticket.panelMessageId = panelMessage.id;
 
   tickets[channel.id] = ticket;
   saveTickets(tickets);
@@ -597,6 +599,51 @@ async function submitTicket(interaction, typeKey) {
   await interaction.editReply(
     `Your ${type.label} ticket has been created: <#${channel.id}>`
   );
+}
+
+
+const escalateCommand = new SlashCommandBuilder()
+  .setName("escalate")
+  .setDescription("Escalate the current support ticket to Management");
+
+async function handleEscalate(interaction, ticket) {
+  if (ticket.closed || ticket.closing) {
+    await interaction.reply({ content: "This ticket is closed or currently closing.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const member = interaction.member;
+  const canEscalate = isHighRank(member) || canUseTeam(member, ticket.teamRoleId) || ticket.claimedBy === interaction.user.id;
+  if (!canEscalate) {
+    await interaction.reply({ content: "Only the assigned support team, the ticket's claimer, or Senior HR and above can escalate this ticket.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  if (ticket.escalated) {
+    await interaction.reply({ content: "This ticket has already been escalated to Management.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const oldRoleId = ticket.teamRoleId;
+  ticket.teamRoleId = MANAGEMENT_TEAM_ROLE_ID;
+  ticket.escalated = true;
+  ticket.escalatedAt = new Date().toISOString();
+  ticket.escalatedBy = interaction.user.id;
+  const tickets = readTickets();
+  tickets[ticket.threadId] = ticket;
+  saveTickets(tickets);
+
+  await interaction.reply({ content: "This ticket has been escalated to Management.", flags: MessageFlags.Ephemeral });
+  const thread = interaction.channel;
+  if (ticket.panelMessageId) {
+    const panelMessage = await thread.messages.fetch(ticket.panelMessageId).catch(() => null);
+    if (panelMessage) {
+      await panelMessage.edit({ components: ticketPanelComponents(ticket), flags: MessageFlags.IsComponentsV2 }).catch(error => {
+        console.error("Could not update escalated ticket panel:", error);
+      });
+    }
+  }
+  await thread.send({
+    content: "**Ticket Escalated to Management**\\n<@&" + MANAGEMENT_TEAM_ROLE_ID + "> — this ticket was escalated by <@" + interaction.user.id + "> from <@&" + oldRoleId + ">.",
+    allowedMentions: { roles: [MANAGEMENT_TEAM_ROLE_ID], users: [interaction.user.id] }
+  }).catch(error => console.error("Could not notify Management about escalated ticket:", error));
 }
 
 async function handleClaim(interaction, ticket) {
@@ -892,6 +939,11 @@ async function setup(client) {
         return;
       }
 
+      if (interaction.isChatInputCommand() && interaction.commandName === "escalate") {
+        await handleEscalate(interaction, ticket);
+        return;
+      }
+
       if (!interaction.isButton()) return;
       if (!interaction.customId.startsWith("support:")) return;
 
@@ -926,4 +978,4 @@ async function setup(client) {
   });
 }
 
-module.exports = { setup, ensureSupportPanel };
+module.exports = { setup, ensureSupportPanel, commands: [escalateCommand] };
