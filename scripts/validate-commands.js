@@ -10,6 +10,7 @@ const modules = {
   suggestions: require("../suggestions"),
   say: require("../say"),
   welcome: require("../welcome"),
+  robloxGroupSync: require("../roblox-group-sync"),
 };
 
 const rawCommands = [
@@ -23,6 +24,7 @@ const rawCommands = [
   ...(modules.suggestions.commands || []),
   ...(modules.say.command ? [modules.say.command] : []),
   ...(modules.welcome.commands || []),
+  ...(modules.robloxGroupSync.commands || []),
 ];
 
 const definitions = rawCommands.map(command =>
