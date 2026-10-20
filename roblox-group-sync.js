@@ -187,6 +187,9 @@ const syncCommand = new SlashCommandBuilder()
 const reviewCommand = new SlashCommandBuilder()
   .setName("roblox-review")
   .setDescription("Review pending Roblox group removal checks");
+const syncAllCommand = new SlashCommandBuilder()
+  .setName("roblox-sync-all")
+  .setDescription("Synchronize all currently eligible staff members' Roblox roles");
 const confirmRemovalCommand = new SlashCommandBuilder()
   .setName("roblox-confirm-removal")
   .setDescription("Confirm a second eligibility check for a pending Roblox removal")
@@ -232,6 +235,38 @@ async function handleSync(interaction) {
     console.error("[Roblox Group Sync]", error);
     await interaction.editReply("Roblox sync failed safely. No removal was attempted. The error was logged; try again later.");
     await sendLog(interaction.client, "❌ Roblox sync failed for <@" + target.id + ">: " + String(error?.message || error).slice(0, 500));
+  }
+}
+async function handleSyncAll(interaction) {
+  const actor = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+  if (!isSeniorHROrAbove(actor)) {
+    await interaction.reply({ content: "Only Senior HR and above can run a full Roblox staff sync.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  try {
+    const members = await interaction.guild.members.fetch();
+    const eligible = [...members.values()].filter(isEligible);
+    let assigned = 0, alreadyCorrect = 0, unlinked = 0, notInGroup = 0, failed = 0;
+    for (const member of eligible.slice(0, 250)) {
+      try {
+        const robloxId = await lookupRobloxId(member.id, interaction.guildId);
+        if (!robloxId) { unlinked++; continue; }
+        const result = await setStaffRole(robloxId);
+        if (result.status === "role-assigned") assigned++;
+        else if (result.status === "already-correct") alreadyCorrect++;
+        else notInGroup++;
+      } catch (error) {
+        failed++;
+        console.error("[Roblox Group Sync] Bulk sync error for " + member.id + ":", error?.message || error);
+      }
+    }
+    await sendLog(interaction.client, "📋 Full Roblox staff sync completed by <@" + actor.id + ">. Checked " + Math.min(eligible.length, 250) + " of " + eligible.length + " eligible staff. Role assigned: " + assigned + "; already correct: " + alreadyCorrect + "; not in group: " + notInGroup + "; unlinked: " + unlinked + "; errors: " + failed + ".");
+    await interaction.editReply("Roblox staff sync finished. Checked " + Math.min(eligible.length, 250) + " of " + eligible.length + " eligible staff.\nAssigned: " + assigned + "\nAlready correct: " + alreadyCorrect + "\nNot in group: " + notInGroup + "\nNo Bloxlink link: " + unlinked + "\nErrors: " + failed + (eligible.length > 250 ? "\nThere are more than 250 eligible members; run again after reviewing these results." : ""));
+  } catch (error) {
+    console.error("[Roblox Group Sync] Bulk sync failed:", error);
+    await interaction.editReply("Full sync failed safely. No removals were attempted. Check the Roblox automation log and try again later.");
+    await sendLog(interaction.client, "❌ Full Roblox staff sync failed: " + String(error?.message || error).slice(0, 400));
   }
 }
 async function handleReview(interaction) {
@@ -344,7 +379,8 @@ function setup(client) {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
     if (interaction.commandName === "roblox-sync") await handleSync(interaction);
     if (interaction.commandName === "roblox-review") await handleReview(interaction);
+    if (interaction.commandName === "roblox-sync-all") await handleSyncAll(interaction);
     if (interaction.commandName === "roblox-confirm-removal") await handleConfirmRemoval(interaction);
   });
 }
-module.exports = { setup, commands: [syncCommand, reviewCommand, confirmRemovalCommand] };
+module.exports = { setup, commands: [syncCommand, reviewCommand, confirmRemovalCommand, syncAllCommand] };
