@@ -187,6 +187,10 @@ const syncCommand = new SlashCommandBuilder()
 const reviewCommand = new SlashCommandBuilder()
   .setName("roblox-review")
   .setDescription("Review pending Roblox group removal checks");
+const confirmRemovalCommand = new SlashCommandBuilder()
+  .setName("roblox-confirm-removal")
+  .setDescription("Confirm a second eligibility check for a pending Roblox removal")
+  .addUserOption(option => option.setName("member").setDescription("Member whose Roblox removal is being confirmed").setRequired(true));
 
 async function handleSync(interaction) {
   const actor = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
@@ -251,6 +255,47 @@ async function handleReview(interaction) {
     flags: MessageFlags.Ephemeral,
   });
 }
+async function handleConfirmRemoval(interaction) {
+  const actor = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+  if (!isSeniorHROrAbove(actor)) {
+    await interaction.reply({ content: "Only Senior HR and above can confirm Roblox removal reviews.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const user = interaction.options.getUser("member");
+  const review = data.removalReviews[user.id];
+  if (!review) {
+    await interaction.reply({ content: "No pending Roblox removal review exists for that user.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  const currentMember = await interaction.guild.members.fetch(user.id).catch(() => null);
+  if (currentMember && isEligible(currentMember)) {
+    delete data.removalReviews[user.id];
+    saveData();
+    await interaction.editReply("Removal cancelled: the member still has a qualifying staff role. Their Roblox group membership must be retained.");
+    await sendLog(interaction.client, "✅ Roblox removal review cancelled for <@" + user.id + ">: second check found a qualifying role.");
+    return;
+  }
+  let latestRobloxId = review.robloxId;
+  if (currentMember) {
+    latestRobloxId = await lookupRobloxId(user.id, interaction.guildId).catch(() => review.robloxId);
+    if (review.robloxId && latestRobloxId && String(review.robloxId) !== String(latestRobloxId)) {
+      review.robloxId = latestRobloxId;
+      review.confirmedBy = null;
+      review.createdAt = new Date().toISOString();
+      saveData();
+      await interaction.editReply("The linked Roblox account changed. The review was refreshed and must be checked again before confirmation.");
+      await sendLog(interaction.client, "⚠️ Roblox removal review refreshed for <@" + user.id + "> because their linked Roblox account changed.");
+      return;
+    }
+  }
+  review.robloxId = latestRobloxId || null;
+  review.confirmedBy = actor.id;
+  review.confirmedAt = new Date().toISOString();
+  saveData();
+  await interaction.editReply("Second check confirmed and recorded. Important: Roblox Open Cloud does not currently expose a supported group-membership removal endpoint for this API key workflow, so this bot has NOT removed the user. A manager must remove the Roblox account manually.");
+  await sendLog(interaction.client, "🛑 Roblox removal second-check confirmed by <@" + actor.id + "> for <@" + user.id + "> (Roblox ID " + (review.robloxId || "unresolved") + "). Manual Roblox group removal is still required; the bot did not perform it.");
+}
 async function syncMember(client, member, reason = "staff role update") {
   if (!member?.guild || member.guild.id !== process.env.DISCORD_GUILD_ID && process.env.DISCORD_GUILD_ID) return;
   if (!isEligible(member)) {
@@ -301,6 +346,7 @@ function setup(client) {\n  client.once("clientReady", () => {\n    // Poll only
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
     if (interaction.commandName === "roblox-sync") await handleSync(interaction);
     if (interaction.commandName === "roblox-review") await handleReview(interaction);
+    if (interaction.commandName === "roblox-confirm-removal") await handleConfirmRemoval(interaction);
   });
 }
-module.exports = { setup, commands: [syncCommand, reviewCommand] };
+module.exports = { setup, commands: [syncCommand, reviewCommand, confirmRemovalCommand] };
