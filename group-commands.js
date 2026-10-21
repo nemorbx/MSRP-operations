@@ -4,6 +4,7 @@ const { SlashCommandBuilder, ContainerBuilder, TextDisplayBuilder, SeparatorBuil
 
 const WHITELISTED_GROUP_ID = "974927500";
 const PUBLIC_GROUP_ID = "362792702";
+const PUBLIC_GROUP_URL = "https://www.roblox.com/communities/362792702/Missouri-State-Roleplay-MSRP#!/about";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const GROUP_LOG_CHANNEL_ID = "1561919652655796244";
 const ELIGIBLE_STAFF_ROLE_IDS = ["1528242210871447672", "1527385806895976590", "1527385974290776144", "1551985353802518588"];
@@ -167,7 +168,7 @@ async function handleGroupInfo(interaction) {
     const ownerName = group => group.owner?.username || group.owner?.displayName || 'Unavailable';
     const count = group => Number.isFinite(group.memberCount) ? group.memberCount.toLocaleString('en-US') : 'Unavailable';
     const ticks = String.fromCharCode(96,96);
-    const groupBlock = (title, id, group, linkLabel) => '## ' + title + ' (' + id + ')\n' + 'Member count: ' + ticks + count(group) + ticks + '\n' + 'Group Owner: ' + ticks + ownerName(group) + ticks + '\n' + 'Group Link: [' + linkLabel + '](<https://www.roblox.com/communities/' + id + '/#!/about>)';
+    const groupBlock = (title, id, group, linkLabel) => '## ' + title + ' (' + id + ')\n' + 'Member count: ' + ticks + count(group) + ticks + '\n' + 'Group Owner: ' + ticks + ownerName(group) + ticks + '\n' + 'Group Link: [' + linkLabel + '](<' + (id === PUBLIC_GROUP_ID ? PUBLIC_GROUP_URL : 'https://www.roblox.com/communities/' + id + '/#!/about') + '>)';
     const container = new ContainerBuilder();
     container.addTextDisplayComponents(new TextDisplayBuilder().setContent(groupBlock('Whitelisted Group', WHITELISTED_GROUP_ID, white, 'Whitelisted Group')));
     container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large).setDivider(true));
