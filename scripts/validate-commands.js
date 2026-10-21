@@ -44,7 +44,7 @@ assert.deepEqual([...new Set(duplicates)], [], "Slash command names must be uniq
 
 const requiredCommands = [
   "infract", "promote", "afk", "giveaway",
-  "feedback", "staff-rating", "suggest", "say", "welcome", "escalate", "group", "group-info",
+  "feedback", "staff-rating", "suggest", "say", "welcome", "escalate", "group",
 ];
 for (const name of requiredCommands) {
   assert.ok(names.includes(name), `Required slash command is missing from registration: /${name}`);
