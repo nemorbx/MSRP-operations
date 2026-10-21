@@ -106,7 +106,7 @@ async function handleGroupCommand(interaction) {
       }
       const reason = !eligible ? "The Discord member does not have an eligible staff role." : "No linked Roblox account could be resolved."; 
       await logGroupCheck(interaction.client, "🕓 **Roblox group request requires review**\nDiscord user: <@" + interaction.user.id + ">\nReason: " + reason);
-      return interaction.editReply("Your request needs Senior HR+ approval. " + reason + " Join/request to join the whitelisted group first, and make sure your Roblox account is linked through Bloxlink.\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
+      return interaction.editReply("Your request needs Senior HR+ approval. " + reason + " Join/request to join the whitelisted group first, and make sure your Roblox account is linked through Bloxlink.\nWhitelisted group: https://www.roblox.com/communities/974927500/MSRP-WhiteIisted#!/about");
     } catch (error) {
       console.error("[Group Request]", error);
       await logGroupCheck(interaction.client, "❌ **Roblox group request check failed**\nRequested by: <@" + interaction.user.id + ">\nError: " + String(error?.message || error).slice(0, 500));
