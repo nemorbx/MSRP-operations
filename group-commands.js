@@ -25,7 +25,10 @@ function isSeniorHROrAbove(member) {
 
 async function robloxJson(url, options = {}) {
   const response = await fetch(url, { headers: { Accept: "application/json", ...(options.headers || {}) }, signal: AbortSignal.timeout(12000), ...options });
-  if (!response.ok) throw new Error("Roblox API returned HTTP " + response.status);
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error("Roblox API returned HTTP " + response.status + (detail ? ": " + detail.slice(0, 700) : ""));
+  }
   return response.json();
 }
 
