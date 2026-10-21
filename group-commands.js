@@ -50,7 +50,7 @@ async function lookupLinkedRobloxId(guildId, discordId) {
   const result = await response.json();
   const raw = result?.robloxID || result?.robloxId || result?.roblox_id || result?.primaryAccount || result?.primary_account || result?.user?.robloxID || result?.user?.robloxId || result?.user?.id;
   const id = raw && typeof raw === 'object' ? (raw.robloxID || raw.robloxId || raw.id || raw.roblox_id) : raw;
-  return id && /^\\d+$/.test(String(id)) ? String(id) : null;
+  return id && /^\d+$/.test(String(id)) ? String(id) : null;
 }
 
 async function listPendingRequests(robloxUserId) {
@@ -96,15 +96,15 @@ async function handleGroupCommand(interaction) {
       if (eligible && robloxId) {
         const accepted = await acceptRequest(robloxId);
         const result = accepted ? "Eligible staff member has a linked Roblox account; their pending request was accepted." : "Eligible staff member is linked, but no pending request was found. No group changes were made.";
-        await logGroupCheck(interaction.client, "🔎 **Roblox group request**\\nDiscord user: <@" + interaction.user.id + ">\\nRoblox user ID: " + robloxId + "\\nResult: " + result);
-        return interaction.editReply((accepted ? "Your pending request was accepted." : "I could not find a pending request for your linked Roblox account.") + "\\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
+        await logGroupCheck(interaction.client, "🔎 **Roblox group request**\nDiscord user: <@" + interaction.user.id + ">\nRoblox user ID: " + robloxId + "\nResult: " + result);
+        return interaction.editReply((accepted ? "Your pending request was accepted." : "I could not find a pending request for your linked Roblox account.") + "\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
       }
       const reason = !eligible ? "The Discord member does not have an eligible staff role." : "No linked Roblox account could be resolved."; 
-      await logGroupCheck(interaction.client, "🕓 **Roblox group request requires review**\\nDiscord user: <@" + interaction.user.id + ">\\nReason: " + reason);
-      return interaction.editReply("Your request needs Senior HR+ approval. " + reason + " Join/request to join the whitelisted group first, and make sure your Roblox account is linked through Bloxlink.\\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
+      await logGroupCheck(interaction.client, "🕓 **Roblox group request requires review**\nDiscord user: <@" + interaction.user.id + ">\nReason: " + reason);
+      return interaction.editReply("Your request needs Senior HR+ approval. " + reason + " Join/request to join the whitelisted group first, and make sure your Roblox account is linked through Bloxlink.\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
     } catch (error) {
       console.error("[Group Request]", error);
-      await logGroupCheck(interaction.client, "❌ **Roblox group request check failed**\\nRequested by: <@" + interaction.user.id + ">\\nError: " + String(error?.message || error).slice(0, 500));
+      await logGroupCheck(interaction.client, "❌ **Roblox group request check failed**\nRequested by: <@" + interaction.user.id + ">\nError: " + String(error?.message || error).slice(0, 500));
       return interaction.editReply("I could not verify or process your request right now. No group change was made. Please contact Senior HR+.");
     }
   }
@@ -135,7 +135,7 @@ async function handleGroupInfo(interaction) {
     const ownerName = group => group.owner?.username || group.owner?.displayName || 'Unavailable';
     const count = group => Number.isFinite(group.memberCount) ? group.memberCount.toLocaleString('en-US') : 'Unavailable';
     const ticks = String.fromCharCode(96,96);
-    const groupBlock = (title, id, group, linkLabel) => '## ' + title + ' (' + id + ')\\n' + 'Member count: ' + ticks + count(group) + ticks + '\\n' + 'Group Owner: ' + ticks + ownerName(group) + ticks + '\\n' + 'Group Link: [' + linkLabel + '](<https://www.roblox.com/communities/' + id + '/#!/about>)';
+    const groupBlock = (title, id, group, linkLabel) => '## ' + title + ' (' + id + ')\n' + 'Member count: ' + ticks + count(group) + ticks + '\n' + 'Group Owner: ' + ticks + ownerName(group) + ticks + '\n' + 'Group Link: [' + linkLabel + '](<https://www.roblox.com/communities/' + id + '/#!/about>)';
     const container = new ContainerBuilder();
     container.addTextDisplayComponents(new TextDisplayBuilder().setContent(groupBlock('Whitelisted Group', WHITELISTED_GROUP_ID, white, 'Whitelisted Group')));
     container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large).setDivider(true));
@@ -148,10 +148,10 @@ async function handleGroupInfo(interaction) {
       files.push(new AttachmentBuilder(bannerPath, { name: 'banner.png' }));
     }
     await interaction.editReply({ components: [container], files, flags: MessageFlags.IsComponentsV2 });
-    await logGroupCheck(interaction.client, '🔎 **Roblox group information checked**\\nRequested by: <@' + interaction.user.id + '>\\nWhitelisted group ' + WHITELISTED_GROUP_ID + ': ' + count(white) + ' members; owner ' + ownerName(white) + '.\\nPublic group ' + PUBLIC_GROUP_ID + ': ' + count(publicGroup) + ' members; owner ' + ownerName(publicGroup) + '.');
+    await logGroupCheck(interaction.client, '🔎 **Roblox group information checked**\nRequested by: <@' + interaction.user.id + '>\nWhitelisted group ' + WHITELISTED_GROUP_ID + ': ' + count(white) + ' members; owner ' + ownerName(white) + '.\nPublic group ' + PUBLIC_GROUP_ID + ': ' + count(publicGroup) + ' members; owner ' + ownerName(publicGroup) + '.');
   } catch (error) {
     console.error('[Group Info]', error);
-    await logGroupCheck(interaction.client, '❌ **Roblox group information check failed**\\nRequested by: <@' + interaction.user.id + '>\\nError: ' + String(error?.message || error).slice(0, 500));
+    await logGroupCheck(interaction.client, '❌ **Roblox group information check failed**\nRequested by: <@' + interaction.user.id + '>\nError: ' + String(error?.message || error).slice(0, 500));
     return interaction.editReply('I could not retrieve group information from Roblox right now. Please try again later.');
   }
 }
