@@ -604,46 +604,82 @@ async function submitTicket(interaction, typeKey) {
 
 const escalateCommand = new SlashCommandBuilder()
   .setName("escalate")
-  .setDescription("Escalate the current support ticket to Management");
+  .setDescription("Change the support type of the current ticket")
+  .addStringOption(option =>
+    option.setName("type")
+      .setDescription("New support team for this ticket")
+      .setRequired(true)
+      .addChoices(
+        { name: "General Support", value: "general" },
+        { name: "Internal Affairs Support", value: "ia" },
+        { name: "Management Support", value: "management" }
+      )
+  );
 
-async function handleEscalate(interaction, ticket) {
-  if (ticket.closed || ticket.closing) {
-    await interaction.reply({ content: "This ticket is closed or currently closing.", flags: MessageFlags.Ephemeral });
-    return;
+async function handleEscalate(interaction) {
+  if (!interaction.inGuild() || !interaction.channel) {
+    return interaction.reply({ content: "Use this command inside an open support ticket.", flags: MessageFlags.Ephemeral });
   }
-  const member = interaction.member;
-  const canEscalate = isHighRank(member) || canUseTeam(member, ticket.teamRoleId) || ticket.claimedBy === interaction.user.id;
-  if (!canEscalate) {
-    await interaction.reply({ content: "Only the assigned support team, the ticket's claimer, or Senior HR and above can escalate this ticket.", flags: MessageFlags.Ephemeral });
-    return;
-  }
-  if (ticket.escalated) {
-    await interaction.reply({ content: "This ticket has already been escalated to Management.", flags: MessageFlags.Ephemeral });
-    return;
-  }
-  const oldRoleId = ticket.teamRoleId;
-  ticket.teamRoleId = MANAGEMENT_TEAM_ROLE_ID;
-  ticket.escalated = true;
-  ticket.escalatedAt = new Date().toISOString();
-  ticket.escalatedBy = interaction.user.id;
   const tickets = readTickets();
-  tickets[ticket.threadId] = ticket;
-  saveTickets(tickets);
-
-  await interaction.reply({ content: "This ticket has been escalated to Management.", flags: MessageFlags.Ephemeral });
-  const thread = interaction.channel;
-  if (ticket.panelMessageId) {
-    const panelMessage = await thread.messages.fetch(ticket.panelMessageId).catch(() => null);
-    if (panelMessage) {
-      await panelMessage.edit({ components: ticketPanelComponents(ticket), flags: MessageFlags.IsComponentsV2 }).catch(error => {
-        console.error("Could not update escalated ticket panel:", error);
+  const ticket = tickets[interaction.channelId];
+  if (!ticket || ticket.guildId !== interaction.guildId) {
+    return interaction.reply({ content: "This channel is not a registered support ticket. Run `/escalate` inside the ticket you want to change.", flags: MessageFlags.Ephemeral });
+  }
+  if (ticket.closed || ticket.closing) {
+    return interaction.reply({ content: "This ticket is closed or currently closing.", flags: MessageFlags.Ephemeral });
+  }
+  const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+  const canChangeType = isHighRank(member) || canUseTeam(member, ticket.teamRoleId) || ticket.claimedBy === interaction.user.id;
+  if (!canChangeType) {
+    return interaction.reply({ content: "Only the assigned support team, the ticket claimer, or Senior HR and above can change this ticket's support type.", flags: MessageFlags.Ephemeral });
+  }
+  const newTypeKey = interaction.options.getString("type", true);
+  const newType = TYPES[newTypeKey];
+  if (!newType) return interaction.reply({ content: "That support type is invalid.", flags: MessageFlags.Ephemeral });
+  const oldTypeKey = ticket.type;
+  if (oldTypeKey === newTypeKey) {
+    return interaction.reply({ content: "This ticket is already set to **" + newType.label + "**.", flags: MessageFlags.Ephemeral });
+  }
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  try {
+    const channel = interaction.channel;
+    const oldRoleId = ticket.teamRoleId || TYPES[oldTypeKey]?.roleId;
+    await channel.permissionOverwrites.edit(newType.roleId, {
+      ViewChannel: true, SendMessages: true, ReadMessageHistory: true, AttachFiles: true
+    });
+    if (oldRoleId && oldRoleId !== newType.roleId && oldRoleId !== SENIOR_HR_ROLE_ID) {
+      await channel.permissionOverwrites.delete(oldRoleId).catch(error => {
+        console.error("Could not remove previous support-team access during type change:", error?.message || error);
       });
     }
+    const prefix = { general: "general", ia: "internal-affairs", management: "management" }[newTypeKey];
+    const safeUser = (interaction.guild.members.cache.get(ticket.userId)?.user?.username || ticket.userId)
+      .toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || ticket.userId;
+    await channel.setName((prefix + "-support-" + safeUser).slice(0, 100)).catch(error => {
+      console.error("Could not rename ticket after support-type change:", error?.message || error);
+    });
+    ticket.type = newTypeKey;
+    ticket.teamRoleId = newType.roleId;
+    ticket.supportTypeChangedAt = new Date().toISOString();
+    ticket.supportTypeChangedBy = interaction.user.id;
+    ticket.escalated = newTypeKey === "management";
+    ticket.escalatedAt = newTypeKey === "management" ? new Date().toISOString() : null;
+    ticket.escalatedBy = newTypeKey === "management" ? interaction.user.id : null;
+    tickets[interaction.channelId] = ticket;
+    saveTickets(tickets);
+    if (ticket.panelMessageId) {
+      const panelMessage = await channel.messages.fetch(ticket.panelMessageId).catch(() => null);
+      if (panelMessage) await panelMessage.edit({ components: ticketPanelComponents(ticket), flags: MessageFlags.IsComponentsV2 }).catch(error => console.error("Could not refresh ticket panel after support-type change:", error));
+    }
+    await interaction.editReply("Ticket type changed from **" + (TYPES[oldTypeKey]?.label || oldTypeKey) + "** to **" + newType.label + "**.");
+    await channel.send({
+      content: "**Support Type Updated**\nThis ticket was changed from **" + (TYPES[oldTypeKey]?.label || oldTypeKey) + "** to **" + newType.label + "** by <@" + interaction.user.id + ">.\nNew assigned team: <@&" + newType.roleId + ">.",
+      allowedMentions: { roles: [newType.roleId], users: [interaction.user.id] }
+    });
+  } catch (error) {
+    console.error("[Support Type Change] Failed:", error);
+    return interaction.editReply("I couldn't change the support type. Check the bot's Manage Channels permission and try again. If access changes partially applied, contact management to review this ticket's permissions.");
   }
-  await thread.send({
-    content: "**Ticket Escalated to Management**\\n<@&" + MANAGEMENT_TEAM_ROLE_ID + "> — this ticket was escalated by <@" + interaction.user.id + "> from <@&" + oldRoleId + ">.",
-    allowedMentions: { roles: [MANAGEMENT_TEAM_ROLE_ID], users: [interaction.user.id] }
-  }).catch(error => console.error("Could not notify Management about escalated ticket:", error));
 }
 
 async function handleClaim(interaction, ticket) {
@@ -940,7 +976,7 @@ async function setup(client) {
       }
 
       if (interaction.isChatInputCommand() && interaction.commandName === "escalate") {
-        await handleEscalate(interaction, ticket);
+        await handleEscalate(interaction);
         return;
       }
 
