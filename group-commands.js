@@ -1,11 +1,12 @@
 const fs = require('fs');
 const path = require('path');
-const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, MediaGalleryBuilder, MediaGalleryItemBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
 const { pollJoinRequests } = require('./roblox-group-sync');
 
 const WHITELISTED_GROUP_ID = "974927500";
 const PUBLIC_GROUP_ID = "362792702";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
+const GROUP_LOG_CHANNEL_ID = "1561919652655796244";
 
 const groupCommand = new SlashCommandBuilder()
   .setName("group")
@@ -30,6 +31,14 @@ async function robloxJson(url, options = {}) {
 
 async function groupInfo(groupId) {
   return robloxJson("https://groups.roblox.com/v1/groups/" + groupId);
+}
+
+async function logGroupCheck(client, message) {
+  try {
+    const channel = await client.channels.fetch(GROUP_LOG_CHANNEL_ID);
+    if (channel?.isTextBased()) await channel.send({ content: message, allowedMentions: { parse: [] } });
+    else console.error('[Group Checks] Configured log channel is missing or not text-based.');
+  } catch (error) { console.error('[Group Checks] Could not send group-check log:', error?.message || error); }
 }
 
 async function listPendingRequests(robloxUserId) {
@@ -70,9 +79,11 @@ async function handleGroupCommand(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
       await pollJoinRequests(interaction.client);
+      await logGroupCheck(interaction.client, '🔎 **Roblox group request check**\\nRequested by: <@' + interaction.user.id + '>\\nGroup: ' + WHITELISTED_GROUP_ID + '\\nOn-demand join-request check was run.');
       return interaction.editReply("I checked the currently pending requests for the whitelisted group. If your Discord account is linked through Bloxlink and you have an eligible staff role, your request can be accepted automatically. Otherwise, it remains pending for Senior HR+ review.\n\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
     } catch (error) {
       console.error("[Group Request]", error);
+      await logGroupCheck(interaction.client, "❌ **Roblox group request check failed**\\nRequested by: <@" + interaction.user.id + ">\\nError: " + String(error?.message || error).slice(0, 500));
       return interaction.editReply("I could not check join requests right now. Please try again later or ask Senior HR+ to review your request.");
     }
   }
@@ -100,25 +111,27 @@ async function handleGroupInfo(interaction) {
   await interaction.deferReply();
   try {
     const [white, publicGroup] = await Promise.all([groupInfo(WHITELISTED_GROUP_ID), groupInfo(PUBLIC_GROUP_ID)]);
-    const ownerName = group => group.owner?.username || group.owner?.displayName || "Unavailable";
-    const count = group => Number.isFinite(group.memberCount) ? group.memberCount.toLocaleString("en-US") : "Unavailable";
-    const groupBlock = (title, id, group, linkLabel) =>
-      "## " + title + " (" + id + ")\n" +
-      "Member count: ``" + count(group) + "``\n" +
-      "Group Owner: ``" + ownerName(group) + "``\n" +
-      "Group Link: [" + linkLabel + "](<https://www.roblox.com/communities/" + id + "/#!/about>)";
-    const divider = "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
-    const description = groupBlock("Whitelisted Group", WHITELISTED_GROUP_ID, white, "Whitelisted Group") + divider + groupBlock("Public Group", PUBLIC_GROUP_ID, publicGroup, "Public Group");
-    const embed = new EmbedBuilder().setDescription(description).setColor(0x2878D0).setFooter({ text: "Missouri State Roleplay • Roblox Group Information" });
-    const bannerPath = path.join(__dirname, "banner.png");
+    const ownerName = group => group.owner?.username || group.owner?.displayName || 'Unavailable';
+    const count = group => Number.isFinite(group.memberCount) ? group.memberCount.toLocaleString('en-US') : 'Unavailable';
+    const ticks = String.fromCharCode(96,96);
+    const groupBlock = (title, id, group, linkLabel) => '## ' + title + ' (' + id + ')\\n' + 'Member count: ' + ticks + count(group) + ticks + '\\n' + 'Group Owner: ' + ticks + ownerName(group) + ticks + '\\n' + 'Group Link: [' + linkLabel + '](<https://www.roblox.com/communities/' + id + '/#!/about>)';
+    const container = new ContainerBuilder();
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(groupBlock('Whitelisted Group', WHITELISTED_GROUP_ID, white, 'Whitelisted Group')));
+    container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large).setDivider(true));
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(groupBlock('Public Group', PUBLIC_GROUP_ID, publicGroup, 'Public Group')));
+    const bannerPath = path.join(__dirname, 'banner.png');
+    const files = [];
     if (fs.existsSync(bannerPath)) {
-      embed.setImage("attachment://banner.png");
-      return interaction.editReply({ embeds: [embed], files: [new AttachmentBuilder(bannerPath, { name: "banner.png" })] });
+      container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Large).setDivider(true));
+      container.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL('attachment://banner.png')));
+      files.push(new AttachmentBuilder(bannerPath, { name: 'banner.png' }));
     }
-    return interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ components: [container], files, flags: MessageFlags.IsComponentsV2 });
+    await logGroupCheck(interaction.client, '🔎 **Roblox group information checked**\\nRequested by: <@' + interaction.user.id + '>\\nWhitelisted group ' + WHITELISTED_GROUP_ID + ': ' + count(white) + ' members; owner ' + ownerName(white) + '.\\nPublic group ' + PUBLIC_GROUP_ID + ': ' + count(publicGroup) + ' members; owner ' + ownerName(publicGroup) + '.');
   } catch (error) {
-    console.error("[Group Info]", error);
-    return interaction.editReply("I could not retrieve group information from Roblox right now. Please try again later.");
+    console.error('[Group Info]', error);
+    await logGroupCheck(interaction.client, '❌ **Roblox group information check failed**\\nRequested by: <@' + interaction.user.id + '>\\nError: ' + String(error?.message || error).slice(0, 500));
+    return interaction.editReply('I could not retrieve group information from Roblox right now. Please try again later.');
   }
 }
 
