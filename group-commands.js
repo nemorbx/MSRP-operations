@@ -1,4 +1,7 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const fs = require('fs');
+const path = require('path');
+const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
+const { pollJoinRequests } = require('./roblox-group-sync');
 
 const WHITELISTED_GROUP_ID = "974927500";
 const PUBLIC_GROUP_ID = "362792702";
@@ -64,10 +67,14 @@ async function handleGroupCommand(interaction) {
   const sub = interaction.options.getSubcommand();
   if (sub === "info") return handleGroupInfo(interaction);
   if (sub === "request") {
-    return interaction.reply({
-      content: "To request access, open the whitelisted Roblox group and select **Join Group**: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/. Eligible staff with a linked Discord/Roblox account are checked automatically about every five minutes. Other requests remain pending for Senior HR+ review.",
-      flags: MessageFlags.Ephemeral,
-    });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    try {
+      await pollJoinRequests(interaction.client);
+      return interaction.editReply("I checked the currently pending requests for the whitelisted group. If your Discord account is linked through Bloxlink and you have an eligible staff role, your request can be accepted automatically. Otherwise, it remains pending for Senior HR+ review.\n\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
+    } catch (error) {
+      console.error("[Group Request]", error);
+      return interaction.editReply("I could not check join requests right now. Please try again later or ask Senior HR+ to review your request.");
+    }
   }
   const actor = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
   if (!isSeniorHROrAbove(actor)) {
@@ -93,19 +100,25 @@ async function handleGroupInfo(interaction) {
   await interaction.deferReply();
   try {
     const [white, publicGroup] = await Promise.all([groupInfo(WHITELISTED_GROUP_ID), groupInfo(PUBLIC_GROUP_ID)]);
-    const embed = new EmbedBuilder()
-      .setTitle("MSRP Roblox Groups")
-      .setDescription("Whitelisted and public group information")
-      .addFields(
-        { name: "Whitelisted Group", value: "[" + (white.name || "Open group") + "](https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/)\n**Group ID:** " + WHITELISTED_GROUP_ID + "\n**Members:** " + (Number.isFinite(white.memberCount) ? white.memberCount.toLocaleString() : "Unavailable") + "\n**Owner:** " + (white.owner?.username || white.owner?.displayName || "Unavailable"), inline: true },
-        { name: "Public Group", value: "[" + (publicGroup.name || "Open group") + "](https://www.roblox.com/communities/" + PUBLIC_GROUP_ID + "/)\n**Group ID:** " + PUBLIC_GROUP_ID + "\n**Members:** " + (Number.isFinite(publicGroup.memberCount) ? publicGroup.memberCount.toLocaleString() : "Unavailable") + "\n**Owner:** " + (publicGroup.owner?.username || publicGroup.owner?.displayName || "Unavailable"), inline: true }
-      )
-      .setColor(0x2878D0)
-      .setFooter({ text: "Information retrieved from Roblox's public group API" });
+    const ownerName = group => group.owner?.username || group.owner?.displayName || "Unavailable";
+    const count = group => Number.isFinite(group.memberCount) ? group.memberCount.toLocaleString("en-US") : "Unavailable";
+    const groupBlock = (title, id, group, linkLabel) =>
+      "## " + title + " (" + id + ")\n" +
+      "Member count: ``" + count(group) + "``\n" +
+      "Group Owner: ``" + ownerName(group) + "``\n" +
+      "Group Link: [" + linkLabel + "](<https://www.roblox.com/communities/" + id + "/#!/about>)";
+    const divider = "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+    const description = groupBlock("Whitelisted Group", WHITELISTED_GROUP_ID, white, "Whitelisted Group") + divider + groupBlock("Public Group", PUBLIC_GROUP_ID, publicGroup, "Public Group");
+    const embed = new EmbedBuilder().setDescription(description).setColor(0x2878D0).setFooter({ text: "Missouri State Roleplay • Roblox Group Information" });
+    const bannerPath = path.join(__dirname, "banner.png");
+    if (fs.existsSync(bannerPath)) {
+      embed.setImage("attachment://banner.png");
+      return interaction.editReply({ embeds: [embed], files: [new AttachmentBuilder(bannerPath, { name: "banner.png" })] });
+    }
     return interaction.editReply({ embeds: [embed] });
   } catch (error) {
     console.error("[Group Info]", error);
-    return interaction.editReply("I couldn't retrieve group information from Roblox right now. Please try again later.");
+    return interaction.editReply("I could not retrieve group information from Roblox right now. Please try again later.");
   }
 }
 
