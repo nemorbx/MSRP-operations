@@ -113,10 +113,26 @@ async function getTeamAccess(discordUserId, guildId) {
     throw new Error("Roblox returned an unexpected group membership response.");
   }
 
+  // Roblox's v2 users/{userId}/groups/roles endpoint normally returns
+  // { data: [{ group: { id, name }, role: { id, name } }] }. Accept the
+  // documented ID plus equivalent path/legacy shapes without treating an
+  // incomplete response as a definitive "No".
   const isInWhitelistedGroup = groupResult.data.some(entry => {
-    const ids = [entry?.group?.id, entry?.group?.groupId, entry?.groupId, entry?.group_id, entry?.id]
-      .filter(value => value !== undefined && value !== null);
-    return ids.some(id => String(id) === ROBLOX_GROUP_ID);
+    const ids = [
+      entry?.group?.id,
+      entry?.group?.groupId,
+      entry?.group?.group_id,
+      entry?.group?.path,
+      entry?.groupId,
+      entry?.group_id,
+      entry?.group?.group?.id,
+      entry?.id,
+    ].filter(value => value !== undefined && value !== null);
+    return ids.some(value => {
+      const id = String(value);
+      return id === ROBLOX_GROUP_ID || id === "groups/" + ROBLOX_GROUP_ID ||
+        id.endsWith("/groups/" + ROBLOX_GROUP_ID);
+    });
   });
   return isInWhitelistedGroup ? "Yes" : "No";
 }
