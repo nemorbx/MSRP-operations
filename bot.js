@@ -29,6 +29,7 @@ const { setup: setupPartnership, commands: partnershipCommands } = require("./pa
 const { setupBotIssueLogs } = require("./bot-issue-logs");
 const { setup: setupSyncUsername, commands: syncUsernameCommands } = require("./sync-username");
 const { setup: setupRobloxGroupSync, commands: robloxGroupSyncCommands } = require("./roblox-group-sync");
+const { setup: setupGroupCommands, commands: groupCommands } = require("./group-commands");
 
 const afkModule = require("./afk");
 const infractionsModule = require("./infractions");
@@ -81,6 +82,7 @@ setupAdQueue(client);
 setupPartnership(client);
 setupSyncUsername(client);
 setupRobloxGroupSync(client);
+setupGroupCommands(client);
 
 const MEMBER_ROLE_ID = "1527373127422709862";
 
@@ -327,6 +329,7 @@ client.once("clientReady", async () => {
       ...(partnershipCommands || []),
       ...(syncUsernameCommands || []),
       ...(robloxGroupSyncCommands || []),
+      ...(groupCommands || []),
       ...(supportCommands || []),
     ];
 
