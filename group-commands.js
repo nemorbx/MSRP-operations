@@ -72,8 +72,10 @@ async function acceptRequest(robloxUserId) {
   const request = requests.find(item => {
     const user = item.user || item.requester || {};
     const userPath = user.path || item.userPath || "";
-    const id = user.id || user.userId || item.userId || userPath.split("/").pop();
-    return String(id) === String(robloxUserId);
+    const rawId = user.id || user.userId || item.userId || userPath;
+    // Cloud API resources may identify users as "users/12345", not just "12345".
+    const id = String(rawId || "").split("/").filter(Boolean).pop();
+    return id === String(robloxUserId);
   });
   if (!request) return false;
   const requestResource = request.name || request.path || "";
@@ -100,7 +102,7 @@ async function handleGroupCommand(interaction) {
         const accepted = await acceptRequest(robloxId);
         const result = accepted ? "Eligible staff member has a linked Roblox account; their pending request was accepted." : "Eligible staff member is linked, but no pending request was found. No group changes were made.";
         await logGroupCheck(interaction.client, "🔎 **Roblox group request**\nDiscord user: <@" + interaction.user.id + ">\nRoblox user ID: " + robloxId + "\nResult: " + result);
-        return interaction.editReply((accepted ? "Your pending request was accepted." : "I could not find a pending request for your linked Roblox account.") + "\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
+        return interaction.editReply((accepted ? "Your pending request was accepted." : "I could not find a pending request for your linked Roblox account.") + "\nWhitelisted group: https://www.roblox.com/communities/974927500/MSRP-WhiteIisted#!/about");
       }
       const reason = !eligible ? "The Discord member does not have an eligible staff role." : "No linked Roblox account could be resolved."; 
       await logGroupCheck(interaction.client, "🕓 **Roblox group request requires review**\nDiscord user: <@" + interaction.user.id + ">\nReason: " + reason);
