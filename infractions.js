@@ -76,12 +76,10 @@ const RANKS = [
   { name: "Junior Mod", id: "1528449495136731237", teamId: "1527381803617222676" },
   { name: "Senior Mod", id: "1528449396860260503", teamId: "1527381803617222676" },
   { name: "Head Mod", id: "1528449441827258531", teamId: "1527381803617222676" },
-  { name: "Lead Mod", id: "1551793867534114827", teamId: "1527381803617222676" },
   { name: "Trial Admin", id: "1528449273644056666", teamId: "1527381747791040522" },
   { name: "Junior Admin", id: "1528449153192169503", teamId: "1527381747791040522" },
   { name: "Senior Admin", id: "1528435425373454366", teamId: "1527381747791040522" },
   { name: "Head Admin", id: "1528449008668774541", teamId: "1527381747791040522" },
-  { name: "Lead Admin", id: "1528426018136920245", teamId: "1527381747791040522" },
   { name: "Trial Internal Affairs", id: "1528426957962743989", teamId: "1527381477975789668" },
   { name: "Junior Internal Affairs", id: "1528453585128390698", teamId: "1527381477975789668" },
   { name: "Senior Internal Affairs", id: "1528453258568536314", teamId: "1527381477975789668" },
@@ -92,7 +90,6 @@ const RANKS = [
   { name: "Junior Management", id: "1528425691723595867", teamId: "1528426569012609106" },
   { name: "Senior Management", id: "1527851704605868254", teamId: "1528426569012609106" },
   { name: "Head Management", id: "1528425534600646860", teamId: "1528426569012609106" },
-  { name: "Lead Management", id: "1528425622047821875", teamId: "1528426569012609106" },
 ];
 
 // Local banner
