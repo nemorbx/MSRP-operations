@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 const { SlashCommandBuilder, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, MediaGalleryBuilder, MediaGalleryItemBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
-const { pollJoinRequests } = require('./roblox-group-sync');
 
 const WHITELISTED_GROUP_ID = "974927500";
 const PUBLIC_GROUP_ID = "362792702";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
 const GROUP_LOG_CHANNEL_ID = "1561919652655796244";
+const ELIGIBLE_STAFF_ROLE_IDS = ["1528242210871447672", "1527385806895976590", "1527385974290776144", "1551985353802518588"];
 
 const groupCommand = new SlashCommandBuilder()
   .setName("group")
@@ -39,6 +39,18 @@ async function logGroupCheck(client, message) {
     if (channel?.isTextBased()) await channel.send({ content: message, allowedMentions: { parse: [] } });
     else console.error('[Group Checks] Configured log channel is missing or not text-based.');
   } catch (error) { console.error('[Group Checks] Could not send group-check log:', error?.message || error); }
+}
+
+async function lookupLinkedRobloxId(guildId, discordId) {
+  const key = process.env.BLOXLINK_API_KEY;
+  if (!key) throw new Error('BLOXLINK_API_KEY is not configured.');
+  const response = await fetch('https://api.blox.link/v4/public/guilds/' + encodeURIComponent(guildId) + '/discord-to-roblox/' + encodeURIComponent(discordId), { headers: { Authorization: key, Accept: 'application/json' }, signal: AbortSignal.timeout(12000) });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error('Bloxlink lookup returned HTTP ' + response.status + '.');
+  const result = await response.json();
+  const raw = result?.robloxID || result?.robloxId || result?.roblox_id || result?.primaryAccount || result?.primary_account || result?.user?.robloxID || result?.user?.robloxId || result?.user?.id;
+  const id = raw && typeof raw === 'object' ? (raw.robloxID || raw.robloxId || raw.id || raw.roblox_id) : raw;
+  return id && /^\\d+$/.test(String(id)) ? String(id) : null;
 }
 
 async function listPendingRequests(robloxUserId) {
@@ -78,13 +90,22 @@ async function handleGroupCommand(interaction) {
   if (sub === "request") {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
-      await pollJoinRequests(interaction.client);
-      await logGroupCheck(interaction.client, '🔎 **Roblox group request check**\\nRequested by: <@' + interaction.user.id + '>\\nGroup: ' + WHITELISTED_GROUP_ID + '\\nOn-demand join-request check was run.');
-      return interaction.editReply("I checked the currently pending requests for the whitelisted group. If your Discord account is linked through Bloxlink and you have an eligible staff role, your request can be accepted automatically. Otherwise, it remains pending for Senior HR+ review.\n\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
+      const member = await interaction.guild.members.fetch(interaction.user.id);
+      const eligible = ELIGIBLE_STAFF_ROLE_IDS.some(roleId => member.roles.cache.has(roleId));
+      const robloxId = await lookupLinkedRobloxId(interaction.guildId, interaction.user.id);
+      if (eligible && robloxId) {
+        const accepted = await acceptRequest(robloxId);
+        const result = accepted ? "Eligible staff member has a linked Roblox account; their pending request was accepted." : "Eligible staff member is linked, but no pending request was found. No group changes were made.";
+        await logGroupCheck(interaction.client, "🔎 **Roblox group request**\\nDiscord user: <@" + interaction.user.id + ">\\nRoblox user ID: " + robloxId + "\\nResult: " + result);
+        return interaction.editReply((accepted ? "Your pending request was accepted." : "I could not find a pending request for your linked Roblox account.") + "\\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
+      }
+      const reason = !eligible ? "The Discord member does not have an eligible staff role." : "No linked Roblox account could be resolved."; 
+      await logGroupCheck(interaction.client, "🕓 **Roblox group request requires review**\\nDiscord user: <@" + interaction.user.id + ">\\nReason: " + reason);
+      return interaction.editReply("Your request needs Senior HR+ approval. " + reason + " Join/request to join the whitelisted group first, and make sure your Roblox account is linked through Bloxlink.\\nWhitelisted group: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/");
     } catch (error) {
       console.error("[Group Request]", error);
       await logGroupCheck(interaction.client, "❌ **Roblox group request check failed**\\nRequested by: <@" + interaction.user.id + ">\\nError: " + String(error?.message || error).slice(0, 500));
-      return interaction.editReply("I could not check join requests right now. Please try again later or ask Senior HR+ to review your request.");
+      return interaction.editReply("I could not verify or process your request right now. No group change was made. Please contact Senior HR+.");
     }
   }
   const actor = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
