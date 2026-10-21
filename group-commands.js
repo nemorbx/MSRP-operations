@@ -47,7 +47,7 @@ async function logGroupCheck(client, message) {
 async function lookupLinkedRobloxId(guildId, discordId) {
   const key = process.env.BLOXLINK_API_KEY;
   if (!key) throw new Error('BLOXLINK_API_KEY is not configured.');
-  const response = await fetch('https://api.blox.link/v4/public/guilds/' + encodeURIComponent(guildId) + '/discord-to-roblox/' + encodeURIComponent(discordId), { headers: { Authorization: key, Accept: 'application/json' }, signal: AbortSignal.timeout(12000) });
+  const response = await fetch('https://api.blox.link/v4/public/guilds/' + encodeURIComponent(guildId) + '/discord-to-roblox/' + encodeURIComponent(discordId), { headers: { Authorization: key, Accept: 'application/json' }, signal: AbortSignal.timeout(25000) });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error('Bloxlink lookup returned HTTP ' + response.status + '.');
   const result = await response.json();
