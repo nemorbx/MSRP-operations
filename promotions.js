@@ -46,13 +46,11 @@ const RANKS = [
     { name: "Junior Mod", id: "1528449495136731237" },
     { name: "Senior Mod", id: "1528449396860260503" },
     { name: "Head Mod", id: "1528449441827258531" },
-    { name: "Lead Mod", id: "1551793867534114827" },
 
     { name: "Trial Admin", id: "1528449273644056666" },
     { name: "Junior Admin", id: "1528449153192169503" },
     { name: "Senior Admin", id: "1528435425373454366" },
     { name: "Head Admin", id: "1528449008668774541" },
-    { name: "Lead Admin", id: "1528426018136920245" },
 
     { name: "Trial Internal Affairs", id: "1528426957962743989" },
     { name: "Junior Internal Affairs", id: "1528453585128390698" },
@@ -64,8 +62,7 @@ const RANKS = [
     { name: "Trial Management", id: "1528425767678247021" },
     { name: "Junior Management", id: "1528425691723595867" },
     { name: "Senior Management", id: "1527851704605868254" },
-    { name: "Head Management", id: "1528425534600646860" },
-    { name: "Lead Management", id: "1528425622047821875" }
+    { name: "Head Management", id: "1528425534600646860" }
 ];
 
 // Team roles automatically synchronized by /promote.
