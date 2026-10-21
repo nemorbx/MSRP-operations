@@ -56,59 +56,58 @@ async function lookupLinkedRobloxId(guildId, discordId) {
   return id && /^\d+$/.test(String(id)) ? String(id) : null;
 }
 
-async function listPendingRequests(robloxUserId) {
+async function listPendingRequests() {
   const key = process.env.ROBLOX_GROUP_API_KEY;
   if (!key) throw new Error("ROBLOX_GROUP_API_KEY is not configured in the hosting environment.");
 
   const allRequests = [];
   let pageToken = "";
-  // Roblox returns at most 20 requests per page. Follow pageToken so older
-  // pending requests are not missed when the group has many requests.
-  for (let page = 0; page < 10; page++) {
+  for (let page = 0; page < 20; page++) {
     const params = new URLSearchParams({ maxPageSize: "20" });
     if (pageToken) params.set("pageToken", pageToken);
-    if (robloxUserId) params.set("filter", "user == 'users/" + robloxUserId + "'");
     const response = await robloxJson("https://apis.roblox.com/cloud/v2/groups/" + WHITELISTED_GROUP_ID + "/join-requests?" + params.toString(), {
       headers: { "x-api-key": key },
     });
-    const requests = response.groupJoinRequests || response.joinRequests || response.data || [];
-    allRequests.push(...requests);
-    if (robloxUserId && requests.length) return allRequests;
+    allRequests.push(...(response.groupJoinRequests || response.joinRequests || response.data || []));
     pageToken = response.nextPageToken || "";
     if (!pageToken) break;
   }
   return allRequests;
 }
 
+function getJoinRequestUserId(request) {
+  // Roblox's documented GroupJoinRequest schema represents user as a string,
+  // for example "users/8259993925", not necessarily an object.
+  const user = request.user || request.requester || "";
+  const candidates = [
+    typeof user === "string" ? user : "",
+    user && typeof user === "object" ? (user.path || user.id || user.userId || user.robloxId || "") : "",
+    request.userPath || request.userId || request.robloxUserId || "",
+  ];
+  for (const candidate of candidates) {
+    const id = String(candidate || "").split("/").filter(Boolean).pop();
+    if (/^\d+$/.test(id || "")) return id;
+  }
+  return null;
+}
+
 async function acceptRequest(robloxUserId) {
   const key = process.env.ROBLOX_GROUP_API_KEY;
   if (!key) throw new Error("ROBLOX_GROUP_API_KEY is not configured in the hosting environment.");
 
-  // First use Roblox's documented user filter; if that returns nothing, inspect
-  // the paginated list as a fallback in case the response shape differs.
-  let requests = await listPendingRequests(robloxUserId);
-  let request = requests.find(item => {
-    const user = item.user || item.requester || {};
-    const userPath = user.path || item.userPath || item.user || "";
-    const rawId = user.id || user.userId || item.userId || userPath;
-    const id = String(rawId || "").split("/").filter(Boolean).pop();
-    return id === String(robloxUserId);
-  });
-  if (!request) {
-    requests = await listPendingRequests();
-    request = requests.find(item => {
-      const user = item.user || item.requester || {};
-      const userPath = user.path || item.userPath || "";
-      const rawId = user.id || user.userId || item.userId || userPath;
-      return String(rawId || "").split("/").filter(Boolean).pop() === String(robloxUserId);
-    });
-  }
+  // Avoid the user filter here: Roblox's GroupJoinRequest schema returns user
+  // as a resource-name string, so match that documented shape locally.
+  const requests = await listPendingRequests();
+  const request = requests.find(item => getJoinRequestUserId(item) === String(robloxUserId));
   if (!request) return false;
 
-  const resourceName = request.name || request.path || "";
-  // For Cloud API resources, "name" is usually "groups/{group}/join-requests/{requestId}".
-  const requestId = request.id || request.joinRequestId || resourceName.split("/").pop();
+  // The documented resource path is groups/{groupId}/join-requests/{joinRequestId};
+  // the join-request ID is the final path segment (often the user's ID).
+  const resourceName = request.path || request.name || "";
+  const requestId = resourceName.split("/").filter(Boolean).pop() ||
+    request.joinRequestId || request.id;
   if (!requestId) throw new Error("Roblox returned a pending request without an ID.");
+
   await robloxJson("https://apis.roblox.com/cloud/v2/groups/" + WHITELISTED_GROUP_ID + "/join-requests/" + encodeURIComponent(requestId) + ":accept", {
     method: "POST",
     headers: { "x-api-key": key, "Content-Type": "application/json" },
