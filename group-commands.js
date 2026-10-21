@@ -56,30 +56,58 @@ async function lookupLinkedRobloxId(guildId, discordId) {
   return id && /^\d+$/.test(String(id)) ? String(id) : null;
 }
 
-async function listPendingRequests() {
+async function listPendingRequests(robloxUserId) {
   const key = process.env.ROBLOX_GROUP_API_KEY;
   if (!key) throw new Error("ROBLOX_GROUP_API_KEY is not configured in the hosting environment.");
-  const response = await robloxJson("https://apis.roblox.com/cloud/v2/groups/" + WHITELISTED_GROUP_ID + "/join-requests?maxPageSize=20", {
-    headers: { "x-api-key": key },
-  });
-  return response.groupJoinRequests || response.joinRequests || response.data || [];
+
+  const allRequests = [];
+  let pageToken = "";
+  // Roblox returns at most 20 requests per page. Follow pageToken so older
+  // pending requests are not missed when the group has many requests.
+  for (let page = 0; page < 10; page++) {
+    const params = new URLSearchParams({ maxPageSize: "20" });
+    if (pageToken) params.set("pageToken", pageToken);
+    if (robloxUserId) params.set("filter", "user == 'users/" + robloxUserId + "'");
+    const response = await robloxJson("https://apis.roblox.com/cloud/v2/groups/" + WHITELISTED_GROUP_ID + "/join-requests?" + params.toString(), {
+      headers: { "x-api-key": key },
+    });
+    const requests = response.groupJoinRequests || response.joinRequests || response.data || [];
+    allRequests.push(...requests);
+    if (robloxUserId && requests.length) return allRequests;
+    pageToken = response.nextPageToken || "";
+    if (!pageToken) break;
+  }
+  return allRequests;
 }
 
 async function acceptRequest(robloxUserId) {
   const key = process.env.ROBLOX_GROUP_API_KEY;
   if (!key) throw new Error("ROBLOX_GROUP_API_KEY is not configured in the hosting environment.");
-  const requests = await listPendingRequests();
-  const request = requests.find(item => {
+
+  // First use Roblox's documented user filter; if that returns nothing, inspect
+  // the paginated list as a fallback in case the response shape differs.
+  let requests = await listPendingRequests(robloxUserId);
+  let request = requests.find(item => {
     const user = item.user || item.requester || {};
-    const userPath = user.path || item.userPath || "";
+    const userPath = user.path || item.userPath || item.user || "";
     const rawId = user.id || user.userId || item.userId || userPath;
-    // Cloud API resources may identify users as "users/12345", not just "12345".
     const id = String(rawId || "").split("/").filter(Boolean).pop();
     return id === String(robloxUserId);
   });
+  if (!request) {
+    requests = await listPendingRequests();
+    request = requests.find(item => {
+      const user = item.user || item.requester || {};
+      const userPath = user.path || item.userPath || "";
+      const rawId = user.id || user.userId || item.userId || userPath;
+      return String(rawId || "").split("/").filter(Boolean).pop() === String(robloxUserId);
+    });
+  }
   if (!request) return false;
-  const requestResource = request.name || request.path || "";
-  const requestId = request.id || request.joinRequestId || requestResource.split("/").pop();
+
+  const resourceName = request.name || request.path || "";
+  // For Cloud API resources, "name" is usually "groups/{group}/join-requests/{requestId}".
+  const requestId = request.id || request.joinRequestId || resourceName.split("/").pop();
   if (!requestId) throw new Error("Roblox returned a pending request without an ID.");
   await robloxJson("https://apis.roblox.com/cloud/v2/groups/" + WHITELISTED_GROUP_ID + "/join-requests/" + encodeURIComponent(requestId) + ":accept", {
     method: "POST",
