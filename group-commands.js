@@ -8,12 +8,9 @@ const groupCommand = new SlashCommandBuilder()
   .setName("group")
   .setDescription("Roblox group tools")
   .addSubcommand(s => s.setName("request").setDescription("Get instructions to request access to the whitelisted Roblox group"))
+  .addSubcommand(s => s.setName("info").setDescription("Show information for both MSRP Roblox groups"))
   .addSubcommand(s => s.setName("accept").setDescription("Accept a pending Roblox group join request (Senior HR+)")
     .addStringOption(o => o.setName("roblox_user_id").setDescription("Roblox user ID of the pending requester").setRequired(true)));
-
-const groupInfoCommand = new SlashCommandBuilder()
-  .setName("group-info")
-  .setDescription("Show information for MSRP's whitelisted and public Roblox groups");
 
 function isSeniorHROrAbove(member) {
   if (!member) return false;
@@ -65,6 +62,7 @@ async function acceptRequest(robloxUserId) {
 
 async function handleGroupCommand(interaction) {
   const sub = interaction.options.getSubcommand();
+  if (sub === "info") return handleGroupInfo(interaction);
   if (sub === "request") {
     return interaction.reply({
       content: "To request access, open the whitelisted Roblox group and select **Join Group**: https://www.roblox.com/communities/" + WHITELISTED_GROUP_ID + "/. Eligible staff with a linked Discord/Roblox account are checked automatically about every five minutes. Other requests remain pending for Senior HR+ review.",
@@ -116,7 +114,6 @@ function setup(client) {
     if (!interaction.isChatInputCommand() || !interaction.guild) return;
     try {
       if (interaction.commandName === "group") await handleGroupCommand(interaction);
-      else if (interaction.commandName === "group-info") await handleGroupInfo(interaction);
     } catch (error) {
       console.error("[Group Commands]", error);
       const message = "The group command failed safely. Please try again later.";
@@ -126,4 +123,4 @@ function setup(client) {
   });
 }
 
-module.exports = { setup, commands: [groupCommand, groupInfoCommand] };
+module.exports = { setup, commands: [groupCommand] };
