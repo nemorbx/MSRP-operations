@@ -357,11 +357,8 @@ async function syncMember(client, member, reason = "staff role update") {
   }
 }
 function setup(client) {
-  client.once("clientReady", () => {
-    // Poll only after the bot is ready; unlinked/ineligible requests are left pending.
-    pollJoinRequests(client).catch(error => console.error("[Roblox Group Sync] Join-request poll failed:", error));
-    setInterval(() => pollJoinRequests(client).catch(error => console.error("[Roblox Group Sync] Join-request poll failed:", error)), 5 * 60 * 1000);
-  });
+  // Join requests are checked on demand from /group request, not periodically.
+  // This avoids continuous API calls and background work on the hosting plan.
   client.on("guildMemberUpdate", async (oldMember, newMember) => {
     const before = [...STAFF_ROLE_IDS].some(id => oldMember.roles.cache.has(id));
     const after = isEligible(newMember);
@@ -387,4 +384,4 @@ function setup(client) {
     if (interaction.commandName === "roblox-confirm-removal") await handleConfirmRemoval(interaction);
   });
 }
-module.exports = { setup, commands: [syncCommand, reviewCommand, confirmRemovalCommand, syncAllCommand] };
+module.exports = { setup, pollJoinRequests, commands: [syncCommand, reviewCommand, confirmRemovalCommand, syncAllCommand] };
