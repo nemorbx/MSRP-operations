@@ -299,6 +299,7 @@ client.once("clientReady", async () => {
     console.error("Role Perks panel refresh error:", error);
   }
 
+  let commandsReady = false;
   try {
     // MSRP commands are registered per guild below. Remove any legacy global
     // registrations first so stale global /promote entries do not appear beside
@@ -345,8 +346,25 @@ client.once("clientReady", async () => {
       await guild.commands.set(uniqueCommands);
       console.log("Registered " + uniqueCommands.length + " MSRP slash commands in " + guild.name + ": " + uniqueCommands.map(command => "/" + command.name).join(", "));
     }
+    commandsReady = true;
   } catch (error) {
     console.error("Slash command registration error:", error);
+  }
+
+  if (commandsReady) {
+    try {
+      const readyChannel = await client.channels.fetch("1561762073971531857");
+      if (readyChannel?.isTextBased() && typeof readyChannel.send === "function") {
+        await readyChannel.send({
+          content: "<@1279549428331446393> ✅ **MSRP Operations is back online and slash commands are registered. You can use commands now.**",
+          allowedMentions: { users: ["1279549428331446393"] }
+        });
+      } else {
+        console.error("Bot-ready notification channel is unavailable or not text-based.");
+      }
+    } catch (error) {
+      console.error("Bot-ready notification failed:", error);
+    }
   }
 
   // Refresh periodically so the displayed member count stays accurate.
