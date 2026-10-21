@@ -56,11 +56,10 @@ async function lookupLinkedRobloxId(guildId, discordId) {
   return id && /^\d+$/.test(String(id)) ? String(id) : null;
 }
 
-async function listPendingRequests(robloxUserId) {
+async function listPendingRequests() {
   const key = process.env.ROBLOX_GROUP_API_KEY;
   if (!key) throw new Error("ROBLOX_GROUP_API_KEY is not configured in the hosting environment.");
-  const filter = encodeURIComponent("user == 'users/" + robloxUserId + "'");
-  const response = await robloxJson("https://apis.roblox.com/cloud/v2/groups/" + WHITELISTED_GROUP_ID + "/join-requests?filter=" + filter + "&maxPageSize=20", {
+  const response = await robloxJson("https://apis.roblox.com/cloud/v2/groups/" + WHITELISTED_GROUP_ID + "/join-requests?maxPageSize=20", {
     headers: { "x-api-key": key },
   });
   return response.groupJoinRequests || response.joinRequests || response.data || [];
@@ -69,7 +68,7 @@ async function listPendingRequests(robloxUserId) {
 async function acceptRequest(robloxUserId) {
   const key = process.env.ROBLOX_GROUP_API_KEY;
   if (!key) throw new Error("ROBLOX_GROUP_API_KEY is not configured in the hosting environment.");
-  const requests = await listPendingRequests(robloxUserId);
+  const requests = await listPendingRequests();
   const request = requests.find(item => {
     const user = item.user || item.requester || {};
     const userPath = user.path || item.userPath || "";
@@ -77,7 +76,8 @@ async function acceptRequest(robloxUserId) {
     return String(id) === String(robloxUserId);
   });
   if (!request) return false;
-  const requestId = request.id || request.joinRequestId || String(request.path || "").split("/").pop();
+  const requestResource = request.name || request.path || "";
+  const requestId = request.id || request.joinRequestId || requestResource.split("/").pop();
   if (!requestId) throw new Error("Roblox returned a pending request without an ID.");
   await robloxJson("https://apis.roblox.com/cloud/v2/groups/" + WHITELISTED_GROUP_ID + "/join-requests/" + encodeURIComponent(requestId) + ":accept", {
     method: "POST",
