@@ -10,7 +10,6 @@ const modules = {
   say: require("../say"),
   welcome: require("../welcome"),
   support: require("../support"),
-  robloxGroupSync: require("../roblox-group-sync"),
   groupCommands: require("../group-commands"),
 };
 
@@ -25,7 +24,6 @@ const rawCommands = [
   ...(modules.say.command ? [modules.say.command] : []),
   ...(modules.welcome.commands || []),
   ...(modules.support.commands || []),
-  ...(modules.robloxGroupSync.commands || []),
   ...(modules.groupCommands.commands || []),
 ];
 
