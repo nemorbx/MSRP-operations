@@ -266,7 +266,12 @@ async function collectTicketTranscript(thread) {
 
   for (let page = 0; page < 10; page += 1) {
     const batch = await thread.messages.fetch({ limit: 100, ...(before ? { before } : {}) }).catch(() => null);
-    if (!batch || !batch.size) break;
+    if (!batch || !batch.size) {
+      // Deleted channels can no longer be fetched through the API; preserve any
+      // messages still cached by discord.js so the deletion log includes a transcript.
+      if (page === 0 && thread.messages?.cache?.size) messages.push(...thread.messages.cache.values());
+      break;
+    }
 
     messages.push(...batch.values());
     const oldest = batch.last();
@@ -710,9 +715,8 @@ async function handleClaim(interaction, ticket) {
   tickets[ticket.threadId] = ticket;
   saveTickets(tickets);
 
-  await thread.members.add(interaction.user.id).catch((error) => {
-    console.error("Could not add ticket claimer to ticket channel:", error);
-  });
+  // Tickets are private guild text channels, not threads; permission overwrites
+  // already grant access to the assigned team, so there is no thread member to add.
 
   // Notification is secondary: a failed notification must not make a successful
   // claim look like it failed or leave Discord showing an error to the claimer.
@@ -807,17 +811,42 @@ async function requestTicketClosure(interaction, ticket) {
   }
 
   await interaction.deferUpdate();
+  // Persist the request state before sending the visible message, so the request
+  // cannot appear in Discord without being registered in tickets.json.
+  latest.closeRequestedAt = new Date().toISOString();
+  latest.closeRequestedBy = interaction.user.id;
+  latest.closeRequestMessageId = "pending";
+  tickets[latest.threadId] = latest;
+  saveTickets(tickets);
+
   const requestMessage = await interaction.channel.send({
     content: `<@${latest.userId}> **Support staff have requested to close this ticket.** Please respond using the buttons below within **1 hour**. If you do not respond, the ticket will automatically close.`,
     components: closeRequestComponents(),
     allowedMentions: { users: [latest.userId] },
+  }).catch(async error => {
+    console.error("[Support] Failed to send closure request:", error);
+    const latestTickets = readTickets();
+    if (latestTickets[latest.threadId]) {
+      latestTickets[latest.threadId].closeRequestMessageId = null;
+      latestTickets[latest.threadId].closeRequestedAt = null;
+      latestTickets[latest.threadId].closeRequestedBy = null;
+      saveTickets(latestTickets);
+    }
+    return null;
   });
-  latest.closeRequestMessageId = requestMessage.id;
-  latest.closeRequestedAt = new Date().toISOString();
-  latest.closeRequestedBy = interaction.user.id;
-  tickets[latest.threadId] = latest;
-  saveTickets(tickets);
-  await scheduleClosureRequestTimeout(interaction.client, latest);
+  if (!requestMessage) {
+    await interaction.followUp({ content: "I couldn't send the closure request. Please check the bot's channel permissions and try again.", ephemeral: true }).catch(() => {});
+    return;
+  }
+  const refreshedTickets = readTickets();
+  const refreshedTicket = refreshedTickets[latest.threadId];
+  if (!refreshedTicket || refreshedTicket.closed) return;
+  refreshedTicket.closeRequestMessageId = requestMessage.id;
+  refreshedTicket.closeRequestedAt = refreshedTicket.closeRequestedAt || new Date().toISOString();
+  refreshedTicket.closeRequestedBy = interaction.user.id;
+  refreshedTickets[latest.threadId] = refreshedTicket;
+  saveTickets(refreshedTickets);
+  await scheduleClosureRequestTimeout(interaction.client, refreshedTicket);
 }
 
 async function handleClose(interaction, ticket) {
@@ -893,9 +922,16 @@ async function handleCloseConfirmation(interaction, ticket, confirm) {
     return;
   }
 
-  if (!latest.closeRequestMessageId) {
+  if (!latest.closeRequestMessageId && interaction.message?.components?.length) {
+    // Recover a request message left behind by a prior interrupted write/deploy.
+    latest.closeRequestMessageId = interaction.message.id;
+    latest.closeRequestedAt = latest.closeRequestedAt || new Date(interaction.message.createdTimestamp).toISOString();
+    tickets[ticket.threadId] = latest;
+    saveTickets(tickets);
+  }
+  if (!latest.closeRequestMessageId || (latest.closeRequestMessageId !== "pending" && latest.closeRequestMessageId !== interaction.message?.id)) {
     await interaction.reply({
-      content: "There is no active closure request for this ticket.",
+      content: "There is no active closure request for this ticket. Ask support staff to send a new request.",
       ephemeral: true,
     });
     return;
@@ -911,7 +947,7 @@ async function handleCloseConfirmation(interaction, ticket, confirm) {
     tickets[ticket.threadId] = latest;
     saveTickets(tickets);
 
-    await interaction.update({ components: [], flags: MessageFlags.IsComponentsV2 });
+    await interaction.update({ components: [] });
     await interaction.channel.send(
       "Ticket closure cancelled. You can continue receiving assistance here."
     );
@@ -955,23 +991,15 @@ async function setup(client) {
       ticket.closedAt = new Date().toISOString();
       ticket.closeRequestMessageId = null;
       ticket.closeRequestedAt = null;
+      ticket.closeRequestedBy = null;
+      const timer = closureRequestTimers.get(thread.id);
+      if (timer) clearTimeout(timer);
+      closureRequestTimers.delete(thread.id);
       tickets[thread.id] = ticket;
       saveTickets(tickets);
 
-      const logsChannel = await client.channels.fetch(SUPPORT_LOGS_CHANNEL_ID).catch(() => null);
-      if (logsChannel && logsChannel.isTextBased()) {
-        const embed = new EmbedBuilder()
-          .setTitle("Support Ticket Log")
-          .setDescription(`**${TYPES[ticket.type]?.label || ticket.type || "Support"}**\nTicket thread: \`#${thread.id}\``)
-          .addFields(
-            { name: "Status", value: "Deleted Manually", inline: true },
-            { name: "Created By", value: `<@${ticket.userId}>`, inline: true },
-            { name: "Claimed By", value: ticket.claimedBy ? `<@${ticket.claimedBy}>` : "Unclaimed", inline: true },
-            { name: "Report Description", value: String(ticket.description || "No description provided.").slice(0, 1024) }
-          )
-          .setTimestamp();
-        await logsChannel.send({ embeds: [embed] }).catch(() => {});
-      }
+      // Use the common logger so manual deletions receive the same transcript file.
+      await sendTicketLog(client, ticket, thread, "manual deletion", null);
     } catch (error) {
       console.error("Support thread deletion handler error:", error);
     }
