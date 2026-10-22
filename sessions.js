@@ -12,6 +12,8 @@ const {
 } = require("discord.js");
 
 const SESSION_CHANNEL_ID = "1527179992398692353";
+const SESSION_STATUS_OWNER_ID = "1279549428331446393";
+let manualSessionStatus = null;
 const SESSION_NOTIFICATION_ROLE_ID = "1527904654212726844";
 const ON_DUTY_ROLE_ID = "1529159979674636450";
 const PANEL_MARKER = "msrp-session-panel";
@@ -127,7 +129,7 @@ function buildSessionPanel() {
     .addActionRowComponents(
       new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("session:notification").setLabel("Session Notification").setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId("session:status").setLabel("Session Status: " + (liveStats.online === true ? "Online" : liveStats.online === false ? "Offline" : "Unknown")).setStyle(liveStats.online === true ? ButtonStyle.Success : ButtonStyle.Secondary).setDisabled(true)
+        new ButtonBuilder().setCustomId("session:status").setLabel("Session Status: " + (manualSessionStatus === true ? "Online" : manualSessionStatus === false ? "Offline" : "Unknown")).setStyle(manualSessionStatus === true ? ButtonStyle.Success : manualSessionStatus === false ? ButtonStyle.Danger : ButtonStyle.Secondary)
       )
     )
     .addSeparatorComponents(spacedDivider())
@@ -191,9 +193,47 @@ async function ensureSessionPanel(client) {
   }
 }
 
+async function refreshSessionStatusPanel(interaction) {
+  const channel = await interaction.client.channels.fetch(SESSION_CHANNEL_ID).catch(() => null);
+  if (!channel?.isTextBased() || !channel.messages) return false;
+  const recent = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+  if (!recent) return false;
+  const panel = recent
+    .filter(message => message.author.id === interaction.client.user.id)
+    .filter(message => JSON.stringify(message.components || []).includes(BANNER_URL) ||
+      JSON.stringify(message.components || []).includes(FOOTER_BANNER_URL) ||
+      JSON.stringify(message.components || []).includes(PANEL_MARKER))
+    .sort((a, b) => b.createdTimestamp - a.createdTimestamp)
+    .first();
+  if (!panel) return false;
+  await panel.edit(buildSessionPanel());
+  return true;
+}
+
 function setupSessions(client) {
   client.on("interactionCreate", async interaction => {
-    if (!interaction.isButton() || interaction.customId !== "session:notification") return;
+    if (!interaction.isButton()) return;
+    if (interaction.customId === "session:status") {
+      if (interaction.user.id !== SESSION_STATUS_OWNER_ID) {
+        await interaction.reply({ content: "Only the server owner can change the session status.", ephemeral: true });
+        return;
+      }
+      manualSessionStatus = manualSessionStatus !== true;
+      const updated = await refreshSessionStatusPanel(interaction).catch(error => {
+        console.error("[Sessions] Could not update session status panel:", error);
+        return false;
+      });
+      if (!updated) {
+        await interaction.reply({ content: "I couldn't find the session info panel to update. Please check the session channel.", ephemeral: true });
+        return;
+      }
+      await interaction.reply({
+        content: "Session status changed to **" + (manualSessionStatus ? "Online** (green)." : "Offline** (red)."),
+        ephemeral: true,
+      });
+      return;
+    }
+    if (interaction.customId !== "session:notification") return;
     try {
       const member = await interaction.guild.members.fetch(interaction.user.id);
       const role = interaction.guild.roles.cache.get(SESSION_NOTIFICATION_ROLE_ID);
