@@ -66,6 +66,8 @@ function setupBotIssueLogs(client) {
     queueLog("WARNING", parts);
   };
 
+  process.on("warning", warning => queueLog("WARNING", ["Node.js warning:", warning]));
+
   client.on("error", error => queueLog("ERROR", ["Discord client error:", error]));
   client.on("shardError", error => queueLog("ERROR", ["Discord gateway shard error:", error]));
   client.on("invalidated", () => queueLog("ERROR", ["Discord session invalidated."]));
