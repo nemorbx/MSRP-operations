@@ -18,7 +18,7 @@ const partnershipCommand = new SlashCommandBuilder()
   .setDMPermission(false)
   .addSubcommand(subcommand => subcommand
     .setName("ad")
-    .setDescription("Post a partnership ad and assign its representative.")
+    .setDescription("Post a partnership ad and assign up to three representatives.")
     .addStringOption(option => option
       .setName("advertisement")
       .setDescription("Full partnership advertisement text.")
@@ -26,8 +26,16 @@ const partnershipCommand = new SlashCommandBuilder()
       .setMaxLength(1800))
     .addUserOption(option => option
       .setName("representative")
-      .setDescription("Member representing this partnership.")
+      .setDescription("First partnership representative.")
       .setRequired(true))
+    .addUserOption(option => option
+      .setName("representative2")
+      .setDescription("Second representative (optional).")
+      .setRequired(false))
+    .addUserOption(option => option
+      .setName("representative3")
+      .setDescription("Third representative (optional).")
+      .setRequired(false))
   );
 
 function readPartnerships() {
@@ -65,7 +73,7 @@ function partnershipMessage(advertisement, representativeId) {
 async function deleteRepresentativeAds(client, guild, userId) {
   const stored = readPartnerships();
   const records = Object.entries(stored).filter(([, record]) =>
-    record.guildId === guild.id && record.representativeId === userId
+    record.guildId === guild.id && (record.representativeId === userId || record.representativeIds?.includes(userId))
   );
 
   if (!records.length) return 0;
@@ -130,7 +138,16 @@ function setup(client) {
       if (interaction.options.getSubcommand() !== "ad") return;
 
       const advertisement = interaction.options.getString("advertisement", true).trim();
-      const representativeUser = interaction.options.getUser("representative", true);
+      const representativeUsers = [
+        interaction.options.getUser("representative", true),
+        interaction.options.getUser("representative2"),
+        interaction.options.getUser("representative3"),
+      ].filter(Boolean);
+      const representativeIds = [...new Set(representativeUsers.map(user => user.id))];
+      if (representativeIds.length !== representativeUsers.length) {
+        await interaction.reply({ content: "Choose a different member for each representative slot.", ephemeral: true });
+        return;
+      }
 
       if (!advertisement) {
         await interaction.reply({
@@ -148,13 +165,14 @@ function setup(client) {
       }
 
       const guild = interaction.guild;
-      const representative = await guild.members.fetch(representativeUser.id).catch(() => null);
-      if (!representative) {
-        await interaction.reply({
-          content: "The representative must be a current member of this server.",
-          ephemeral: true
-        });
-        return;
+      const representatives = [];
+      for (const representativeId of representativeIds) {
+        const representative = await guild.members.fetch(representativeId).catch(() => null);
+        if (!representative) {
+          await interaction.reply({ content: "All representatives must be current members of this server.", ephemeral: true });
+          return;
+        }
+        representatives.push(representative);
       }
 
       const channel = await client.channels.fetch(PARTNERSHIP_CHANNEL_ID).catch(() => null);
@@ -184,36 +202,37 @@ function setup(client) {
 
       await interaction.deferReply({ ephemeral: true });
 
-      const recordId = guild.id + ":" + representative.id + ":" + Date.now();
+      const recordId = guild.id + ":" + representativeIds.join("-") + ":" + Date.now();
       const message = await channel.send({
-        content: partnershipMessage(advertisement, representative.id),
-        allowedMentions: { parse: [], users: [representative.id] }
+        content: partnershipMessage(advertisement, representativeIds),
+        allowedMentions: { parse: [], users: representativeIds }
       });
 
       const stored = readPartnerships();
       stored[recordId] = {
         guildId: guild.id,
         messageId: message.id,
-        representativeId: representative.id,
+        representativeId: representativeIds[0],
+        representativeIds,
         createdBy: interaction.user.id,
         createdAt: Date.now()
       };
       writePartnerships(stored);
 
       try {
-        if (!representative.roles.cache.has(PARTNERSHIP_ROLE_ID)) {
-          await representative.roles.add(role, "Assigned as a partnership advertisement representative");
+        for (const representative of representatives) {
+          if (!representative.roles.cache.has(PARTNERSHIP_ROLE_ID)) {
+            await representative.roles.add(role, "Assigned as a partnership advertisement representative");
+          }
         }
       } catch (error) {
         console.error("[Partnership] Ad posted but role assignment failed:", error);
-        await interaction.editReply({
-          content: "The partnership ad was posted, but I could not assign the Partnership role. Check my role hierarchy and Manage Roles permission."
-        });
+        await interaction.editReply({ content: "The partnership ad was posted, but I could not assign the Partnership role to everyone. Check my role hierarchy and Manage Roles permission." });
         return;
       }
 
       await interaction.editReply({
-        content: "Partnership advertisement posted in <#" + PARTNERSHIP_CHANNEL_ID + ">. <@" + representative.id + "> was assigned the Partnership role."
+        content: "Partnership advertisement posted in <#" + PARTNERSHIP_CHANNEL_ID + ">. Assigned the Partnership role to: " + representativeIds.map(id => "<@" + id + ">").join(", ") + "."
       });
     } catch (error) {
       console.error("[Partnership] Command failed:", error);
