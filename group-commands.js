@@ -40,8 +40,15 @@ async function groupInfo(groupId) {
 async function logGroupCheck(client, message) {
   try {
     const channel = await client.channels.fetch(GROUP_LOG_CHANNEL_ID);
-    if (channel?.isTextBased()) await channel.send({ content: message, allowedMentions: { parse: [] } });
-    else console.error('[Group Checks] Configured log channel is missing or not text-based.');
+    if (channel?.isTextBased()) {
+      const container = new ContainerBuilder()
+        .addTextDisplayComponents(new TextDisplayBuilder().setContent(message));
+      await channel.send({
+        components: [container],
+        flags: MessageFlags.IsComponentsV2,
+        allowedMentions: { parse: [] },
+      });
+    } else console.error('[Group Checks] Configured log channel is missing or not text-based.');
   } catch (error) { console.error('[Group Checks] Could not send group-check log:', error?.message || error); }
 }
 
