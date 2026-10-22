@@ -864,6 +864,16 @@ async function handleClose(interaction, ticket) {
     canUseTeam(interaction.member, ticket.teamRoleId) ||
     ticket.claimedBy === interaction.user.id;
 
+  // Once staff claims a ticket, the opener cannot close it themselves.
+  // Authorized staff must initiate the closure request instead.
+  if (isCreator && ticket.claimedBy) {
+    await interaction.reply({
+      content: "A staff member has claimed this ticket. You cannot close it yourself now; please continue working with the assigned staff member. Authorized staff can request closure when support is complete.",
+      ephemeral: true,
+    });
+    return;
+  }
+
   if (!isCreator && !isAuthorizedStaff) {
     await interaction.reply({
       content: "Only the ticket creator or authorized support staff can request closure.",
@@ -889,6 +899,14 @@ async function handleClose(interaction, ticket) {
 }
 
 async function handleCloseConfirmation(interaction, ticket, confirm) {
+  if (ticket.claimedBy) {
+    await interaction.reply({
+      content: "A staff member has claimed this ticket, so the opener can no longer close it. Please continue with the assigned staff member.",
+      ephemeral: true,
+    });
+    return;
+  }
+
   if (interaction.user.id !== ticket.userId) {
     await interaction.reply({
       content:
