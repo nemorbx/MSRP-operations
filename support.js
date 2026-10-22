@@ -217,26 +217,20 @@ function ticketPanelFiles() {
 }
 
 function closeRequestComponents() {
+  // This is a standard Discord message, so the controls must be an Action Row.
+  // A Components V2 Container here causes Discord error 50035 when sent without
+  // the IsComponentsV2 flag.
   return [
-    new ContainerBuilder()
-      .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(
-          "## Ticket Closure Requested\nA staff member has requested to close your ticket. If you still need assistance, cancel the closure. Otherwise, confirm to close the ticket."
-        )
-      )
-      .addSeparatorComponents(separator())
-      .addActionRowComponents(
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId("support:confirm-close")
-            .setLabel("Confirm Closure")
-            .setStyle(ButtonStyle.Danger),
-          new ButtonBuilder()
-            .setCustomId("support:cancel-close")
-            .setLabel("Cancel")
-            .setStyle(ButtonStyle.Secondary)
-        )
-      ),
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("support:confirm-close")
+        .setLabel("Confirm Closure")
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId("support:cancel-close")
+        .setLabel("Cancel")
+        .setStyle(ButtonStyle.Secondary)
+    ),
   ];
 }
 
