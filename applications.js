@@ -904,6 +904,19 @@ async function handleStaffDecision(interaction, action, applicationId, decisionR
   }).catch(error => {
     console.error("Failed to update staff application review message:", error);
   });
+
+  // Finish the deferred button/modal interaction with a visible success confirmation.
+  // Without this follow-up, Discord can keep showing the interaction as "thinking..."
+  // even though the application result and role changes were processed successfully.
+  const successMessage = action === "approve"
+    ? "✅ Staff application approved successfully. The applicant has been assigned the Awaiting Training role."
+    : action === "deny"
+      ? "✅ Staff application denied successfully. The 3-day reapplication cooldown has been applied."
+      : "✅ Staff applicant has been blacklisted successfully.";
+  await interaction.followUp({
+    flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+    components: [v2Container(successMessage)],
+  });
 }
 
 async function postStaffApplicationResult(client, application) {
