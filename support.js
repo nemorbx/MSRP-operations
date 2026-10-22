@@ -1013,6 +1013,7 @@ async function setup(client) {
 
         // Cancel any pending closure request because the opener can no longer respond.
         if (ticket.closeRequestMessageId || ticket.closeRequestedAt) {
+          const requestMessageId = ticket.closeRequestMessageId;
           const timer = closureRequestTimers.get(ticket.threadId);
           if (timer) clearTimeout(timer);
           closureRequestTimers.delete(ticket.threadId);
@@ -1020,9 +1021,8 @@ async function setup(client) {
           ticket.closeRequestedAt = null;
           ticket.closeRequestedBy = null;
           const channel = await client.channels.fetch(ticket.threadId).catch(() => null);
-          if (channel?.isTextBased() && channel.messages) {
-            const recent = await channel.messages.fetch({ limit: 50 }).catch(() => null);
-            const requestMessage = recent?.get(ticket.closeRequestMessageId);
+          if (requestMessageId && requestMessageId !== "pending" && channel?.isTextBased() && channel.messages) {
+            const requestMessage = await channel.messages.fetch(requestMessageId).catch(() => null);
             if (requestMessage) await requestMessage.edit({ components: [] }).catch(() => {});
           }
         }
