@@ -14,7 +14,6 @@ const { setup: setupAFK } = require("./afk");
 const { setup: setupStaffFeedback } = require("./staff-feedback");
 const { setup: setupRegulations, ensureRegulationsPanel, postOrRefreshPanel } = require("./regulations");
 const { purgeMessages } = require("./purge");
-const { setup: setupMessageLogs } = require("./message-logs");
 const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
 const { setup: setupInformation, postOrRefreshInformationPanel } = require("./information");
 const { setup: setupRolePerks, postOrRefreshRolePerksPanel } = require("./roleperks");
@@ -67,7 +66,6 @@ setupSupport(client);
 setupAFK(client);
 setupStaffFeedback(client);
 setupRegulations(client);
-setupMessageLogs(client);
 setupGiveaway(client);
 setupInformation(client);
 setupRolePerks(client);
@@ -173,23 +171,7 @@ client.on("messageCreate", async message => {
   }
 
   try {
-    const result = await purgeMessages(
-      message.channel,
-      amount,
-      message,
-      deletedMessage => {
-        if (client.messageLogPurgeDeletes) client.messageLogPurgeDeletes.add(deletedMessage.id);
-      }
-    );
-
-    if (client.sendPurgeLog) {
-      await client.sendPurgeLog(message.guild, {
-        executorId: message.author.id,
-        amount,
-        deletedCount: result.deleted,
-        channelId: message.channel.id,
-      });
-    }
+    const result = await purgeMessages(message.channel, amount, message);
 
     const confirmation = await message.channel.send("🧹 Purged " + result.deleted + " message" + (result.deleted === 1 ? "." : "s.")).catch(() => null);
     if (confirmation) setTimeout(() => confirmation.delete().catch(() => {}), 3000);
