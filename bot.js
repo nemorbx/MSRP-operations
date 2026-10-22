@@ -1,5 +1,9 @@
 require("dotenv").config();
 
+const fs = require("fs");
+const path = require("path");
+const { execFileSync } = require("child_process");
+
 const { Client, GatewayIntentBits, Partials, PermissionsBitField, ActivityType } = require("discord.js");
 
 const { setup: setupInfractions } = require("./infractions");
@@ -355,10 +359,47 @@ client.once("clientReady", async () => {
     try {
       const readyChannel = await client.channels.fetch("1561762073971531857");
       if (readyChannel?.isTextBased() && typeof readyChannel.send === "function") {
+        let updateText = "";
+        let commitSha = "";
+        let updateKeyFile = path.join(__dirname, "data", "last-notified-commit.json");
+        try {
+          // Read the actual commit deployed by the host instead of repeating a hard-coded update list.
+          const commit = execFileSync("git", ["log", "-1", "--format=%H%n%s%n%b"], {
+            cwd: __dirname,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "ignore"],
+          }).trim();
+          const [sha, subject, ...bodyLines] = commit.split("\\n");
+          commitSha = sha || "";
+          const previous = fs.existsSync(updateKeyFile)
+            ? JSON.parse(fs.readFileSync(updateKeyFile, "utf8")).sha
+            : "";
+          if (commitSha && commitSha !== previous) {
+            const body = bodyLines.join("\\n").trim();
+            const details = body
+              .split("\\n")
+              .map(line => line.replace(/^[-*]\\s*/, "").trim())
+              .filter(Boolean);
+            updateText = "\\n\\n**Changes in this deployment**\\n• " +
+              [subject, ...details].filter(Boolean).join("\\n• ");
+          }
+        } catch (error) {
+          console.warn("[Ready] Could not read deployment commit details:", error.message);
+        }
+
         await readyChannel.send({
-          content: "<@1279549428331446393> ✅ **MSRP Operations is back online and slash commands are registered. You can use commands now.**\n\n**Latest pushed updates**\n• Ticket closure requests now require the ticket opener to confirm or cancel; no response within 1 hour automatically closes the ticket.\n• Staff applications now expire after 10 minutes without a response, and the application is removed so the user must start over.\n• Removed Lead ranks from promotion, infraction/demotion, and staff application eligibility checks.\n• Updated the public MSRP Roblox group link.",
+          content: "<@1279549428331446393> ✅ **MSRP Operations is back online and slash commands are registered. You can use commands now.**" + updateText,
           allowedMentions: { users: ["1279549428331446393"] }
         });
+
+        if (commitSha) {
+          try {
+            fs.mkdirSync(path.dirname(updateKeyFile), { recursive: true });
+            fs.writeFileSync(updateKeyFile, JSON.stringify({ sha: commitSha }, null, 2));
+          } catch (error) {
+            console.warn("[Ready] Could not save last-notified deployment commit:", error.message);
+          }
+        }
       } else {
         console.error("Bot-ready notification channel is unavailable or not text-based.");
       }
