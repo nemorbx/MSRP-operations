@@ -899,14 +899,8 @@ async function handleClose(interaction, ticket) {
 }
 
 async function handleCloseConfirmation(interaction, ticket, confirm) {
-  if (ticket.claimedBy) {
-    await interaction.reply({
-      content: "A staff member has claimed this ticket, so the opener can no longer close it. Please continue with the assigned staff member.",
-      ephemeral: true,
-    });
-    return;
-  }
-
+  // The opener cannot use the ticket's regular Close button after it is claimed,
+  // but may still confirm a closure request explicitly initiated by authorized staff.
   if (interaction.user.id !== ticket.userId) {
     await interaction.reply({
       content:
