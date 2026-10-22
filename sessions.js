@@ -13,7 +13,7 @@ const {
 
 const SESSION_CHANNEL_ID = "1527179992398692353";
 const SESSION_STATUS_OWNER_ID = "1279549428331446393";
-let manualSessionStatus = null;
+let manualSessionStatus = false;
 const SESSION_NOTIFICATION_ROLE_ID = "1527904654212726844";
 const ON_DUTY_ROLE_ID = "1529159979674636450";
 const PANEL_MARKER = "msrp-session-panel";
