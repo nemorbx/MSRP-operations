@@ -356,7 +356,7 @@ client.once("clientReady", async () => {
       const readyChannel = await client.channels.fetch("1561762073971531857");
       if (readyChannel?.isTextBased() && typeof readyChannel.send === "function") {
         await readyChannel.send({
-          content: "<@1279549428331446393> ✅ **MSRP Operations is back online and slash commands are registered. You can use commands now.**",
+          content: "<@1279549428331446393> ✅ **MSRP Operations is back online and slash commands are registered. You can use commands now.**\n\n**Latest pushed updates**\n• Ticket closure requests now require the ticket opener to confirm or cancel; no response within 1 hour automatically closes the ticket.\n• Staff applications now expire after 10 minutes without a response, and the application is removed so the user must start over.\n• Removed Lead ranks from promotion, infraction/demotion, and staff application eligibility checks.\n• Updated the public MSRP Roblox group link.",
           allowedMentions: { users: ["1279549428331446393"] }
         });
       } else {
