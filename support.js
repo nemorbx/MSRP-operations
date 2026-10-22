@@ -31,6 +31,8 @@ const SUPPORT_LOGS_CHANNEL_ID = "1552509962910171176";
 const SUPPORT_PANEL_VERSION = 8;
 const SUPPORT_PANEL_MARKER = "\u200B".repeat(SUPPORT_PANEL_VERSION);
 let supportPanelRefreshPromise = null;
+const closureRequestTimers = new Map();
+const CLOSURE_RESPONSE_TIMEOUT_MS = 60 * 60 * 1000;
 
 const DATA_DIR = path.join(__dirname, "data");
 const TICKETS_FILE = path.join(DATA_DIR, "tickets.json");
@@ -775,6 +777,55 @@ async function finalizeClose(interaction, ticket, closedById = null) {
   return true;
 }
 
+async function scheduleClosureRequestTimeout(client, ticket) {
+  const oldTimer = closureRequestTimers.get(ticket.threadId);
+  if (oldTimer) clearTimeout(oldTimer);
+  closureRequestTimers.delete(ticket.threadId);
+  if (!ticket.closeRequestMessageId || !ticket.closeRequestedAt || ticket.closed || ticket.closing) return;
+
+  const elapsed = Date.now() - new Date(ticket.closeRequestedAt).getTime();
+  const remaining = Math.max(0, CLOSURE_RESPONSE_TIMEOUT_MS - elapsed);
+  const timer = setTimeout(async () => {
+    closureRequestTimers.delete(ticket.threadId);
+    const tickets = readTickets();
+    const latest = tickets[ticket.threadId];
+    if (!latest || latest.closed || latest.closing || !latest.closeRequestMessageId) return;
+    const thread = await client.channels.fetch(ticket.threadId).catch(() => null);
+    if (!thread || !thread.isTextBased()) return;
+    await thread.send({ content: `<@${latest.userId}> did not respond to the closure request within one hour. This ticket will now be closed.`, allowedMentions: { users: [latest.userId] } }).catch(() => {});
+    const fakeInteraction = { client, channel: thread, user: { id: null } };
+    const closed = await finalizeClose(fakeInteraction, latest, null);
+    if (!closed) console.error("[Support] Automatic closure after one-hour timeout failed for ticket " + ticket.threadId);
+  }, remaining);
+  closureRequestTimers.set(ticket.threadId, timer);
+}
+
+async function requestTicketClosure(interaction, ticket) {
+  const tickets = readTickets();
+  const latest = tickets[ticket.threadId];
+  if (!latest || latest.closed || latest.closing) {
+    await interaction.reply({ content: "This ticket is already closed or closing.", ephemeral: true });
+    return;
+  }
+  if (latest.closeRequestMessageId) {
+    await interaction.reply({ content: "A closure request is already awaiting the ticket opener's response.", ephemeral: true });
+    return;
+  }
+
+  await interaction.deferUpdate();
+  const requestMessage = await interaction.channel.send({
+    content: `<@${latest.userId}> **Support staff have requested to close this ticket.** Please respond using the buttons below within **1 hour**. If you do not respond, the ticket will automatically close.`,
+    components: closeRequestComponents(),
+    allowedMentions: { users: [latest.userId] },
+  });
+  latest.closeRequestMessageId = requestMessage.id;
+  latest.closeRequestedAt = new Date().toISOString();
+  latest.closeRequestedBy = interaction.user.id;
+  tickets[latest.threadId] = latest;
+  saveTickets(tickets);
+  await scheduleClosureRequestTimeout(interaction.client, latest);
+}
+
 async function handleClose(interaction, ticket) {
   if (ticket.closed || ticket.closing) {
     await interaction.reply({
@@ -792,14 +843,19 @@ async function handleClose(interaction, ticket) {
 
   if (!isCreator && !isAuthorizedStaff) {
     await interaction.reply({
-      content: "Only the ticket creator or authorized support staff can close this ticket.",
+      content: "Only the ticket creator or authorized support staff can request closure.",
       ephemeral: true,
     });
     return;
   }
 
+  if (!isCreator) {
+    await requestTicketClosure(interaction, ticket);
+    return;
+  }
+
   await interaction.deferUpdate();
-  await interaction.channel.send("This support ticket will close in 5 seconds.").catch(() => {});
+  await interaction.channel.send("The ticket opener requested closure. This ticket will close in 5 seconds.").catch(() => {});
   const closed = await finalizeClose(interaction, ticket, interaction.user.id);
   if (!closed) {
     await interaction.followUp({
@@ -854,6 +910,10 @@ async function handleCloseConfirmation(interaction, ticket, confirm) {
   if (!confirm) {
     latest.closeRequestMessageId = null;
     latest.closeRequestedAt = null;
+    latest.closeRequestedBy = null;
+    const closureTimer = closureRequestTimers.get(ticket.threadId);
+    if (closureTimer) clearTimeout(closureTimer);
+    closureRequestTimers.delete(ticket.threadId);
     tickets[ticket.threadId] = latest;
     saveTickets(tickets);
 
@@ -864,8 +924,16 @@ async function handleCloseConfirmation(interaction, ticket, confirm) {
     return;
   }
 
+  const closureTimer = closureRequestTimers.get(ticket.threadId);
+  if (closureTimer) clearTimeout(closureTimer);
+  closureRequestTimers.delete(ticket.threadId);
+  latest.closeRequestMessageId = null;
+  latest.closeRequestedAt = null;
+  latest.closeRequestedBy = null;
+  tickets[ticket.threadId] = latest;
+  saveTickets(tickets);
   await interaction.deferUpdate();
-  await interaction.channel.send("This support ticket will close in 5 seconds.").catch(() => {});
+  await interaction.channel.send("The ticket opener confirmed closure. This support ticket will close in 5 seconds.").catch(() => {});
   const closed = await finalizeClose(interaction, latest, interaction.user.id);
 
   if (!closed) {
@@ -932,11 +1000,19 @@ async function setup(client) {
       ticket.closedAt = new Date().toISOString();
       ticket.closeRequestMessageId = null;
       ticket.closeRequestedAt = null;
+      ticket.closeRequestedBy = null;
       legacyTickets[id] = ticket;
       changed = true;
     }
   }
   if (changed) saveTickets(legacyTickets);
+
+  // Restore one-hour closure timers after a restart so pending requests do not get stuck.
+  for (const ticket of Object.values(readTickets())) {
+    if (ticket.closeRequestMessageId && ticket.closeRequestedAt && !ticket.closed && !ticket.closing) {
+      scheduleClosureRequestTimeout(client, ticket).catch(error => console.error("[Support] Could not restore closure timeout:", error));
+    }
+  }
 
   client.on("channelDelete", async (channel) => {
     try {
@@ -948,6 +1024,10 @@ async function setup(client) {
       ticket.closedAt = new Date().toISOString();
       ticket.closeRequestMessageId = null;
       ticket.closeRequestedAt = null;
+      ticket.closeRequestedBy = null;
+      const closureTimer = closureRequestTimers.get(channel.id);
+      if (closureTimer) clearTimeout(closureTimer);
+      closureRequestTimers.delete(channel.id);
       tickets[channel.id] = ticket;
       saveTickets(tickets);
       await sendTicketLog(client, ticket, channel, "manual deletion", null);
