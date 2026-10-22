@@ -339,54 +339,57 @@ client.once("clientReady", async () => {
 
   if (commandsReady) {
     try {
-      const readyChannel = await client.channels.fetch("1561762073971531857");
-      if (readyChannel?.isTextBased() && typeof readyChannel.send === "function") {
-        let updateText = "";
+      const updateChannel = await client.channels.fetch("1561762073971531857");
+      if (updateChannel?.isTextBased() && typeof updateChannel.send === "function") {
+        const updateKeyFile = path.join(__dirname, "data", "last-notified-commit.json");
         let commitSha = "";
-        let updateKeyFile = path.join(__dirname, "data", "last-notified-commit.json");
+        let updateLines = [];
+
         try {
-          // Read the actual commit deployed by the host instead of repeating a hard-coded update list.
+          // Announce only a new deployed commit, never a generic startup or stale update.
           const commit = execFileSync("git", ["log", "-1", "--format=%H%n%s%n%b"], {
             cwd: __dirname,
             encoding: "utf8",
             stdio: ["ignore", "pipe", "ignore"],
           }).trim();
-          const [sha, subject, ...bodyLines] = commit.split("\\n");
+          const [sha, subject, ...bodyLines] = commit.split("\n");
           commitSha = sha || "";
           const previous = fs.existsSync(updateKeyFile)
             ? JSON.parse(fs.readFileSync(updateKeyFile, "utf8")).sha
             : "";
+
           if (commitSha && commitSha !== previous) {
-            const body = bodyLines.join("\\n").trim();
-            const details = body
-              .split("\\n")
-              .map(line => line.replace(/^[-*]\\s*/, "").trim())
+            const details = bodyLines.join("\n").trim()
+              .split("\n")
+              .map(line => line.replace(/^[-*]\s*/, "").trim())
               .filter(Boolean);
-            updateText = "\\n\\n**Changes in this deployment**\\n• " +
-              [subject, ...details].filter(Boolean).join("\\n• ");
+            updateLines = [subject, ...details].filter(Boolean);
+            if (!updateLines.length) updateLines = ["Deployment updated successfully."];
           }
         } catch (error) {
-          console.warn("[Ready] Could not read deployment commit details:", error.message);
+          console.warn("[Updates] Could not read deployment commit details:", error.message);
         }
 
-        await readyChannel.send({
-          content: "<@1279549428331446393> ✅ **MSRP Operations is back online and slash commands are registered. You can use commands now.**" + updateText,
-          allowedMentions: { users: ["1279549428331446393"] }
-        });
+        if (commitSha && updateLines.length) {
+          await updateChannel.send({
+            content: "✅ **MSRP Operations Update**\n" +
+              updateLines.map(line => "• " + line).join("\n") +
+              "\n\n_Status: deployed successfully._",
+            allowedMentions: { parse: [] },
+          });
 
-        if (commitSha) {
           try {
             fs.mkdirSync(path.dirname(updateKeyFile), { recursive: true });
             fs.writeFileSync(updateKeyFile, JSON.stringify({ sha: commitSha }, null, 2));
           } catch (error) {
-            console.warn("[Ready] Could not save last-notified deployment commit:", error.message);
+            console.warn("[Updates] Could not save last-notified deployment commit:", error.message);
           }
         }
       } else {
-        console.error("Bot-ready notification channel is unavailable or not text-based.");
+        console.error("Bot update channel is unavailable or not text-based.");
       }
     } catch (error) {
-      console.error("Bot-ready notification failed:", error);
+      console.error("Bot update notification failed:", error);
     }
   }
 
