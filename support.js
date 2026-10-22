@@ -611,9 +611,14 @@ const ticketAddCommand = new SlashCommandBuilder()
     .setName("add")
     .setDescription("Add a member to this ticket.")
     .addUserOption(option => option.setName("member").setDescription("Member to add to the ticket").setRequired(true))
+  )
+  .addSubcommand(subcommand => subcommand
+    .setName("remove")
+    .setDescription("Remove a member from this ticket.")
+    .addUserOption(option => option.setName("member").setDescription("Member to remove from the ticket").setRequired(true))
   );
 
-async function handleTicketAdd(interaction) {
+async function handleTicketAccessChange(interaction, action) {
   const tickets = readTickets();
   const ticket = tickets[interaction.channelId];
   if (!ticket || ticket.closed) {
@@ -623,19 +628,30 @@ async function handleTicketAdd(interaction) {
   const isClaimer = ticket.claimedBy === interaction.user.id;
   const isSeniorHR = isHighRank(interaction.member);
   if (!isClaimer && !isSeniorHR) {
-    await interaction.reply({ content: "Only the staff member who claimed this ticket or Senior High Rank can add members.", ephemeral: true });
+    await interaction.reply({ content: "Only the staff member who claimed this ticket or Senior High Rank can manage ticket access.", ephemeral: true });
     return;
   }
+
   const targetUser = interaction.options.getUser("member", true);
-  if (targetUser.id === ticket.userId) {
+  if (action === "add" && targetUser.id === ticket.userId) {
     await interaction.reply({ content: "The ticket opener already has access to this ticket.", ephemeral: true });
     return;
   }
+  if (action === "remove" && targetUser.id === ticket.userId) {
+    await interaction.reply({ content: "You cannot remove the ticket creator from their own ticket.", ephemeral: true });
+    return;
+  }
+
   const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
   if (!targetMember) {
     await interaction.reply({ content: "That user must be a member of this server.", ephemeral: true });
     return;
   }
+  if (action === "remove" && isHighRank(targetMember)) {
+    await interaction.reply({ content: "You cannot remove a Senior High Rank member from a ticket.", ephemeral: true });
+    return;
+  }
+
   const channel = interaction.channel;
   if (!channel?.permissionOverwrites) {
     await interaction.reply({ content: "This ticket channel does not support member access changes.", ephemeral: true });
@@ -643,22 +659,44 @@ async function handleTicketAdd(interaction) {
   }
   await interaction.deferReply({ ephemeral: true });
   try {
-    await channel.permissionOverwrites.edit(targetUser.id, {
-      ViewChannel: true,
-      SendMessages: true,
-      ReadMessageHistory: true,
-      AttachFiles: true,
-      EmbedLinks: true,
-    }, { reason: "Added to MSRP support ticket by " + interaction.user.tag });
-    await channel.send({
-      content: "<@" + targetUser.id + "> was added to this ticket by <@" + interaction.user.id + ">.",
-      allowedMentions: { users: [targetUser.id, interaction.user.id] },
-    });
-    await interaction.editReply("Successfully added " + targetUser.tag + " to this ticket.");
+    if (action === "add") {
+      await channel.permissionOverwrites.edit(targetUser.id, {
+        ViewChannel: true,
+        SendMessages: true,
+        ReadMessageHistory: true,
+        AttachFiles: true,
+        EmbedLinks: true,
+      }, { reason: "Added to MSRP support ticket by " + interaction.user.tag });
+      await channel.send({
+        content: "<@" + targetUser.id + "> was added to this ticket by <@" + interaction.user.id + ">.",
+        allowedMentions: { users: [targetUser.id, interaction.user.id] },
+      });
+      await interaction.editReply("Successfully added " + targetUser.tag + " to this ticket.");
+    } else {
+      const overwrite = channel.permissionOverwrites.cache.get(targetUser.id);
+      if (!overwrite) {
+        await interaction.editReply(targetUser.tag + " does not have an individual access override in this ticket.");
+        return;
+      }
+      await channel.permissionOverwrites.delete(targetUser.id, "Removed from MSRP support ticket by " + interaction.user.tag);
+      await channel.send({
+        content: "<@" + targetUser.id + "> was removed from this ticket by <@" + interaction.user.id + ">.",
+        allowedMentions: { users: [targetUser.id, interaction.user.id] },
+      });
+      await interaction.editReply("Successfully removed " + targetUser.tag + " from this ticket.");
+    }
   } catch (error) {
-    console.error("[Support] Failed to add member to ticket:", error);
-    await interaction.editReply("I couldn't add that member. Check the bot's Manage Channels permission.");
+    console.error("[Support] Failed to " + action + " member " + targetUser.id + " in ticket:", error);
+    await interaction.editReply("I couldn't " + action + " that member. Check the bot's Manage Channels permission.");
   }
+}
+
+async function handleTicketAdd(interaction) {
+  return handleTicketAccessChange(interaction, "add");
+}
+
+async function handleTicketRemove(interaction) {
+  return handleTicketAccessChange(interaction, "remove");
 }
 
 const escalateCommand = new SlashCommandBuilder()
@@ -1190,9 +1228,16 @@ async function setup(client) {
         return;
       }
 
-      if (interaction.isChatInputCommand() && interaction.commandName === "ticket" && interaction.options.getSubcommand() === "add") {
-        await handleTicketAdd(interaction);
-        return;
+      if (interaction.isChatInputCommand() && interaction.commandName === "ticket") {
+        const subcommand = interaction.options.getSubcommand();
+        if (subcommand === "add") {
+          await handleTicketAdd(interaction);
+          return;
+        }
+        if (subcommand === "remove") {
+          await handleTicketRemove(interaction);
+          return;
+        }
       }
 
       if (interaction.isChatInputCommand() && interaction.commandName === "escalate") {
