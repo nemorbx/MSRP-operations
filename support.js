@@ -805,6 +805,17 @@ async function requestTicketClosure(interaction, ticket) {
     await interaction.reply({ content: "This ticket is already closed or closing.", ephemeral: true });
     return;
   }
+
+  // If the opener has left the server, never create a closure request that nobody can answer.
+  const opener = await interaction.guild.members.fetch(latest.userId).catch(() => null);
+  if (!opener || latest.openerLeft) {
+    await interaction.reply({
+      content: "The ticket opener has left the server, so a closure request cannot be sent to them.",
+      ephemeral: true,
+    });
+    return;
+  }
+
   if (latest.closeRequestMessageId) {
     await interaction.reply({ content: "A closure request is already awaiting the ticket opener's response.", ephemeral: true });
     return;
@@ -991,6 +1002,38 @@ async function handleCloseConfirmation(interaction, ticket, confirm) {
 
 async function setup(client) {
   ensureData();
+
+  client.on("guildMemberRemove", async (member) => {
+    try {
+      const tickets = readTickets();
+      let changed = false;
+      for (const ticket of Object.values(tickets)) {
+        if (ticket.userId !== member.id || ticket.closed) continue;
+        ticket.openerLeft = true;
+
+        // Cancel any pending closure request because the opener can no longer respond.
+        if (ticket.closeRequestMessageId || ticket.closeRequestedAt) {
+          const timer = closureRequestTimers.get(ticket.threadId);
+          if (timer) clearTimeout(timer);
+          closureRequestTimers.delete(ticket.threadId);
+          ticket.closeRequestMessageId = null;
+          ticket.closeRequestedAt = null;
+          ticket.closeRequestedBy = null;
+          const channel = await client.channels.fetch(ticket.threadId).catch(() => null);
+          if (channel?.isTextBased() && channel.messages) {
+            const recent = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+            const requestMessage = recent?.get(ticket.closeRequestMessageId);
+            if (requestMessage) await requestMessage.edit({ components: [] }).catch(() => {});
+          }
+        }
+        tickets[ticket.threadId] = ticket;
+        changed = true;
+      }
+      if (changed) saveTickets(tickets);
+    } catch (error) {
+      console.error("Support opener-leave handler error:", error);
+    }
+  });
 
   client.on("threadDelete", async (thread) => {
     try {
