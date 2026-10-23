@@ -251,6 +251,7 @@ function canClaim(member, ticket) {
 
 function canRequestClosure(member, ticket) {
   return (
+    isHighRank(member) ||
     ticket.claimedBy === member?.id ||
     canUseTeam(member, ticket.teamRoleId)
   );
@@ -584,7 +585,17 @@ async function submitTicket(interaction, typeKey) {
     createdAt: new Date().toISOString(),
   };
 
-  const ping = await channel.send({ content: `<@&${type.roleId}>` }).catch(() => null);
+  // Internal Affairs tickets notify both the IA team and Senior High Rank.
+  const pingContent = typeKey === "ia"
+    ? `<@&${type.roleId}> <@&${SENIOR_HR_ROLE_ID}>`
+    : `<@&${type.roleId}>`;
+  const ping = await channel.send({
+    content: pingContent,
+    allowedMentions: { roles: typeKey === "ia" ? [type.roleId, SENIOR_HR_ROLE_ID] : [type.roleId] },
+  }).catch(error => {
+    console.error("[Support] Failed to notify ticket team:", error);
+    return null;
+  });
   if (ping) setTimeout(() => ping.delete().catch(() => {}), 1500);
 
   const panelMessage = await channel.send({
