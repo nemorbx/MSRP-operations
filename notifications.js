@@ -14,9 +14,9 @@ const {
 } = require("discord.js");
 
 const NOTIFICATION_CHANNEL_ID = "1560172255839780976";
-const TOP_BANNER = "notification.PNG";
+const TOP_BANNER = "notification.png";
 const FOOTER_BANNER = "banner.png";
-const PANEL_VERSION = 1;
+const PANEL_VERSION = 2;
 const PANEL_MARKER = "\u200B".repeat(PANEL_VERSION);
 const EMOJIS = {
   announcement: { name: "megaphone", id: "1563317451851178034" },
