@@ -134,7 +134,7 @@ const COLORS = {
   PENDING: 0x5dade2,
   APPROVED: 0x57f287,
   DENIED: 0xed4245,
-  BLACKLISTED: 0xf1c40f
+  BLACKLISTED: 0x000000
 };
 
 // ============================================================
@@ -1046,6 +1046,9 @@ async function updateStaffEmbed(
 
   description +=
     `\n**${label}:** <@${interaction.user.id}>`;
+  if (label === "Blacklisted By" && application.blacklistReason) {
+    description += `\n**Blacklist Reason:** ${application.blacklistReason}`;
+  }
 
   embed.setDescription(description);
 
