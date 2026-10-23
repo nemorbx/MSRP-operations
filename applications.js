@@ -1240,9 +1240,8 @@ function setup(client) {
         const user = await client.users.fetch(application.userId);
         const dm = await user.createDM();
         let controlMessage = null;
-        if (application.controlMessageId && application.controlChannelId) {
-          const channel = await client.channels.fetch(application.controlChannelId).catch(() => null);
-          if (channel?.isDMBased?.()) controlMessage = await channel.messages.fetch(application.controlMessageId).catch(() => null);
+        if (application.controlMessageId) {
+          controlMessage = await dm.messages.fetch(application.controlMessageId).catch(() => null);
         }
         if (!controlMessage) {
           controlMessage = await dm.send({
