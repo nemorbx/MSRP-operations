@@ -29,6 +29,7 @@ const STAFF_BLACKLIST_ROLE_ID = "1529726037032833096";
 const AWAITING_TRAINING_ROLE_ID = "1551985353802518588";
 const APPLICATION_READER_ROLE_ID = "1551993755026858084";
 const BAN_APPEAL_READER_ROLE_ID = "1551993820743335976";
+const UNVERIFIED_ROLE_ID = "1528563912646197400";
 
 const APPLICATION_PANEL_VERSION = 4;
 const APPLICATION_PANEL_MARKER = "\u200B".repeat(APPLICATION_PANEL_VERSION);
@@ -129,6 +130,10 @@ function readJson(file, fallback) {
 
 function writeJson(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
+
+function isUnverified(member) {
+  return Boolean(member?.roles?.cache?.has(UNVERIFIED_ROLE_ID));
 }
 
 function isStaff(member) {
@@ -401,6 +406,12 @@ function buildEligibilityContainer(remaining, ready = false, started = false) {
 
 async function startStaffApplication(interaction) {
   if (!interaction.guild || !interaction.member) return;
+
+  // Unverified members cannot start staff applications. Support tickets remain available through the support panel.
+  if (isUnverified(interaction.member)) {
+    await v2Reply(interaction, "You must verify your account before using applications. If you are having trouble verifying, open a Support ticket.");
+    return;
+  }
 
   // Acknowledge immediately to prevent Discord's interaction from remaining in a thinking state.
   await interaction.deferReply({ flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral });
@@ -1321,6 +1332,15 @@ function setup(client) {
   client.on("interactionCreate", async interaction => {
     try {
       if (interaction.isButton()) {
+        // Block application actions for unverified members, while leaving the Support panel handled by support.js available.
+        if (interaction.guild && isUnverified(interaction.member) && [
+          "staff_application_start", "media_application_start", "ban_appeal_start",
+          "staff_application_cancel", "staff_application_confirm_ready"
+        ].includes(interaction.customId)) {
+          await v2Reply(interaction, "You must verify your account before using applications. If you are having trouble verifying, open a Support ticket.");
+          return;
+        }
+
         if (interaction.customId.startsWith("staff_dm_start:") || interaction.customId.startsWith("staff_dm_cancel:")) {
           await handleDMButton(interaction);
           return;
