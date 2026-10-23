@@ -16,6 +16,7 @@ const { setup: setupRegulations, ensureRegulationsPanel, postOrRefreshPanel } = 
 const { purgeMessages } = require("./purge");
 const { setup: setupGiveaway, giveawayCommand } = require("./giveaway");
 const { setup: setupInformation, postOrRefreshInformationPanel } = require("./information");
+const { setup: setupNotifications, ensureNotificationPanel } = require("./notifications");
 const { setup: setupRolePerks, postOrRefreshRolePerksPanel } = require("./roleperks");
 const { setup: setupWelcome, commands: welcomeCommands } = require("./welcome");
 const { postOrRefreshVerificationPanel } = require("./verification-panel");
@@ -68,6 +69,7 @@ setupStaffFeedback(client);
 setupRegulations(client);
 setupGiveaway(client);
 setupInformation(client);
+setupNotifications(client);
 setupRolePerks(client);
 setupWelcome(client);
 setupSticky(client);
@@ -251,6 +253,12 @@ client.once("clientReady", async () => {
     await ensureApplicationPanel(client);
   } catch (error) {
     console.error("Application panel refresh error:", error);
+  }
+
+  try {
+    await ensureNotificationPanel(client);
+  } catch (error) {
+    console.error("Notification panel refresh error:", error);
   }
 
   try {
