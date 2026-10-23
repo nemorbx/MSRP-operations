@@ -311,7 +311,7 @@ function setup(client) {
         }
 
         if (sub === "results") {
-          if (!isTrainer(member)) return interaction.reply({ content: "Only Staff Trainers can submit training results.", flags: MessageFlags.Ephemeral });
+          if (!isTrainer(member) && !isSeniorHR(member)) return interaction.reply({ content: "Only Staff Trainers or Senior High Rank can submit training results.", flags: MessageFlags.Ephemeral });
           const traineeUser = interaction.options.getUser("trainee", true);
           const trainee = await interaction.guild.members.fetch(traineeUser.id).catch(() => null);
           if (!trainee || trainee.user.bot || !trainee.roles.cache.has(TRAINING_ROLE_ID)) {
