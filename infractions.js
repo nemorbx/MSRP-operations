@@ -166,31 +166,32 @@ function isHR(member) {
   return member.roles.cache.has(HR_ROLE_ID);
 }
 
-// High Rank (Internal Affairs Supervisor+) and Senior HR have the same
-// infraction authority. Rank hierarchy checks still apply to the target.
+// High Rank and Senior High Rank may issue infractions.
 function hasInfractionAuthority(member) {
   return isSeniorHR(member) || isHR(member);
 }
 
-// ==============================
-// PERMISSION CHECK
-// ==============================
-
+// Permission check uses MSRP staff-rank order rather than unrelated Discord roles.
 function canIssueInfraction(issuer, target) {
-  // Senior HR can infract anyone.
-  if (isSeniorHR(issuer)) {
-    return true;
-  }
+  if (isSeniorHR(issuer)) return true;
+  if (!isHR(issuer)) return false;
 
-  // Must be HR.
-  if (!isHR(issuer)) {
-    return false;
-  }
+  const issuerRankIndexes = RANKS
+    .map((rank, index) => ({ rank, index }))
+    .filter(({ rank }) => issuer.roles.cache.has(rank.id))
+    .map(({ index }) => index);
+  const targetRankIndexes = RANKS
+    .map((rank, index) => ({ rank, index }))
+    .filter(({ rank }) => target.roles.cache.has(rank.id))
+    .map(({ index }) => index);
 
-  // HR must be ABOVE the target.
-  // Same rank = not allowed.
-  // Lower rank = not allowed.
-  return issuer.roles.highest.position > target.roles.highest.position;
+  // Only staff members with a recognized rank can be actioned by High Rank.
+  if (!issuerRankIndexes.length || !targetRankIndexes.length) return false;
+  const issuerHighestRank = Math.max(...issuerRankIndexes);
+  const targetHighestRank = Math.max(...targetRankIndexes);
+
+  // A higher rank index is more senior in the configured RANKS list.
+  return targetHighestRank < issuerHighestRank;
 }
 
 // ==============================
