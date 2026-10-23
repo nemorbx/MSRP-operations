@@ -18,7 +18,7 @@ const WEBSITE_URL = "https://nemorbx.github.io/msrp/";
 const WHITELISTED_GROUP_URL = "https://www.roblox.com/share/g/974927500";
 const ROBLOX_GROUP_URL = "https://www.roblox.com/share/g/362792702";
 const INFORMATION_IMAGE_NAME = "information.png";
-const INFORMATION_PANEL_VERSION = 12;
+const INFORMATION_PANEL_VERSION = 13;
 const INFORMATION_PANEL_MARKER = "\u200B".repeat(INFORMATION_PANEL_VERSION);
 let informationPanelRefreshPromise = null;
 
@@ -68,6 +68,7 @@ function informationPanel(guild) {
   container.addTextDisplayComponents(
     display("> <:caution:1560140490823835689> **Default kick timer:** `30 Minutes` " + INFORMATION_PANEL_MARKER)
   );
+  container.addSeparatorComponents(divider());
   container.addActionRowComponents(
     new ActionRowBuilder().addComponents(
       new ButtonBuilder().setLabel("Whitelisted Group").setStyle(ButtonStyle.Link).setURL(WHITELISTED_GROUP_URL),
