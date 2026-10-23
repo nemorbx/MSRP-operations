@@ -511,10 +511,10 @@ function setup(client) {
         // Match the formatting used by MSRP's promotion announcements.
         components.addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            "> Congratulations, <@" + trainee.id + ">! You've successfully passed staff training and are now a \`Junior Moderator\`. We thank you for your dedication and commitment to the team here at Missouri State Roleplay.\\n\\n" +
-            "> **Training Score:** \`" + record.total + "/30\`\\n" +
-            "> **Trained By:** <@" + record.trainerId + ">\\n" +
-            "> **Result:** \`PASSED\`"
+            "> Congratulations, <@" + trainee.id + ">! You've successfully passed staff training and are now a `Junior Moderator`. We thank you for your dedication and commitment to the team here at Missouri State Roleplay.\n\n" +
+            "> **Training Score:** `" + record.total + "/30`\n" +
+            "> **Trained By:** <@" + record.trainerId + ">\n" +
+            "> **Result:** `PASSED`"
           )
         );
 
