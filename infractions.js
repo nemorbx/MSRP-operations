@@ -1006,7 +1006,7 @@ client.on(
       const clearInvestMatch = message.content.trim().match(/^!clearinvestigation\\s+(?:<@!?(\\d+)>|(\\d+))$/i);
       if (clearInvestMatch) {
         const actor = await message.guild.members.fetch(message.author.id);
-        if (!hasSeniorHRAuthority(actor)) {
+        if (!isSeniorHR(actor)) {
           const warning = await message.reply("Only Senior HR can remove Under Investigation and restore staff roles.");
           setTimeout(() => warning.delete().catch(() => {}), 7000);
           return;
