@@ -802,10 +802,10 @@ function recoverStaffApplicationFromReviewMessage(interaction, applicationId) {
 async function showStaffDecisionReasonModal(interaction, action, applicationId) {
   const modal = new ModalBuilder()
     .setCustomId(`staff_decision_reason:${action}:${applicationId}`)
-    .setTitle(action === "approve" ? "Accept Application" : "Deny Application");
+    .setTitle(action === "approve" ? "Accept Application" : action === "blacklist" ? "Blacklist Applicant" : "Deny Application");
   const reason = new TextInputBuilder()
     .setCustomId("decision_reason")
-    .setLabel(action === "approve" ? "Reason for accepting" : "Reason for denying")
+    .setLabel(action === "approve" ? "Reason for accepting" : action === "blacklist" ? "Reason for staff blacklist" : "Reason for denying")
     .setStyle(TextInputStyle.Paragraph)
     .setPlaceholder("Explain why this decision was made...")
     .setMinLength(3)
@@ -877,7 +877,7 @@ async function handleStaffDecision(interaction, action, applicationId, decisionR
     application.status = "Blacklisted";
     application.reviewedBy = interaction.user.id;
     application.reviewedAt = new Date().toISOString();
-    application.resultReason = "You are no longer eligible to submit staff applications.";
+    application.resultReason = decisionReason.trim();
     const blacklist = readJson(BLACKLIST_FILE, []);
     if (!blacklist.includes(application.userId)) blacklist.push(application.userId);
     writeJson(BLACKLIST_FILE, blacklist);
@@ -1244,13 +1244,8 @@ function setup(client) {
         }
 
         const [prefix, id] = interaction.customId.split(":");
-        if (prefix === "staff_approve" || prefix === "staff_deny") {
+        if (prefix === "staff_approve" || prefix === "staff_deny" || prefix === "staff_blacklist") {
           await showStaffDecisionReasonModal(interaction, prefix.replace("staff_", ""), id);
-          return;
-        }
-
-        if (prefix === "staff_blacklist") {
-          await handleStaffDecision(interaction, "blacklist", id);
           return;
         }
 
