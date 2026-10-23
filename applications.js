@@ -774,7 +774,7 @@ function statusColor(status) {
 function buildStaffReviewContainer(application) {
   const statusText = application.status === "Approved" ? "Accepted" : application.status === "Denied" ? "Denied" : application.status === "Blacklisted" ? "Blacklisted" : "Currently Being Reviewed";
   const container = new ContainerBuilder().setAccentColor(statusColor(application.status));
-  container.addTextDisplayComponents(new TextDisplayBuilder().setContent("## Staff Application\n**Status:** " + statusText + "\n**Applicant:** <@" + application.userId + ">" + (application.status === "Pending" ? "\n**Application Reader:** <@" + APPLICATION_READER_ROLE_ID + ">" : "\n**Reviewed By:** <@" + (application.reviewedBy || "Unknown") + ">")));
+  container.addTextDisplayComponents(new TextDisplayBuilder().setContent("## Staff Application\n**Status:** " + statusText + "\n**Applicant:** <@" + application.userId + ">" + (application.status === "Pending" ? "\n**Application Reader:** <@&" + APPLICATION_READER_ROLE_ID + ">" : "\n**Reviewed By:** <@" + (application.reviewedBy || "Unknown") + ">")));
   (STAFF_QUESTIONS || []).slice(0, 25).forEach((question, index) => {
     container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
     container.addTextDisplayComponents(new TextDisplayBuilder().setContent("**" + String(question) + "**\n" + String(application.answers?.[index] || "No response.")));
