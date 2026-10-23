@@ -214,8 +214,9 @@ function setupSessions(client) {
   client.on("interactionCreate", async interaction => {
     if (!interaction.isButton()) return;
     if (interaction.customId === "session:status") {
-      if (interaction.user.id !== SESSION_STATUS_OWNER_ID) {
-        await interaction.reply({ content: "Only the server owner can change the session status.", ephemeral: true });
+      const member = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+      if (!member?.roles?.cache?.has(SESSION_STATUS_ROLE_ID)) {
+        await interaction.reply({ content: "Only members with the Session Permissions role can change the session status.", ephemeral: true });
         return;
       }
       manualSessionStatus = manualSessionStatus !== true;
