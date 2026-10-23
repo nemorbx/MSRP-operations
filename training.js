@@ -99,10 +99,16 @@ async function getTeamAccess(discordUserId, guildId) {
     throw new Error("Bloxlink did not return a linked Roblox account.");
   }
 
-  const groupResponse = await fetch(
+  let groupResponse = await fetch(
     "https://groups.roblox.com/v2/users/" + encodeURIComponent(String(robloxId)) + "/groups/roles",
     { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(12000) }
   );
+  if (!groupResponse.ok) {
+    groupResponse = await fetch(
+      "https://groups.roblox.com/v1/users/" + encodeURIComponent(String(robloxId)) + "/groups/roles",
+      { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(12000) }
+    );
+  }
 
   if (!groupResponse.ok) {
     throw new Error("Roblox group membership lookup failed with HTTP " + groupResponse.status + ".");
@@ -281,7 +287,7 @@ function setup(client) {
             teamAccess = await getTeamAccess(member.id, interaction.guild.id);
           } catch (error) {
             console.error("Training Bloxlink/group check failed:", error?.message || error);
-            return interaction.editReply("I couldn't verify your linked Roblox account or group membership right now. Please make sure your Discord is verified with Bloxlink and try again later.");
+            teamAccess = "Unable to Verify";
           }
           const channel = interaction.guild.channels.cache.get(REQUEST_CHANNEL_ID);
           if (!channel || !channel.isTextBased()) {
