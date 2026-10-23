@@ -547,8 +547,8 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
     applicationId,
     collector,
     controlMessage,
-    index: 0,
-    answers: [],
+    index: Array.isArray(application.answers) ? application.answers.length : 0,
+    answers: Array.isArray(application.answers) ? [...application.answers] : [],
   };
 
   activeSessions.set(user.id, session);
@@ -566,6 +566,15 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
     session.answers[session.index] = content;
     session.index += 1;
     collector.resetTimer({ time: 10 * 60 * 1000 });
+    const progressData = readJson(APPLICATIONS_FILE, {});
+    const progressApplication = progressData[applicationId];
+    if (progressApplication && progressApplication.status === "In Progress") {
+      progressApplication.answers = [...session.answers];
+      progressApplication.lastActivityAt = new Date().toISOString();
+      progressApplication.controlMessageId = controlMessage?.id || progressApplication.controlMessageId || null;
+      progressApplication.controlChannelId = controlMessage?.channelId || progressApplication.controlChannelId || dm.id;
+      writeJson(APPLICATIONS_FILE, progressData);
+    }
 
     if (session.index >= STAFF_QUESTIONS.length) {
       collector.stop("submitted");
@@ -646,7 +655,26 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
   });
 
   try {
-    await dm.send({ components: [v2Container(questionText(STAFF_QUESTIONS[0]))], flags: MessageFlags.IsComponentsV2 });
+    if (session.index >= STAFF_QUESTIONS.length) {
+      const data = readJson(APPLICATIONS_FILE, {});
+      const current = data[applicationId];
+      if (current && current.status === "In Progress") {
+        current.status = "Pending";
+        current.submittedAt = new Date().toISOString();
+        current.answers = [...session.answers];
+        writeJson(APPLICATIONS_FILE, data);
+        collector.stop("submitted");
+        activeSessions.delete(user.id);
+        await controlMessage.edit({ components: [buildDMControlContainer(user.id, applicationId, true, true)], flags: MessageFlags.IsComponentsV2 }).catch(() => {});
+        await postStaffApplication(globalThis.__msrpClient, current);
+        await dm.send({ components: [v2Container("Your saved application was submitted for review after the bot restarted.")], flags: MessageFlags.IsComponentsV2 }).catch(() => {});
+      }
+      return;
+    }
+    const resumeText = session.index > 0
+      ? "## Application Resumed\nYour saved progress has been restored. Continue with the next unanswered question.\n\n" + questionText(STAFF_QUESTIONS[session.index])
+      : questionText(STAFF_QUESTIONS[0]);
+    await dm.send({ components: [v2Container(resumeText)], flags: MessageFlags.IsComponentsV2 });
   } catch (error) {
     console.error("[Applications] Failed to send first staff application question:", error);
     collector.stop("error");
@@ -691,6 +719,9 @@ async function beginDMApplication(interaction) {
       status: "In Progress",
       createdAt: new Date().toISOString(),
       answers: [],
+      controlMessageId: interaction.message.id,
+      controlChannelId: interaction.message.channelId,
+      lastActivityAt: new Date().toISOString(),
     };
 
     applications[application.id] = application;
@@ -1197,8 +1228,39 @@ async function handleDMButton(interaction) {
 
 function setup(client) {
   ensureDataFiles();
-  resetStaffApplicationsOnce();
+  // Keep in-progress records when the bot restarts or deploys.
   globalThis.__msrpClient = client;
+
+  // Restore saved in-progress applications after deploys/restarts.
+  client.once(Events.ClientReady, async () => {
+    const data = readJson(APPLICATIONS_FILE, {});
+    const resumable = Object.values(data).filter(app => app?.type === "staff" && app.status === "In Progress");
+    for (const application of resumable) {
+      try {
+        const user = await client.users.fetch(application.userId);
+        const dm = await user.createDM();
+        let controlMessage = null;
+        if (application.controlMessageId && application.controlChannelId) {
+          const channel = await client.channels.fetch(application.controlChannelId).catch(() => null);
+          if (channel?.isDMBased?.()) controlMessage = await channel.messages.fetch(application.controlMessageId).catch(() => null);
+        }
+        if (!controlMessage) {
+          controlMessage = await dm.send({
+            components: [buildDMControlContainer(user.id, application.id, true, false)],
+            flags: MessageFlags.IsComponentsV2,
+          });
+          application.controlMessageId = controlMessage.id;
+          application.controlChannelId = controlMessage.channelId;
+          data[application.id] = application;
+          writeJson(APPLICATIONS_FILE, data);
+        }
+        await activateDMApplication(user, application.id, dm, controlMessage);
+      } catch (error) {
+        console.error("[Applications] Could not resume in-progress application " + application.id + " for user " + application.userId + ":", error);
+      }
+    }
+    console.log("[Applications] Startup resume check complete for " + resumable.length + " in-progress application(s).");
+  });
 
   // The Application Center panel is persistent and is intentionally not
   // recreated during bot startup. This prevents duplicate panels and speeds up
