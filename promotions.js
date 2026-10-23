@@ -67,6 +67,7 @@ const RANKS = [
 
 // Team roles automatically synchronized by /promote.
 const STAFF_TEAM_ROLE_ID = "1528242210871447672";
+const HIGH_RANK_ROLE_ID = "1551704115350999143";
 const TEAM_ROLE_IDS = {
     moderation: "1527381803617222676",
     administration: "1527381747791040522",
@@ -465,10 +466,14 @@ client.on("interactionCreate", async interaction => {
 
         const teamRoleId = getTeamRoleId(newRank.name);
         const teamRoleIds = Object.values(TEAM_ROLE_IDS);
+        const isInternalAffairsOrManagement =
+            newRank.name.includes("Internal Affairs") ||
+            newRank.name.includes("Management");
         const requiredRoleIds = [
             newRole.id,
             STAFF_TEAM_ROLE_ID,
-            ...(teamRoleId ? [teamRoleId] : [])
+            ...(teamRoleId ? [teamRoleId] : []),
+            ...(isInternalAffairsOrManagement ? [HIGH_RANK_ROLE_ID] : [])
         ];
         const requiredRoles = requiredRoleIds.map(id =>
             interaction.guild.roles.cache.get(id)
