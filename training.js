@@ -50,7 +50,15 @@ const trainingCommand = new SlashCommandBuilder()
   .setName("training")
   .setDescription("Training requests and results")
   .addSubcommand(sub => sub.setName("request").setDescription("Request a training session")
-    .addStringOption(o => o.setName("timezone").setDescription("Your time zone (e.g. CST, EST, AEDT)").setRequired(true)))
+    .addStringOption(o => o.setName("timezone").setDescription("Your time zone (e.g. CST, EST, AEDT)").setRequired(true))
+    .addStringOption(o => o.setName("age_group").setDescription("Your Roblox age group").setRequired(true).addChoices(
+      { name: "5–8", value: "5–8" },
+      { name: "9–12", value: "9–12" },
+      { name: "13–15", value: "13–15" },
+      { name: "16–17", value: "16–17" },
+      { name: "18–20", value: "18–20" },
+      { name: "21+", value: "21+" }
+    )))
   .addSubcommand(sub => sub.setName("results").setDescription("Submit a trainee's training results")
     .addUserOption(o => o.setName("trainee").setDescription("Trainee being evaluated").setRequired(true))
     .addIntegerOption(o => o.setName("driving").setDescription("Driving score (0–10)").setRequired(true).setMinValue(0).setMaxValue(10))
@@ -148,7 +156,7 @@ function requestButtons(traineeId, accepted = false) {
     new ButtonBuilder().setCustomId("training_cancel_" + traineeId).setLabel("Cancel Request").setStyle(ButtonStyle.Secondary).setDisabled(false)
   );
 }
-function requestPanel(traineeId, traineeName, timezone, teamAccess, availability = "Now", accepted = false, testPreview = false, acceptedBy = null) {
+function requestPanel(traineeId, traineeName, timezone, ageGroup, teamAccess, availability = "Now", accepted = false, testPreview = false, acceptedBy = null) {
   const container = new ContainerBuilder()
     .addTextDisplayComponents(new TextDisplayBuilder().setContent(
       (testPreview ? "**TEST PREVIEW — not a real request**\n\n" : "") +
@@ -158,7 +166,8 @@ function requestPanel(traineeId, traineeName, timezone, teamAccess, availability
         : "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\n\n") +
       "**Trainee:** " + String(traineeName || "Unknown user").replace(/[`*_~|>]/g, "") + "\n" +
       "**Team Access:** ``" + teamAccess + "``\n" +
-      "**Time Zone:** ``" + timezone + "``" +
+      "**Time Zone:** ``" + timezone + "``\\n" +
+      "**Roblox Age Group:** ``" + ageGroup + "``" +
       (accepted && acceptedBy ? "\n\n**Accepted By:** <@" + acceptedBy + ">" : "")
     ))
     .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
@@ -224,7 +233,7 @@ function setup(client) {
       if (command === "!test training request") {
         const testId = message.author.id;
         const sent = await channel.send({
-          components: requestPanel(testId, message.author.username, "CDT", "No", "Now", false, false),
+          components: requestPanel(testId, message.author.username, "CDT", "13–15", "No", "Now", false, false),
           flags: MessageFlags.IsComponentsV2,
           allowedMentions: { parse: [] }
         });
@@ -277,6 +286,7 @@ function setup(client) {
             return interaction.reply({ content: "You already have a pending or accepted training request. Cancel the pending request or complete your session first.", flags: MessageFlags.Ephemeral });
           }
           const timezone = interaction.options.getString("timezone", true).trim();
+          const ageGroup = interaction.options.getString("age_group", true);
           const availability = "Now";
           if (timezone.length < 2 || timezone.length > 60) {
             return interaction.reply({ content: "Please enter a valid time zone.", flags: MessageFlags.Ephemeral });
@@ -293,7 +303,7 @@ function setup(client) {
           if (!channel || !channel.isTextBased()) {
             return interaction.editReply({ content: "The training request channel is not configured correctly. Please contact an administrator." });
           }
-          const request = { traineeId: member.id, guildId: interaction.guild.id, timezone, teamAccess, availability, createdAt: now, status: "pending", messageId: null, channelId: channel.id };
+          const request = { traineeId: member.id, guildId: interaction.guild.id, timezone, ageGroup, teamAccess, availability, createdAt: now, status: "pending", messageId: null, channelId: channel.id };
           let sent;
           try {
             const pingMessage = await channel.send({
@@ -301,7 +311,7 @@ function setup(client) {
               allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID] }
             });
             sent = await channel.send({
-              components: requestPanel(member.id, member.user.username, timezone, teamAccess, availability, false, false),
+              components: requestPanel(member.id, member.user.username, timezone, ageGroup, teamAccess, availability, false, false),
               flags: MessageFlags.IsComponentsV2,
               allowedMentions: { parse: [] }
             });
@@ -389,6 +399,7 @@ function setup(client) {
           traineeId,
           trainee?.user?.username || "Unknown user",
           request.timezone,
+          request.ageGroup || "Not provided",
           request.teamAccess,
           request.availability,
           true,
