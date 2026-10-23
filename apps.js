@@ -1060,7 +1060,10 @@ async function updateStaffEmbed(
 // ============================================================
 
 async function handleStaffDecision(
-  interaction
+  interaction,
+  blacklistReason = "",
+  forcedAction = null,
+  forcedId = null
 ) {
   const parts =
     interaction.customId.split("_");
@@ -1110,6 +1113,25 @@ async function handleStaffDecision(
         "You don't have permission to blacklist applicants. Senior HR+ only.",
       ephemeral: true
     });
+    return;
+  }
+
+  if (action === "blacklist") {
+    const modal = new ModalBuilder()
+      .setCustomId("app_blacklist_reason_" + id)
+      .setTitle("Staff Blacklist Reason")
+      .addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId("reason")
+            .setLabel("Reason for staff blacklist")
+            .setStyle(TextInputStyle.Paragraph)
+            .setMinLength(5)
+            .setMaxLength(1000)
+            .setRequired(true)
+        )
+      );
+    await interaction.showModal(modal);
     return;
   }
 
@@ -1235,6 +1257,7 @@ async function handleStaffDecision(
             application.id,
           blacklistedBy:
             interaction.user.id,
+          reason: blacklistReason.trim(),
           blacklistedAt:
             new Date().toISOString()
         });
@@ -1247,6 +1270,7 @@ async function handleStaffDecision(
 
       application.status =
         "Blacklisted";
+      application.blacklistReason = blacklistReason.trim();
 
       application.reviewerId =
         interaction.user.id;
@@ -1506,6 +1530,20 @@ export function setupApplications(
         }
 
         // MODAL
+        if (
+          interaction.isModalSubmit() &&
+          interaction.customId.startsWith("app_blacklist_reason_")
+        ) {
+          const id = interaction.customId.slice("app_blacklist_reason_".length);
+          const reason = interaction.fields.getTextInputValue("reason").trim();
+          if (reason.length < 5) {
+            await interaction.reply({ content: "Please provide a meaningful blacklist reason (at least 5 characters).", ephemeral: true });
+            return;
+          }
+          await handleStaffDecision(interaction, reason, "blacklist", id);
+          return;
+        }
+
         if (
           interaction.isModalSubmit() &&
           interaction.customId ===
