@@ -5,6 +5,7 @@ const {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  Events,
   ContainerBuilder,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
@@ -620,12 +621,17 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
       collector.stop("error");
       const data = readJson(APPLICATIONS_FILE, {});
       if (data[applicationId]?.status === "In Progress") {
-        delete data[applicationId];
+        data[applicationId].answers = [...session.answers];
+        data[applicationId].lastActivityAt = new Date().toISOString();
         writeJson(APPLICATIONS_FILE, data);
       }
       activeSessions.delete(user.id);
       await controlMessage.edit({
-        components: [v2Container("## Staff Application Error\nAn error interrupted this application. Please start a new one from the Application Center.")],
+        components: [buildDMControlContainer(user.id, applicationId, true, false)],
+        flags: MessageFlags.IsComponentsV2,
+      }).catch(() => {});
+      await dm.send({
+        components: [v2Container("## Application Paused\nSomething interrupted the application, but your saved answers have been kept. Use the Start Application button on your application control message to resume.")],
         flags: MessageFlags.IsComponentsV2,
       }).catch(() => {});
     }
