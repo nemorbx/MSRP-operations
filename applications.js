@@ -166,16 +166,30 @@ function getCurrentApplication(userId) {
 
 function getCooldown(userId) {
   const cooldowns = readJson(COOLDOWNS_FILE, {});
-  const until = cooldowns[userId];
+  const entry = cooldowns[userId];
+  const until = typeof entry === "number" ? entry : Number(entry?.until || 0);
   if (!until) return 0;
 
   if (Date.now() >= until) {
-    delete cooldowns[userId];
+    if (typeof entry === "number") {
+      delete cooldowns[userId];
+    } else {
+      cooldowns[userId] = { ...entry, until: 0 };
+    }
     writeJson(COOLDOWNS_FILE, cooldowns);
     return 0;
   }
 
   return until;
+}
+
+function formatCooldown(until) {
+  const remaining = Math.max(0, until - Date.now());
+  const minutes = Math.ceil(remaining / 60000);
+  if (minutes < 60) return minutes + " minute(s)";
+  const hours = Math.ceil(remaining / 3600000);
+  if (hours < 24) return hours + " hour(s)";
+  return Math.ceil(remaining / 86400000) + " day(s)";
 }
 
 function createApplicationId(prefix = "APP") {
@@ -413,8 +427,9 @@ async function startStaffApplication(interaction) {
     await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("You are currently blacklisted from submitting staff applications.")] });
     return;
   }
-  if (getCooldown(interaction.user.id)) {
-    await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("Your previous staff application was denied. You must wait 3 days before submitting another staff application.")] });
+  const cooldownUntil = getCooldown(interaction.user.id);
+  if (cooldownUntil) {
+    await interaction.editReply({ flags: MessageFlags.IsComponentsV2, components: [v2Container("Your previous staff application was denied. You can submit another application in " + formatCooldown(cooldownUntil) + ".")] });
     return;
   }
 
@@ -898,8 +913,24 @@ async function handleStaffDecision(interaction, action, applicationId, decisionR
     application.reviewedAt = new Date().toISOString();
     application.resultReason = decisionReason.trim();
     const cooldowns = readJson(COOLDOWNS_FILE, {});
-    cooldowns[application.userId] = Date.now() + 3 * 24 * 60 * 60 * 1000;
+    const previous = cooldowns[application.userId];
+    const previousCount = typeof previous === "object" && previous
+      ? Number(previous.denialCount || 0)
+      : 0;
+    const denialCount = previousCount + 1;
+    const duration = denialCount === 1
+      ? 10 * 60 * 1000
+      : denialCount === 2
+        ? 3 * 60 * 60 * 1000
+        : 3 * 24 * 60 * 60 * 1000;
+    cooldowns[application.userId] = {
+      denialCount,
+      until: Date.now() + duration,
+      lastDeniedAt: new Date().toISOString(),
+    };
     writeJson(COOLDOWNS_FILE, cooldowns);
+    application.denialCount = denialCount;
+    application.reapplicationCooldownMs = duration;
   } else if (action === "blacklist") {
     application.status = "Blacklisted";
     application.reviewedBy = interaction.user.id;
