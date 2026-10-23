@@ -424,9 +424,29 @@ function setup(client) {
         }
         delete data.activeRequests[traineeId];
         saveData();
+        if (request.pingMessageId) {
+          await interaction.channel.messages.delete(request.pingMessageId).catch(() => {});
+        }
+        const trainee = await interaction.guild.members.fetch(traineeId).catch(() => null);
+        const traineeName = String(trainee?.user?.username || "Unknown user").replace(/[`*_~|>]/g, "");
         const cancelledPanel = new ContainerBuilder()
-          .addTextDisplayComponents(new TextDisplayBuilder().setContent("## Training Request Cancelled\n\n<@" + traineeId + "> cancelled their training request."))
-          .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }));
+          .setAccentColor(0x808080)
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+            "## Training Request\n\n> This request has been cancelled and is no longer active.\n\n" +
+            "**Trainee:** " + traineeName + "\n" +
+            "**Team Access:** ``" + request.teamAccess + "``\n" +
+            "**Time Zone:** ``" + request.timezone + "``\n\n" +
+            "~~Request Cancelled~~"
+          ))
+          .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+          .addActionRowComponents(new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId("training_cancelled_accept_" + traineeId).setLabel("Request Cancelled").setStyle(ButtonStyle.Secondary).setDisabled(true),
+            new ButtonBuilder().setCustomId("training_cancelled_cancel_" + traineeId).setLabel("Cancelled").setStyle(ButtonStyle.Secondary).setDisabled(true)
+          ))
+          .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+          .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(
+            new MediaGalleryItemBuilder().setURL("https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/banner.PNG")
+          ));
         await interaction.update({
           components: [cancelledPanel],
           flags: MessageFlags.IsComponentsV2,
