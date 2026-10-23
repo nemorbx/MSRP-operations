@@ -713,11 +713,19 @@ async function activateDMApplication(user, applicationId, dm, controlMessage) {
     activeSessions.delete(user.id);
     const data = readJson(APPLICATIONS_FILE, {});
     if (data[applicationId]?.status === "In Progress") {
-      delete data[applicationId];
+      // Never discard an in-progress application because a DM send or restart recovery failed.
+      data[applicationId].answers = [...session.answers];
+      data[applicationId].lastActivityAt = new Date().toISOString();
+      data[applicationId].controlMessageId = controlMessage?.id || data[applicationId].controlMessageId || null;
+      data[applicationId].controlChannelId = controlMessage?.channelId || data[applicationId].controlChannelId || dm.id;
       writeJson(APPLICATIONS_FILE, data);
     }
     await controlMessage.edit({
-      components: [v2Container("## Staff Application Error\nI couldn't send the first question. Please check your DMs and start a new application.")],
+      components: [buildDMControlContainer(user.id, applicationId, true, false)],
+      flags: MessageFlags.IsComponentsV2,
+    }).catch(() => {});
+    await dm.send({
+      components: [v2Container("## Application Paused\nSorry, something interrupted the application. Your saved answers have been kept. Please press **Start Application** on your application control message to resume. If it still will not resume, contact a staff member in the Assistance channel.")],
       flags: MessageFlags.IsComponentsV2,
     }).catch(() => {});
   }
@@ -1281,6 +1289,16 @@ function setup(client) {
           data[application.id] = application;
           writeJson(APPLICATIONS_FILE, data);
         }
+        // Let applicants know a restart/update interrupted the session, while preserving
+        // their saved answers and resuming from the next unanswered question.
+        await dm.send({
+          components: [v2Container(
+            "## Application Paused During an Update\nSorry! Your staff application was interrupted while the bot restarted for an update. Your saved answers have been kept, and your application is resuming below. If it does not continue correctly, please contact a staff member in the Assistance channel."
+          )],
+          flags: MessageFlags.IsComponentsV2,
+        }).catch(error => {
+          console.error("[Applications] Could not send restart notice to applicant " + application.userId + ":", error);
+        });
         await activateDMApplication(user, application.id, dm, controlMessage);
       } catch (error) {
         console.error("[Applications] Could not resume in-progress application " + application.id + " for user " + application.userId + ":", error);
