@@ -150,7 +150,7 @@ function requestPanel(traineeId, traineeName, timezone, teamAccess, availability
       (accepted
         ? "> <@" + traineeId + ">, your training request has been accepted. Please make your way to the briefing room inside the Sheriff's station.\n\n"
         : "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\n\n") +
-      "**Trainee:** <@" + traineeId + ">\n" +
+      "**Trainee:** " + String(traineeName || "Unknown user").replace(/[`*_~|>]/g, "") + "\n" +
       "**Team Access:** ``" + teamAccess + "``\n" +
       "**Time Zone:** ``" + timezone + "``" +
       (accepted && acceptedBy ? "\n\n**Accepted By:** <@" + acceptedBy + ">" : "")
@@ -385,16 +385,24 @@ function setup(client) {
           request.timezone,
           request.teamAccess,
           request.availability,
-          true
+          true,
+          false,
+          interaction.user.id
         );
         await interaction.update({ components: requestPanelComponents, flags: MessageFlags.IsComponentsV2, allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], parse: [] } });
         await interaction.followUp({ content: "You accepted this training request. The trainee has been notified.", flags: MessageFlags.Ephemeral });
         if (trainee) {
           await trainee.send("Your training request has been accepted by <@" + interaction.user.id + ">. Please make your way to the briefing room inside the Sheriff's station.").catch(() => {});
         }
+        const acceptedAt = Math.floor(request.acceptedAt / 1000);
+        const acceptedNotice = new ContainerBuilder()
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+            "<@" + interaction.user.id + "> has accepted this training request.\\n**Accepted:** <t:" + acceptedAt + ":F> (<t:" + acceptedAt + ":R>)"
+          ));
         await interaction.channel.send({
-          content: "<@" + interaction.user.id + "> has accepted this training request.",
-          allowedMentions: { users: [interaction.user.id] }
+          components: [acceptedNotice],
+          flags: MessageFlags.IsComponentsV2,
+          allowedMentions: { users: [interaction.user.id], parse: [] }
         });
         return;
       }
