@@ -49,6 +49,8 @@ const commands = [
           { name: "Notice", value: "Notice" },
           { name: "Warning", value: "Warning" },
           { name: "Strike", value: "Strike" },
+          { name: "Zero Tolerance Policy", value: "Zero Tolerance Policy" },
+          { name: "Staff Blacklisted", value: "Staff Blacklisted" },
           { name: "Demotion", value: "Demotion" },
           { name: "Termination", value: "Termination" },
           { name: "Under Investigation", value: "Under Investigation" }
@@ -91,6 +93,19 @@ const RANKS = [
   { name: "Junior Management", id: "1528425691723595867", teamId: "1528426569012609106" },
   { name: "Senior Management", id: "1527851704605868254", teamId: "1528426569012609106" },
   { name: "Head Management", id: "1528425534600646860", teamId: "1528426569012609106" },
+];
+
+// Progressive infraction roles, ordered from first notice through blacklist.
+const INFRACTION_STAGES = [
+  { name: "Notice 1", id: "1552174660311982180", category: "Notice" },
+  { name: "Notice 2", id: "1552174704352034867", category: "Notice" },
+  { name: "Warning 1", id: "1552174554850267147", category: "Warning" },
+  { name: "Warning 2", id: "1552174629768929361", category: "Warning" },
+  { name: "Strike 1", id: "1552174735893209128", category: "Strike" },
+  { name: "Strike 2", id: "1552174776091680858", category: "Strike" },
+  { name: "Zero Tolerance Policy", id: "1552174814972870828", category: "Zero Tolerance Policy" },
+  { name: "Under Investigation", id: "1563118621159465003", category: "Under Investigation" },
+  { name: "Staff Blacklisted", id: "1529726037032833096", category: "Staff Blacklisted" },
 ];
 
 // Local banner
@@ -575,6 +590,36 @@ client.on("interactionCreate", async (interaction) => {
 
       let punishmentResult = punishment;
 
+      // Existing stage determines progression; selected type can skip to a higher stage.
+      const currentStageIndex = INFRACTION_STAGES.findIndex(stage => target.roles.cache.has(stage.id));
+      const requestedStageIndex = {
+        "Notice": 0,
+        "Warning": 2,
+        "Strike": 4,
+        "Zero Tolerance Policy": 6,
+        "Staff Blacklisted": 8,
+      }[punishment];
+      let stageToApply = null;
+      if (requestedStageIndex !== undefined) {
+        const nextIndex = currentStageIndex >= 6 ? 7 : Math.max(requestedStageIndex, currentStageIndex + 1);
+        stageToApply = INFRACTION_STAGES[Math.min(nextIndex, 8)];
+        punishment = stageToApply.category;
+      }
+
+      if (stageToApply && !["Under Investigation", "Staff Blacklisted"].includes(stageToApply.category)) {
+        const role = guild.roles.cache.get(stageToApply.id);
+        const botMember = guild.members.me;
+        if (!role || !botMember || role.position >= botMember.roles.highest.position) {
+          throw new Error("The bot role must be above the infraction stage role: " + stageToApply.name);
+        }
+        const previousStageRoles = INFRACTION_STAGES
+          .filter(stage => !["Under Investigation", "Staff Blacklisted"].includes(stage.category) && target.roles.cache.has(stage.id))
+          .map(stage => stage.id);
+        if (previousStageRoles.length) await target.roles.remove(previousStageRoles, "Advance progressive infraction stage");
+        await target.roles.add(role, "Apply progressive infraction stage");
+        punishmentResult = stageToApply.name;
+      }
+
       if (punishment === "Under Investigation") {
         const botMember = guild.members.me;
         if (!botMember) throw new Error("Bot member could not be resolved.");
@@ -605,6 +650,21 @@ client.on("interactionCreate", async (interaction) => {
         await target.roles.add(investigationRole, "Staff placed under investigation");
         pending.savedStaffRoles = savedStaffRoles;
         punishmentResult = "Under Investigation — staff rank/team roles removed and replaced with Under Investigation";
+      } else if (punishment === "Staff Blacklisted") {
+        const blacklistRole = guild.roles.cache.get("1529726037032833096");
+        const botMember = guild.members.me;
+        if (!blacklistRole || !botMember || blacklistRole.position >= botMember.roles.highest.position) {
+          throw new Error("Staff Blacklisted role is missing or above the bot role.");
+        }
+        const staffRoleIds = [...new Set([
+          ...RANKS.map(rank => rank.id),
+          ...RANKS.map(rank => rank.teamId),
+          STAFF_TEAM_ROLE_ID,
+          ...INFRACTION_STAGES.filter(stage => stage.id !== blacklistRole.id).map(stage => stage.id),
+        ])].filter(id => target.roles.cache.has(id));
+        if (staffRoleIds.length) await target.roles.remove(staffRoleIds, "Staff blacklisted");
+        await target.roles.add(blacklistRole, "Staff blacklisted");
+        punishmentResult = "Staff Blacklisted — staff rank/team and infraction stage roles removed";
       } else if (punishment === "Demotion" || punishment === "Termination") {
         const currentRank = RANKS
           .map(rank => ({ rank, role: guild.roles.cache.get(rank.id) }))
