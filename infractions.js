@@ -1003,7 +1003,7 @@ client.on(
       if (!message.guild) return;
 
       // !clearinvestigation @user — Senior HR only; restores saved staff roles.
-      const clearInvestMatch = message.content.trim().match(/^!clearinvestigation\\s+(?:<@!?(\\d+)>|(\\d+))$/i);
+      const clearInvestMatch = message.content.trim().match(/^!clearinvestigation\s+(?:<@!?(\d+)>|(\d+))$/i);
       if (clearInvestMatch) {
         const actor = await message.guild.members.fetch(message.author.id);
         if (!isSeniorHR(actor)) {
