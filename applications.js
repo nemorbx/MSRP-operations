@@ -1278,6 +1278,42 @@ function setup(client) {
     console.log("[Applications] Startup resume check complete for " + resumable.length + " in-progress application(s).");
   });
 
+  // Senior HR can clear an applicant's stored denial history and cooldown.
+  // Usage: !clear application denials @user (or a user ID)
+  client.on("messageCreate", async message => {
+    try {
+      if (!message.guild || message.author.bot) return;
+      const parts = message.content.trim().split(/\\s+/);
+      if (parts.slice(0, 4).join(" ").toLowerCase() !== "!clear application denials") return;
+      const actor = await message.guild.members.fetch(message.author.id).catch(() => null);
+      if (!actor || !isSeniorHR(actor)) {
+        await message.reply("Only Senior HR can clear staff application denial history.");
+        return;
+      }
+      const targetId = message.mentions.users.first()?.id || parts[4]?.replace(/[<@!>]/g, "");
+      if (!targetId || !/^\\d{17,20}$/.test(targetId)) {
+        await message.reply("Usage: !clear application denials @user or !clear application denials USER_ID.");
+        return;
+      }
+      const applications = readJson(APPLICATIONS_FILE, {});
+      let removed = 0;
+      for (const [applicationId, application] of Object.entries(applications)) {
+        if (application.userId === targetId && application.type === "staff" && application.status === "Denied") {
+          delete applications[applicationId];
+          removed++;
+        }
+      }
+      writeJson(APPLICATIONS_FILE, applications);
+      const cooldowns = readJson(COOLDOWNS_FILE, {});
+      delete cooldowns[targetId];
+      writeJson(COOLDOWNS_FILE, cooldowns);
+      await message.reply("Cleared stored staff application denial history for <@" + targetId + "> and reset their reapplication cooldown. Removed " + removed + " denied application record(s).");
+    } catch (error) {
+      console.error("Application denial history clear command failed:", error);
+      await message.reply("Could not clear that applicant's denial history. Check the bot console for details.").catch(() => {});
+    }
+  });
+
   // The Application Center panel is persistent and is intentionally not
   // recreated during bot startup. This prevents duplicate panels and speeds up
   // deployments.
