@@ -154,16 +154,262 @@ function requestPanel(traineeId, traineeName, timezone, teamAccess, availability
       (testPreview ? "**TEST PREVIEW — not a real request**\n\n" : "") +
       (accepted ? "## Training Request Accepted\n\n" : "## Training Request\n\n") +
       (accepted
-        ? "> Your training request has been accepted. Please message your trainer in staff chat to continue your training.\\n\\n"
-        : "> Please await a trainer to accept your training request. Once accepted, message your trainer in staff chat to continue your training.\\n\\n") +
-        await interaction.followUp({ content: "You accepted this training request. The trainee has been notified.", flags: MessageFlags.Ephemeral });
-        await interaction.channel.send({
-          content: "<@" + traineeId + "> your training request has been accepted. Please message your trainer <@" + interaction.user.id + "> in staff chat to continue your training.",
-          allowedMentions: { users: [traineeId, interaction.user.id], parse: [] }
+        ? "> <@" + traineeId + ">, your training request has been accepted. Please make your way to the briefing room inside the Sheriff's station.\n\n"
+        : "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\n\n") +
+      "**Trainee:** " + String(traineeName || "Unknown user").replace(/[`*_~|>]/g, "") + "\n" +
+      "**Team Access:** ``" + teamAccess + "``\n" +
+      "**Time Zone:** ``" + timezone + "``" +
+      (accepted && acceptedBy ? "\n\n**Accepted By:** <@" + acceptedBy + ">" : "")
+    ))
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+    .addActionRowComponents(requestButtons(traineeId, accepted))
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+    .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder().setURL("https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/banner.PNG")
+    ));
+  return [container];
+}
+
+function resultButtons(traineeId, resultId, passed, claimed = false) {
+  const row = new ActionRowBuilder();
+  if (passed) {
+    row.addComponents(new ButtonBuilder().setCustomId("training_claim_" + resultId).setLabel(claimed ? "Roles Claimed" : "Claim Roles").setStyle(ButtonStyle.Success).setDisabled(claimed));
+  }
+  row.addComponents(new ButtonBuilder().setCustomId("training_void_" + resultId).setLabel("Void Result").setStyle(ButtonStyle.Danger));
+  return row;
+}
+function resultPanel(record) {
+  const passed = record.passed;
+  const notes = String(record.notes || "No additional notes.").replace(/\n/g, " ").slice(0, 1000);
+  const container = new ContainerBuilder()
+    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+      "## Training Results\n" +
+      "> <@" + record.trainerId + "> has sent the results for <@" + record.traineeId + ">'s training. They scored a total of **``" + record.total + "/30``**, this means that the user has **``" + (passed ? "passed" : "failed") + "``**.\n\n" +
+      "> **Trainee:** <@" + record.traineeId + ">\n" +
+      "> **Trainer:** <@" + record.trainerId + ">\n\n" +
+      "> **Driving Ability:** ``" + record.driving + "``\n" +
+      "> **SPaG Ability:** ``" + record.spag + "``\n" +
+      "> **Moderation Ability:** ``" + record.moderation + "``\n" +
+      "> **Total Score:** ``" + record.total + "/30``\n\n" +
+      "> **Training Notes:** ``" + notes + "``"
+    ))
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+    .addActionRowComponents(resultButtons(record.traineeId, record.resultId, passed, record.claimed))
+    .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
+    .addMediaGalleryComponents(new MediaGalleryBuilder().addItems(
+      new MediaGalleryItemBuilder().setURL("https://raw.githubusercontent.com/nemorbx/MSRP-operations/main/banner.PNG")
+    ));
+  return [container];
+}
+
+function setup(client) {
+  client.on("messageCreate", async message => {
+    try {
+      if (!message.guild || message.author.bot) return;
+      const command = message.content.trim().toLowerCase();
+      if (command !== "!test training request" && command !== "!clear training requests") return;
+
+      const member = await message.guild.members.fetch(message.author.id);
+      if (!isSeniorHR(member)) {
+        await message.reply("Only Senior HR can use training test and cleanup commands.");
+        return;
+      }
+
+      const channel = message.guild.channels.cache.get(REQUEST_CHANNEL_ID);
+      if (!channel || !channel.isTextBased()) {
+        await message.reply("The training request channel is not configured correctly.");
+        return;
+      }
+
+      if (command === "!test training request") {
+        const testId = message.author.id;
+        const sent = await channel.send({
+          components: requestPanel(testId, message.author.username, "CDT", "No", "Now", false, false),
+          flags: MessageFlags.IsComponentsV2,
+          allowedMentions: { parse: [] }
         });
-        if (trainee) {
-          await trainee.send("Your training request has been accepted by <@" + interaction.user.id + ">. Please message your trainer in staff chat to continue your training.").catch(() => {});
+        await message.reply("Test training request posted in <#" + channel.id + ">. It is a preview only and does not create a real request.");
+        return;
+      }
+
+      let deleted = 0;
+      let before;
+      while (true) {
+        const batch = await channel.messages.fetch({ limit: 100, ...(before ? { before } : {}) });
+        if (!batch.size) break;
+        before = batch.last().id;
+        const botMessages = batch.filter(m => m.author.id === client.user.id);
+        for (const botMessage of botMessages.values()) {
+          if (botMessage.content.includes("TRAINING REQUEST TEST") ||
+              botMessage.components?.length ||
+              botMessage.embeds?.some(e => e.title === "Training Request")) {
+            await botMessage.delete().catch(() => {});
+            deleted++;
+          }
         }
+        if (batch.size < 100) break;
+      }
+      for (const [traineeId, request] of Object.entries(data.activeRequests)) {
+        if (request.guildId === message.guild.id && request.channelId === channel.id) {
+          delete data.activeRequests[traineeId];
+        }
+      }
+      saveData();
+      await message.reply("Cleared " + deleted + " training request/test message(s) posted by MSRP Operations and removed pending training requests from the active queue.");
+    } catch (error) {
+      console.error("Training prefix command error:", error);
+      await message.reply("That training command failed. Check the bot console for details.").catch(() => {});
+    }
+  });
+
+  client.on("interactionCreate", async interaction => {
+    try {
+      if (interaction.isChatInputCommand() && interaction.commandName === "training" && interaction.guild) {
+        const sub = interaction.options.getSubcommand();
+        const member = await interaction.guild.members.fetch(interaction.user.id);
+        const now = Date.now();
+
+        if (sub === "request") {
+          if (!member.roles.cache.has(TRAINING_ROLE_ID)) {
+            return interaction.reply({ content: "Only members with the Awaiting Training role can request training.", flags: MessageFlags.Ephemeral });
+          }
+          if (data.activeRequests[member.id]) {
+            return interaction.reply({ content: "You already have a pending or accepted training request. Cancel the pending request or complete your session first.", flags: MessageFlags.Ephemeral });
+          }
+          const timezone = interaction.options.getString("timezone", true).trim();
+          const availability = "Now";
+          if (timezone.length < 2 || timezone.length > 60) {
+            return interaction.reply({ content: "Please enter a valid time zone.", flags: MessageFlags.Ephemeral });
+          }
+          let teamAccess;
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+          try {
+            teamAccess = await getTeamAccess(member.id, interaction.guild.id);
+          } catch (error) {
+            console.error("Training Bloxlink/group check failed:", error?.message || error);
+            teamAccess = "Unable to Verify";
+          }
+          const channel = interaction.guild.channels.cache.get(REQUEST_CHANNEL_ID);
+          if (!channel || !channel.isTextBased()) {
+            return interaction.editReply({ content: "The training request channel is not configured correctly. Please contact an administrator." });
+          }
+          const request = { traineeId: member.id, guildId: interaction.guild.id, timezone, teamAccess, availability, createdAt: now, status: "pending", messageId: null, channelId: channel.id };
+          let sent;
+          try {
+            const pingMessage = await channel.send({
+              content: "<@&" + STAFF_TRAINER_ROLE_ID + ">",
+              allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID] }
+            });
+            sent = await channel.send({
+              components: requestPanel(member.id, member.user.username, timezone, teamAccess, availability, false, false),
+              flags: MessageFlags.IsComponentsV2,
+              allowedMentions: { parse: [] }
+            });
+            request.pingMessageId = pingMessage.id;
+          } catch (error) {
+            console.error("Could not post training request:", error);
+            return interaction.editReply("I couldn't post your training request. No request was saved, so please try again in a moment.");
+          }
+          request.messageId = sent.id;
+          data.activeRequests[member.id] = request;
+          saveData();
+          return interaction.editReply({ content: "Your training request has been submitted. Staff Trainers have been notified." });
+        }
+
+        if (sub === "results") {
+          if (!isTrainer(member) && !isSeniorHR(member)) return interaction.reply({ content: "Only Staff Trainers or Senior High Rank can submit training results.", flags: MessageFlags.Ephemeral });
+          const traineeUser = interaction.options.getUser("trainee", true);
+          const trainee = await interaction.guild.members.fetch(traineeUser.id).catch(() => null);
+          if (!trainee || trainee.user.bot || !trainee.roles.cache.has(TRAINING_ROLE_ID)) {
+            return interaction.reply({ content: "That member must be a non-bot member with the Awaiting Training role.", flags: MessageFlags.Ephemeral });
+          }
+          const request = data.activeRequests[trainee.id];
+          if (!request || request.status !== "accepted") {
+            return interaction.reply({ content: "That trainee must have a training request accepted by a Staff Trainer before results can be submitted.", flags: MessageFlags.Ephemeral });
+          }
+          const driving = interaction.options.getInteger("driving", true);
+          const spag = interaction.options.getInteger("spag", true);
+          const moderation = interaction.options.getInteger("moderation", true);
+          const total = driving + spag + moderation;
+          const passed = total >= 20;
+          const notes = interaction.options.getString("notes")?.trim() || "No additional notes.";
+          const resultsChannel = interaction.guild.channels.cache.get(RESULTS_CHANNEL_ID);
+          if (!resultsChannel || !resultsChannel.isTextBased()) return interaction.reply({ content: "The training results channel is not configured correctly.", flags: MessageFlags.Ephemeral });
+
+          const resultId = interaction.id;
+          const record = {
+            resultId, guildId: interaction.guild.id, traineeId: trainee.id, trainerId: interaction.user.id,
+            driving, spag, moderation, total, passed, notes, messageId: null, channelId: resultsChannel.id,
+            claimed: false, voided: false, createdAt: now
+          };
+          data.results[resultId] = record;
+          delete data.activeRequests[trainee.id];
+          saveData();
+
+          const message = await resultsChannel.send({
+            components: resultPanel(record),
+            flags: MessageFlags.IsComponentsV2,
+            allowedMentions: { parse: [] }
+          });
+          record.messageId = message.id;
+          saveData();
+
+          if (passed) {
+            try {
+              await trainee.send({
+                content: "You passed staff training with " + total + "/30. Use the Claim Roles button on your result in the training results channel to receive your staff roles.",
+              });
+            } catch {}
+          }
+          return interaction.reply({ content: "Training results recorded: **" + (passed ? "PASS" : "FAIL") + "** (" + total + "/30). " + (passed ? "The trainee must claim their roles from the results message." : "A score below 20 is a fail. The trainee may request another session whenever they are eligible and have the Awaiting Training role."), flags: MessageFlags.Ephemeral });
+        }
+      }
+
+      if (!interaction.isButton() || !interaction.guild) return;
+      const member = await interaction.guild.members.fetch(interaction.user.id);
+
+      if (interaction.customId.startsWith("training_accept_")) {
+        if (!isTrainer(member)) return interaction.reply({ content: "Only Staff Trainers can accept training requests.", flags: MessageFlags.Ephemeral });
+        const traineeId = interaction.customId.slice("training_accept_".length);
+        const request = data.activeRequests[traineeId];
+        if (!request || request.status !== "pending" || request.guildId !== interaction.guild.id) {
+          return interaction.reply({ content: "This request is no longer pending.", flags: MessageFlags.Ephemeral });
+        }
+        request.status = "accepted";
+        request.acceptedBy = interaction.user.id;
+        request.acceptedAt = Date.now();
+        saveData();
+        const trainee = await interaction.guild.members.fetch(traineeId).catch(() => null);
+        if (request.pingMessageId) {
+          await interaction.channel.messages.delete(request.pingMessageId).catch(() => {});
+          request.pingMessageId = null;
+          saveData();
+        }
+        const requestPanelComponents = requestPanel(
+          traineeId,
+          trainee?.user?.username || "Unknown user",
+          request.timezone,
+          request.teamAccess,
+          request.availability,
+          true,
+          false,
+          interaction.user.id
+        );
+        await interaction.update({ components: requestPanelComponents, flags: MessageFlags.IsComponentsV2, allowedMentions: { roles: [STAFF_TRAINER_ROLE_ID], parse: [] } });
+        await interaction.followUp({ content: "You accepted this training request. The trainee has been notified.", flags: MessageFlags.Ephemeral });
+        if (trainee) {
+          await trainee.send("Your training request has been accepted by <@" + interaction.user.id + ">. Please make your way to the briefing room inside the Sheriff's station.").catch(() => {});
+        }
+        const acceptedAt = Math.floor(request.acceptedAt / 1000);
+        const acceptedNotice = new ContainerBuilder()
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+            "<@" + interaction.user.id + "> has accepted this training request.\\n**Accepted:** <t:" + acceptedAt + ":F> (<t:" + acceptedAt + ":R>)"
+          ));
+        await interaction.channel.send({
+          components: [acceptedNotice],
+          flags: MessageFlags.IsComponentsV2,
+          allowedMentions: { users: [interaction.user.id], parse: [] }
+        });
         return;
       }
 
