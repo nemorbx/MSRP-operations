@@ -27,8 +27,8 @@ const PROMOTION_CHANNEL_ID = "1529167049949970453";
 const HR_ROLE_ID = "1551704115350999143";
 
 // TOP IMAGE
-const HEADER_PATH = path.join(__dirname, "promotion.png");
-const HEADER_NAME = "promotion.png";
+const HEADER_PATH = path.join(__dirname, "promotions.png");
+const HEADER_NAME = "promotions.png";
 
 // BOTTOM IMAGE
 const BANNER_PATH = path.join(__dirname, "banner.png");
