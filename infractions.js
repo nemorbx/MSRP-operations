@@ -601,7 +601,7 @@ client.on("interactionCreate", async (interaction) => {
       }[punishment];
       let stageToApply = null;
       if (requestedStageIndex !== undefined) {
-        const nextIndex = currentStageIndex >= 6 ? 7 : Math.max(requestedStageIndex, currentStageIndex + 1);
+        const nextIndex = requestedStageIndex === 8 ? 8 : (currentStageIndex >= 6 ? 7 : Math.max(requestedStageIndex, currentStageIndex + 1));
         stageToApply = INFRACTION_STAGES[Math.min(nextIndex, 8)];
         punishment = stageToApply.category;
       }
