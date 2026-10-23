@@ -773,7 +773,7 @@ function buildStaffReviewEmbed(application) {
     );
   const fields = (STAFF_QUESTIONS || []).slice(0, 25).map((question, index) => ({
     name: String(question).slice(0, 256),
-    value: String(application.answers?.[index] || "No response.").slice(0, 1024),
+    value: (index > 0 ? "━━━━━━━━━━━━━━━━━━━━\\n" : "") + String(application.answers?.[index] || "No response.").slice(0, index > 0 ? 1000 : 1024),
     inline: false,
   }));
   if (application.resultReason) fields.push({ name: "Decision Reason", value: String(application.resultReason).slice(0, 1024), inline: false });
