@@ -491,38 +491,53 @@ function setup(client) {
           await interaction.followUp({ content: "Your roles were assigned, but the Promotions announcement could not be sent because the Promotions channel is unavailable. Please contact Senior HR.", flags: MessageFlags.Ephemeral }).catch(() => {});
           return;
         }
-        const fs = require("fs");
-        const path = require("path");
         const headerPath = path.join(__dirname, "passed-training.png");
         const footerPath = path.join(__dirname, "banner.png");
         const files = [];
-        const mediaItems = [];
+        const components = new ContainerBuilder();
+
+        // Large training-pass banner at the top.
         if (fs.existsSync(headerPath)) {
           files.push({ attachment: headerPath, name: "passed-training.png" });
-          mediaItems.push(new MediaGalleryItemBuilder().setURL("attachment://passed-training.png"));
+          components.addMediaGalleryComponents(
+            new MediaGalleryBuilder().addItems(
+              new MediaGalleryItemBuilder().setURL("attachment://passed-training.png")
+            )
+          );
         } else {
-          console.error("[Training] Missing banner file:", headerPath);
+          console.error("[Training] Missing top training banner:", headerPath);
         }
-        const components = new ContainerBuilder();
-        if (mediaItems.length) components.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(...mediaItems));
+
+        // Match the formatting used by MSRP's promotion announcements.
         components.addTextDisplayComponents(
           new TextDisplayBuilder().setContent(
-            "> Congratulations, <@" + trainee.id + ">! You have successfully passed staff training with a score of **" + record.total + "/30**. Your **Junior Moderator**, **Moderation Team**, and **Staff Team** roles have been assigned.\n\n" +
-            "> **Trainer:** <@" + record.trainerId + ">\n" +
-            "> **Result:** `PASSED`"
+            "> Congratulations, <@" + trainee.id + ">! You've successfully passed staff training and are now a \`Junior Moderator\`. We thank you for your dedication and commitment to the team here at Missouri State Roleplay.\\n\\n" +
+            "> **Training Score:** \`" + record.total + "/30\`\\n" +
+            "> **Trained By:** <@" + record.trainerId + ">\\n" +
+            "> **Result:** \`PASSED\`"
           )
         );
-        components.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
+
+        // Divider between the announcement text and the default small banner.
+        components.addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }));
+
         if (fs.existsSync(footerPath)) {
           files.push({ attachment: footerPath, name: "banner.png" });
-          components.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL("attachment://banner.png")));
+          components.addMediaGalleryComponents(
+            new MediaGalleryBuilder().addItems(
+              new MediaGalleryItemBuilder().setURL("attachment://banner.png")
+            )
+          );
+        } else {
+          console.error("[Training] Missing default bottom banner:", footerPath);
         }
+
         try {
           await promotionsChannel.send({
             components: [components],
             files,
             flags: MessageFlags.IsComponentsV2,
-            allowedMentions: { users: [trainee.id], parse: [] }
+            allowedMentions: { users: [trainee.id, record.trainerId], parse: [] }
           });
         } catch (error) {
           console.error("[Training] Failed to post passed-training announcement:", error);
