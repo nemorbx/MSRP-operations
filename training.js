@@ -484,12 +484,38 @@ function setup(client) {
         await interaction.followUp({ content: "Congratulations! You received Junior Moderator, Moderation Team, and Staff Team roles.", flags: MessageFlags.Ephemeral });
         const promotionsChannel = interaction.guild.channels.cache.get(PROMOTIONS_CHANNEL_ID);
         if (promotionsChannel && promotionsChannel.isTextBased()) {
+          const fs = require("fs");
+          const path = require("path");
+          const headerPath = path.join(__dirname, "passed-training.png");
+          const footerPath = path.join(__dirname, "banner.png");
+          const components = new ContainerBuilder()
+            .addMediaGalleryComponents(
+              new MediaGalleryBuilder().addItems(
+                new MediaGalleryItemBuilder().setURL("attachment://passed-training.png")
+              )
+            )
+            .addTextDisplayComponents(
+              new TextDisplayBuilder().setContent(
+                "> Congratulations, <@" + trainee.id + ">! You have successfully passed staff training with a score of **" + record.total + "/30**. Your **Junior Moderator**, **Moderation Team**, and **Staff Team** roles have been assigned.\n\n" +
+                "> **Trainer:** <@" + record.trainerId + ">\\n" +
+                "> **Result:** `PASSED`"
+              )
+            )
+            .addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small))
+            .addMediaGalleryComponents(
+              new MediaGalleryBuilder().addItems(
+                new MediaGalleryItemBuilder().setURL("attachment://banner.png")
+              )
+            );
+          const files = [];
+          if (fs.existsSync(headerPath)) files.push({ attachment: headerPath, name: "passed-training.png" });
+          if (fs.existsSync(footerPath)) files.push({ attachment: footerPath, name: "banner.png" });
           await promotionsChannel.send({
-            embeds: [new EmbedBuilder().setColor(0x2ecc71).setTitle("Staff Promotion")
-              .setDescription("Congratulations <@" + trainee.id + ">! They passed training with **" + record.total + "/30** and claimed the **Junior Moderator**, **Moderation Team**, and **Staff Team** roles.\n\n**Trainer:** <@" + record.trainerId + ">")
-              .setTimestamp()],
+            components: [components],
+            files,
+            flags: MessageFlags.IsComponentsV2,
             allowedMentions: { parse: [] }
-          }).catch(() => {});
+          }).catch(error => console.error("[Training] Failed to post passed-training announcement:", error));
         }
         return;
       }
