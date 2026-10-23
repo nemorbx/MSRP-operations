@@ -27,6 +27,7 @@ const SUPPORT_TEAM_ROLE_ID = "1551966555212877834";
 const INTERNAL_AFFAIRS_TEAM_ROLE_ID = "1527381477975789668";
 const MANAGEMENT_TEAM_ROLE_ID = "1528426569012609106";
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
+const HIGH_RANK_ROLE_ID = "1551704115350999143";
 const SUPPORT_LOGS_CHANNEL_ID = "1552509962910171176";
 const SUPPORT_PANEL_VERSION = 9;
 const SUPPORT_PANEL_MARKER = "\u200B".repeat(SUPPORT_PANEL_VERSION);
@@ -236,7 +237,7 @@ function closeRequestComponents() {
 }
 
 function isHighRank(member) {
-  return Boolean(member?.roles?.cache?.has(SENIOR_HR_ROLE_ID));
+  return Boolean(member?.roles?.cache?.has(SENIOR_HR_ROLE_ID) || member?.roles?.cache?.has(HIGH_RANK_ROLE_ID));
 }
 
 function canUseTeam(member, roleId) {
@@ -455,6 +456,77 @@ async function createTicket(interaction, typeKey) {
   }
 
   await interaction.showModal(buildDescriptionModal(typeKey));
+}
+
+async function openSupportTicketForMember(guild, targetMember, openedBy) {
+  const tickets = readTickets();
+  const active = Object.values(tickets).find(t =>
+    t.guildId === guild.id && t.userId === targetMember.id && !t.closed
+  );
+  if (active) return { error: "That member already has an open support ticket: <#" + active.threadId + ">." };
+
+  const parent = await getSupportChannel(guild);
+  if (!parent || !parent.isTextBased()) return { error: "The configured support channel could not be found." };
+
+  const type = TYPES.general;
+  const safeName = targetMember.user.username.toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || targetMember.id;
+  const channel = await guild.channels.create({
+    name: ("general-support-" + safeName).slice(0, 100),
+    type: ChannelType.GuildText,
+    permissionOverwrites: [
+      { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+      { id: targetMember.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
+      { id: type.roleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
+      { id: SENIOR_HR_ROLE_ID, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] },
+      { id: HIGH_RANK_ROLE_ID, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles] }
+    ],
+    position: 0,
+    reason: "General support ticket opened for " + targetMember.user.tag + " by " + openedBy.tag
+  }).catch(error => {
+    console.error("[Support] Staff-opened ticket channel creation failed:", error);
+    return null;
+  });
+  if (!channel) return { error: "I couldn't create the ticket. Check the bot's Manage Channels permission and role hierarchy." };
+
+  const account = await lookupRobloxAccount(guild.id, targetMember.id);
+  const ticket = {
+    threadId: channel.id,
+    isChannelTicket: true,
+    guildId: guild.id,
+    userId: targetMember.id,
+    type: "general",
+    teamRoleId: type.roleId,
+    description: "General support ticket opened on behalf of " + targetMember.user.tag + " by " + openedBy.tag + ".",
+    openedById: openedBy.id,
+    accountCreatedAt: targetMember.user.createdAt.toISOString(),
+    robloxId: account.robloxId,
+    robloxUsername: account.robloxUsername,
+    claimedBy: null,
+    closed: false,
+    closeRequestMessageId: null,
+    closeRequestedAt: null,
+    createdAt: new Date().toISOString()
+  };
+
+  const ping = await channel.send({
+    content: "<@" + type.roleId + "> <@" + targetMember.id + ">",
+    allowedMentions: { roles: [type.roleId], users: [targetMember.id] }
+  }).catch(error => {
+    console.error("[Support] Failed to notify staff-opened ticket:", error);
+    return null;
+  });
+  if (ping) setTimeout(() => ping.delete().catch(() => {}), 1500);
+
+  const panelMessage = await channel.send({
+    components: ticketPanelComponents(ticket),
+    files: ticketPanelFiles(),
+    flags: MessageFlags.IsComponentsV2
+  });
+  ticket.panelMessageId = panelMessage.id;
+  tickets[channel.id] = ticket;
+  saveTickets(tickets);
+  return { channel };
 }
 
 async function lookupRobloxAccount(guildId, discordUserId) {
@@ -1217,6 +1289,31 @@ async function setup(client) {
     } catch (error) {
       console.error("Support channel deletion handler error:", error);
     }
+  });
+
+  client.on("messageCreate", async message => {
+    if (message.author.bot || !message.guild || !message.content.trim().toLowerCase().startsWith("!openticket")) return;
+    const member = message.member;
+    if (!isHighRank(member)) {
+      await message.reply("Only High Rank and Senior HR can use this command.");
+      return;
+    }
+    const targetUser = message.mentions.users.first() || null;
+    if (!targetUser) {
+      await message.reply("Usage: `!openticket @member`");
+      return;
+    }
+    const targetMember = await message.guild.members.fetch(targetUser.id).catch(() => null);
+    if (!targetMember) {
+      await message.reply("That user must be a member of this server.");
+      return;
+    }
+    const result = await openSupportTicketForMember(message.guild, targetMember, message.author);
+    if (result.error) {
+      await message.reply(result.error);
+      return;
+    }
+    await message.reply("Opened a **General Support** ticket for " + targetMember.toString() + ": <#" + result.channel.id + ">.");
   });
 
   client.on("interactionCreate", async (interaction) => {
