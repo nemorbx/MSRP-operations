@@ -50,7 +50,8 @@ const commands = [
           { name: "Warning", value: "Warning" },
           { name: "Strike", value: "Strike" },
           { name: "Demotion", value: "Demotion" },
-          { name: "Termination", value: "Termination" }
+          { name: "Termination", value: "Termination" },
+          { name: "Under Investigation", value: "Under Investigation" }
         )
     ),
 ].map((command) => command.toJSON());
@@ -573,7 +574,37 @@ client.on("interactionCreate", async (interaction) => {
 
       let punishmentResult = punishment;
 
-      if (punishment === "Demotion" || punishment === "Termination") {
+      if (punishment === "Under Investigation") {
+        const botMember = guild.members.me;
+        if (!botMember) throw new Error("Bot member could not be resolved.");
+        let investigationRole = guild.roles.cache.find(role => role.name === "Under Investigation");
+        if (!investigationRole) {
+          investigationRole = await guild.roles.create({
+            name: "Under Investigation",
+            color: 0x808080,
+            reason: "Created automatically for staff investigation infractions",
+          });
+        }
+        if (investigationRole.position >= botMember.roles.highest.position) {
+          await interaction.editReply({
+            content: "I cannot assign Under Investigation because the bot's highest role must be above that role. Move the bot role higher and try again.",
+            components: [],
+          });
+          return;
+        }
+
+        for (const rank of RANKS) {
+          if (target.roles.cache.has(rank.id)) await target.roles.remove(rank.id, "Staff placed under investigation").catch(() => {});
+        }
+        for (const teamId of [...new Set(RANKS.map(rank => rank.teamId))]) {
+          if (target.roles.cache.has(teamId)) await target.roles.remove(teamId, "Staff placed under investigation").catch(() => {});
+        }
+        if (target.roles.cache.has(STAFF_TEAM_ROLE_ID)) {
+          await target.roles.remove(STAFF_TEAM_ROLE_ID, "Staff placed under investigation").catch(() => {});
+        }
+        await target.roles.add(investigationRole, "Staff placed under investigation");
+        punishmentResult = "Under Investigation — all recognized staff rank/team roles removed and replaced with Under Investigation";
+      } else if (punishment === "Demotion" || punishment === "Termination") {
         const currentRank = RANKS
           .map(rank => ({ rank, role: guild.roles.cache.get(rank.id) }))
           .filter(x => x.role && target.roles.cache.has(x.role.id))
