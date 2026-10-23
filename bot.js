@@ -143,6 +143,73 @@ async function isBotOwner(userId) {
   }
 }
 
+const SENIOR_HR_ROLE_ID = "1551704056991318191";
+const GRANTABLE_PERK_ROLE_NAMES = new Set([
+  "prc staff",
+  "media team",
+  "vip",
+  "notable",
+  "premium",
+  "donor",
+  "contributor",
+  "developer",
+  "former staff",
+  "content creator",
+  "partners",
+  "melony voter",
+  "whitelisted owner",
+  "whitelisted member",
+]);
+
+client.on("messageCreate", async message => {
+  if (message.author.bot || !message.guild) return;
+  const parts = message.content.trim().split(/\\s+/);
+  if (parts[0]?.toLowerCase() !== "!giverole") return;
+
+  if (!message.member?.roles.cache.has(SENIOR_HR_ROLE_ID)) {
+    await message.reply("Only Senior HR can use this command.").catch(() => {});
+    return;
+  }
+
+  const targetUser = message.mentions.users.first();
+  const role = message.mentions.roles.first();
+  if (!targetUser || !role) {
+    await message.reply("Usage: `!giverole @member @role`\\nAllowed roles: PRC Staff, Media Team, VIP, Notable, Premium, Donor, Contributor, Developer, Former Staff, Content Creator, Partners, Melony Voter, Whitelisted Owner, Whitelisted Member.").catch(() => {});
+    return;
+  }
+
+  if (!GRANTABLE_PERK_ROLE_NAMES.has(role.name.toLowerCase())) {
+    await message.reply("That role isn't on the approved list for this command.").catch(() => {});
+    return;
+  }
+  if (role.managed) {
+    await message.reply("Discord manages that role automatically, so it can't be assigned manually.").catch(() => {});
+    return;
+  }
+  if (role.position >= message.guild.members.me.roles.highest.position) {
+    await message.reply("I can't assign that role because it is at or above my highest role. Move the role below MSRP Operations and try again.").catch(() => {});
+    return;
+  }
+
+  const target = await message.guild.members.fetch(targetUser.id).catch(() => null);
+  if (!target) {
+    await message.reply("That member could not be found in this server.").catch(() => {});
+    return;
+  }
+  if (target.roles.cache.has(role.id)) {
+    await message.reply(target.toString() + " already has " + role.toString() + ".").catch(() => {});
+    return;
+  }
+
+  try {
+    await target.roles.add(role, "Role granted by Senior HR " + message.author.tag + " using !giverole");
+    await message.reply("Granted " + role.toString() + " to " + target.toString() + ".");
+  } catch (error) {
+    console.error("[Role Grant] Failed to grant role " + role.id + " to " + target.id + ":", error);
+    await message.reply("I couldn't assign that role. Check my Manage Roles permission and role hierarchy.").catch(() => {});
+  }
+});
+
 client.on("messageCreate", async message => {
   if (message.author.bot || !message.guild) return;
 
