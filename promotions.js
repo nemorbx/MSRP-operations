@@ -551,68 +551,33 @@ client.on("interactionCreate", async interaction => {
 
         const container = new ContainerBuilder();
 
-        // TOP IMAGE — promotion.png
+        // Large promotion banner at the top.
         container.addMediaGalleryComponents(
             new MediaGalleryBuilder().addItems(
-                new MediaGalleryItemBuilder().setURL(
-                    `attachment://${HEADER_NAME}`
-                )
+                new MediaGalleryItemBuilder().setURL(`attachment://${HEADER_NAME}`)
             )
         );
 
-        // TITLE / ISSUER + BOT LOGO
-        // Components V2 Sections support a thumbnail accessory, which recreates
-        // the bot-logo corner from the old embed without using a legacy embed.
-        const titleSection = new SectionBuilder()
-            .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(
-                    `## Staff Promotion\nPromoted by <@${issuer.id}>`
-                )
-            )
-            .setThumbnailAccessory(
-                new ThumbnailBuilder()
-                    .setURL(client.user.displayAvatarURL({ extension: "png", size: 256 }))
-                    .setDescription("MSRP Automations bot icon")
-            );
-
-        container.addSectionComponents(titleSection);
-
-        // TOP-TO-BOTTOM PROMOTION DETAILS
-        // Keep the original information and order, but stack each field vertically.
+        // Announcement text in the requested quote-style layout.
         container.addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-                `**Promoted Staff**\n<@${target.id}>`
-            ),
-            new TextDisplayBuilder().setContent(
-                `**Old Role**\n${oldRole ? `<@&${oldRole.id}>` : "No Previous Role"}`
-            ),
-            new TextDisplayBuilder().setContent(
-                `**New Role**\n<@&${newRole.id}>`
-            ),
-            new TextDisplayBuilder().setContent(
-                `**Extra Notes**\n${notes}`
+                `> Congratulations, <@${target.id}>, you've been promoted to \`${newRole.name}\`. We thank you for your dedication and commitment to the team here at Missouri State Roleplay.\n\n` +
+                `> **Reason:** \`${notes || "No reason provided."}\`\n` +
+                `> **Promoted By:** <@${issuer.id}>`
             )
         );
 
-        // FOOTER-STYLE INFORMATION
+        // Thin divider before the small footer banner.
         container.addSeparatorComponents(
             new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small)
         );
-        container.addTextDisplayComponents(
-            new TextDisplayBuilder().setContent(
-                `**${target.displayName}**\n<t:${Math.floor(Date.now() / 1000)}:F>`
-            )
-        );
 
-        // BOTTOM BANNER — banner.png
+        // Small default banner at the bottom.
         container.addMediaGalleryComponents(
             new MediaGalleryBuilder().addItems(
-                new MediaGalleryItemBuilder().setURL(
-                    `attachment://${BANNER_NAME}`
-                )
+                new MediaGalleryItemBuilder().setURL(`attachment://${BANNER_NAME}`)
             )
         );
-
         // ONE V2 MESSAGE — no legacy content/embed fields
         try {
             await channel.send({
