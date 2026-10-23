@@ -593,17 +593,17 @@ client.on("interactionCreate", async (interaction) => {
           return;
         }
 
-        for (const rank of RANKS) {
-          if (target.roles.cache.has(rank.id)) await target.roles.remove(rank.id, "Staff placed under investigation").catch(() => {});
-        }
-        for (const teamId of [...new Set(RANKS.map(rank => rank.teamId))]) {
-          if (target.roles.cache.has(teamId)) await target.roles.remove(teamId, "Staff placed under investigation").catch(() => {});
-        }
-        if (target.roles.cache.has(STAFF_TEAM_ROLE_ID)) {
-          await target.roles.remove(STAFF_TEAM_ROLE_ID, "Staff placed under investigation").catch(() => {});
+        const savedStaffRoles = [
+          ...RANKS.filter(rank => target.roles.cache.has(rank.id)).map(rank => rank.id),
+          ...[...new Set(RANKS.map(rank => rank.teamId))].filter(roleId => target.roles.cache.has(roleId)),
+          ...(target.roles.cache.has(STAFF_TEAM_ROLE_ID) ? [STAFF_TEAM_ROLE_ID] : []),
+        ];
+        for (const roleId of savedStaffRoles) {
+          await target.roles.remove(roleId, "Staff placed under investigation").catch(error => console.error("[Infractions] Could not remove staff role:", roleId, error));
         }
         await target.roles.add(investigationRole, "Staff placed under investigation");
-        punishmentResult = "Under Investigation — all recognized staff rank/team roles removed and replaced with Under Investigation";
+        pending.savedStaffRoles = savedStaffRoles;
+        punishmentResult = "Under Investigation — staff rank/team roles removed and replaced with Under Investigation";
       } else if (punishment === "Demotion" || punishment === "Termination") {
         const currentRank = RANKS
           .map(rank => ({ rank, role: guild.roles.cache.get(rank.id) }))
@@ -926,6 +926,12 @@ client.on("interactionCreate", async (interaction) => {
         punishment:
           punishmentResult,
 
+        savedStaffRoles:
+          pending.savedStaffRoles || [],
+
+        investigationCleared:
+          false,
+
         appealStatus,
 
         createdAt:
@@ -995,6 +1001,40 @@ client.on(
     try {
       if (message.author.bot) return;
       if (!message.guild) return;
+
+      // !clearinvestigation @user — Senior HR only; restores saved staff roles.
+      const clearInvestMatch = message.content.trim().match(/^!clearinvestigation\\s+(?:<@!?(\\d+)>|(\\d+))$/i);
+      if (clearInvestMatch) {
+        const actor = await message.guild.members.fetch(message.author.id);
+        if (!hasSeniorHRAuthority(actor)) {
+          const warning = await message.reply("Only Senior HR can remove Under Investigation and restore staff roles.");
+          setTimeout(() => warning.delete().catch(() => {}), 7000);
+          return;
+        }
+        const targetId = clearInvestMatch[1] || clearInvestMatch[2];
+        const target = await message.guild.members.fetch(targetId).catch(() => null);
+        if (!target) { await message.reply("I could not find that member in this server."); return; }
+        const records = loadInfractions();
+        const investigation = [...records].reverse().find(record => record.targetId === targetId && String(record.punishment || "").startsWith("Under Investigation") && !record.investigationCleared);
+        if (!investigation) {
+          await message.reply("No active Under Investigation infraction was found. Older investigations without a saved role snapshot must be restored manually.");
+          return;
+        }
+        const botMember = message.guild.members.me;
+        const investigationRole = message.guild.roles.cache.find(role => role.name === "Under Investigation");
+        if (!botMember || (investigationRole && investigationRole.position >= botMember.roles.highest.position)) { await message.reply("The bot role must be above Under Investigation in the role hierarchy."); return; }
+        const savedRoles = (investigation.savedStaffRoles || []).filter(roleId => message.guild.roles.cache.has(roleId));
+        if (!savedRoles.length) { await message.reply("This case has no saved staff-role snapshot. Please restore the original roles manually."); return; }
+        if (savedRoles.some(roleId => message.guild.roles.cache.get(roleId).position >= botMember.roles.highest.position)) { await message.reply("The bot role must be above all staff roles it needs to restore."); return; }
+        if (investigationRole && target.roles.cache.has(investigationRole.id)) await target.roles.remove(investigationRole, "Investigation cleared by Senior HR");
+        await target.roles.add(savedRoles, "Restore staff roles after investigation cleared");
+        investigation.investigationCleared = true;
+        investigation.investigationClearedBy = message.author.id;
+        investigation.investigationClearedAt = new Date().toISOString();
+        saveInfractions(records);
+        await message.reply("Removed Under Investigation from <@" + target.id + "> and restored their saved staff roles: " + savedRoles.map(id => "<@&" + id + ">").join(", "));
+        return;
+      }
 
       // ==========================================
       // !void — SENIOR HR ONLY, PROOF THREAD ONLY
