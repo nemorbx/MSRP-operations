@@ -55,6 +55,16 @@ const commands = [
           { name: "Termination", value: "Termination" },
           { name: "Under Investigation", value: "Under Investigation" }
         )
+    )
+    .addStringOption((option) =>
+      option
+        .setName("appeal_status")
+        .setDescription("Can this infraction be appealed?")
+        .setRequired(true)
+        .addChoices(
+          { name: "Yes — Appealable", value: "Appealable" },
+          { name: "No — Unappealable", value: "Unappealable" }
+        )
     ),
 ].map((command) => command.toJSON());
 
@@ -251,6 +261,7 @@ client.on("interactionCreate", async (interaction) => {
 
       const infractionType =
         interaction.options.getString("type");
+      const appealStatus = interaction.options.getString("appeal_status");
 
       // ------------------------------------------
       // HR CHECK
@@ -314,6 +325,7 @@ client.on("interactionCreate", async (interaction) => {
         issuerId: issuer.id,
         targetId: target.id,
         infractionType,
+        appealStatus,
         guildId: interaction.guild.id,
       });
 
@@ -555,8 +567,8 @@ client.on("interactionCreate", async (interaction) => {
         return;
       }
 
-      const appealStatus = interaction.values[0];
-      const punishment = pending.punishment;
+      const appealStatus = pending.appealStatus;
+      let punishment = pending.punishment;
 
       if (punishment === "Demotion" && !pending.demotionRoleId) {
         await interaction.followUp({
