@@ -482,40 +482,51 @@ function setup(client) {
         saveData();
         await interaction.update({ components: resultPanel(record), flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [] } });
         await interaction.followUp({ content: "Congratulations! You received Junior Moderator, Moderation Team, and Staff Team roles.", flags: MessageFlags.Ephemeral });
-        const promotionsChannel = interaction.guild.channels.cache.get(PROMOTIONS_CHANNEL_ID);
-        if (promotionsChannel && promotionsChannel.isTextBased()) {
-          const fs = require("fs");
-          const path = require("path");
-          const headerPath = path.join(__dirname, "passed-training.png");
-          const footerPath = path.join(__dirname, "banner.png");
-          const components = new ContainerBuilder()
-            .addMediaGalleryComponents(
-              new MediaGalleryBuilder().addItems(
-                new MediaGalleryItemBuilder().setURL("attachment://passed-training.png")
-              )
-            )
-            .addTextDisplayComponents(
-              new TextDisplayBuilder().setContent(
-                "> Congratulations, <@" + trainee.id + ">! You have successfully passed staff training with a score of **" + record.total + "/30**. Your **Junior Moderator**, **Moderation Team**, and **Staff Team** roles have been assigned.\n\n" +
-                "> **Trainer:** <@" + record.trainerId + ">\\n" +
-                "> **Result:** `PASSED`"
-              )
-            )
-            .addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small))
-            .addMediaGalleryComponents(
-              new MediaGalleryBuilder().addItems(
-                new MediaGalleryItemBuilder().setURL("attachment://banner.png")
-              )
-            );
-          const files = [];
-          if (fs.existsSync(headerPath)) files.push({ attachment: headerPath, name: "passed-training.png" });
-          if (fs.existsSync(footerPath)) files.push({ attachment: footerPath, name: "banner.png" });
+        const promotionsChannel = await interaction.guild.channels.fetch(PROMOTIONS_CHANNEL_ID).catch(error => {
+          console.error("[Training] Could not fetch Promotions channel:", error);
+          return null;
+        });
+        if (!promotionsChannel || !promotionsChannel.isTextBased()) {
+          console.error("[Training] Promotions channel is missing or is not text-based. Configured ID:", PROMOTIONS_CHANNEL_ID);
+          await interaction.followUp({ content: "Your roles were assigned, but the Promotions announcement could not be sent because the Promotions channel is unavailable. Please contact Senior HR.", flags: MessageFlags.Ephemeral }).catch(() => {});
+          return;
+        }
+        const fs = require("fs");
+        const path = require("path");
+        const headerPath = path.join(__dirname, "passed-training.png");
+        const footerPath = path.join(__dirname, "banner.png");
+        const files = [];
+        const mediaItems = [];
+        if (fs.existsSync(headerPath)) {
+          files.push({ attachment: headerPath, name: "passed-training.png" });
+          mediaItems.push(new MediaGalleryItemBuilder().setURL("attachment://passed-training.png"));
+        } else {
+          console.error("[Training] Missing banner file:", headerPath);
+        }
+        const components = new ContainerBuilder();
+        if (mediaItems.length) components.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(...mediaItems));
+        components.addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            "> Congratulations, <@" + trainee.id + ">! You have successfully passed staff training with a score of **" + record.total + "/30**. Your **Junior Moderator**, **Moderation Team**, and **Staff Team** roles have been assigned.\n\n" +
+            "> **Trainer:** <@" + record.trainerId + ">\n" +
+            "> **Result:** `PASSED`"
+          )
+        );
+        components.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
+        if (fs.existsSync(footerPath)) {
+          files.push({ attachment: footerPath, name: "banner.png" });
+          components.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL("attachment://banner.png")));
+        }
+        try {
           await promotionsChannel.send({
             components: [components],
             files,
             flags: MessageFlags.IsComponentsV2,
-            allowedMentions: { parse: [] }
-          }).catch(error => console.error("[Training] Failed to post passed-training announcement:", error));
+            allowedMentions: { users: [trainee.id], parse: [] }
+          });
+        } catch (error) {
+          console.error("[Training] Failed to post passed-training announcement:", error);
+          await interaction.followUp({ content: "Your roles were assigned, but the Promotions announcement failed to send. Please notify Senior HR.", flags: MessageFlags.Ephemeral }).catch(() => {});
         }
         return;
       }
