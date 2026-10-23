@@ -752,33 +752,23 @@ async function beginDMApplication(interaction) {
   }
 }
 
-function buildStaffReviewEmbed(application) {
-  const statusText =
-    application.status === "Approved" ? "Accepted" :
-    application.status === "Denied" ? "Denied" :
-    application.status === "Blacklisted" ? "Blacklisted" :
-    "Currently Being Reviewed";
-  const color = application.status === "Approved" ? 0x2ecc71 :
-    application.status === "Denied" ? 0xe74c3c :
-    application.status === "Blacklisted" ? 0x000000 : 0x808080;
-  const embed = new EmbedBuilder()
-    .setColor(color)
-    .setTitle("Staff Application")
-    .setDescription(
-      "**Status:** " + statusText +
-      "\n**Applicant:** <@" + application.userId + ">" +
-      (application.status === "Pending"
-        ? "\n**Application Reader:** <@" + APPLICATION_READER_ROLE_ID + ">"
-        : "\n**Reviewed By:** <@" + (application.reviewedBy || "0") + ">")
-    );
-  const fields = (STAFF_QUESTIONS || []).slice(0, 25).map((question, index) => ({
-    name: String(question).slice(0, 256),
-    value: String(application.answers?.[index] || "No response.").slice(0, 1024),
-    inline: false,
-  }));
-  if (application.resultReason) fields.push({ name: "Decision Reason", value: String(application.resultReason).slice(0, 1024), inline: false });
-  embed.addFields(fields.slice(0, 25));
-  return embed;
+function statusColor(status) {
+  return status === "Approved" ? 0x2ecc71 : status === "Denied" ? 0xe74c3c : status === "Blacklisted" ? 0x000000 : 0x808080;
+}
+
+function buildStaffReviewContainer(application) {
+  const statusText = application.status === "Approved" ? "Accepted" : application.status === "Denied" ? "Denied" : application.status === "Blacklisted" ? "Blacklisted" : "Currently Being Reviewed";
+  const container = new ContainerBuilder().setAccentColor(statusColor(application.status));
+  container.addTextDisplayComponents(new TextDisplayBuilder().setContent("## Staff Application\n**Status:** " + statusText + "\n**Applicant:** <@" + application.userId + ">" + (application.status === "Pending" ? "\n**Application Reader:** <@" + APPLICATION_READER_ROLE_ID + ">" : "\n**Reviewed By:** <@" + (application.reviewedBy || "Unknown") + ">")));
+  (STAFF_QUESTIONS || []).slice(0, 25).forEach((question, index) => {
+    container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent("**" + String(question) + "**\n" + String(application.answers?.[index] || "No response.")));
+  });
+  if (application.resultReason) {
+    container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent("**Decision Reason**\n" + application.resultReason));
+  }
+  return container;
 }
 
 function buildStaffReviewButtons(application) {
@@ -795,8 +785,8 @@ async function postStaffApplication(client, application) {
   if (!channel || !channel.isTextBased()) return;
 
   await channel.send({
-    embeds: [buildStaffReviewEmbed(application)],
-    components: buildStaffReviewButtons(application),
+    components: [buildStaffReviewContainer(application), ...buildStaffReviewButtons(application)],
+    flags: MessageFlags.IsComponentsV2,
     allowedMentions: { users: [application.userId], roles: [APPLICATION_READER_ROLE_ID] },
   });
 }
@@ -927,8 +917,8 @@ async function handleStaffDecision(interaction, action, applicationId, decisionR
   // We already deferred the interaction, so edit the original review message
   // instead of calling interaction.update() a second time.
   await interaction.message.edit({
-    embeds: [buildStaffReviewEmbed(application)],
-    components: [],
+    components: [buildStaffReviewContainer(application)],
+    flags: MessageFlags.IsComponentsV2,
     allowedMentions: { users: [application.userId, interaction.user.id] },
   }).catch(error => {
     console.error("Failed to update staff application review message:", error);
@@ -1028,26 +1018,15 @@ async function showBanAppealModal(interaction) {
   await interaction.showModal(modal);
 }
 
-function buildBanAppealReviewEmbed(appeal) {
-  const statusText = appeal.status === "Approved" ? "Accepted" :
-    appeal.status === "Denied" ? "Denied" : "Currently Being Reviewed";
-  const color = appeal.status === "Approved" ? 0x2ecc71 :
-    appeal.status === "Denied" ? 0xe74c3c : 0x808080;
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle("Ban Appeal")
-    .setDescription(
-      "**Roblox Username:** " + String(appeal.username || "Unknown") +
-      "\n**Status:** " + statusText +
-      "\n**Applicant:** <@" + appeal.userId + ">" +
-      (appeal.status === "Pending"
-        ? "\n**Ban Appeal Reader:** <@" + BAN_APPEAL_READER_ROLE_ID + ">"
-        : "\n**Reviewed By:** <@" + (appeal.reviewedBy || "0") + ">")
-    )
-    .addFields(
-      { name: "Why were you banned?", value: String(appeal.answers?.reason || "No response.").slice(0, 1024) },
-      { name: "Why should your ban be appealed?", value: String(appeal.answers?.why || "No response.").slice(0, 1024) }
-    );
+function buildBanAppealReviewContainer(appeal) {
+  const statusText = appeal.status === "Approved" ? "Accepted" : appeal.status === "Denied" ? "Denied" : "Currently Being Reviewed";
+  const container = new ContainerBuilder().setAccentColor(statusColor(appeal.status));
+  container.addTextDisplayComponents(new TextDisplayBuilder().setContent("## Ban Appeal\n**Roblox Username:** " + String(appeal.username || "Unknown") + "\n**Status:** " + statusText + "\n**Applicant:** <@" + appeal.userId + ">" + (appeal.status === "Pending" ? "\n**Ban Appeal Reader:** <@" + BAN_APPEAL_READER_ROLE_ID + ">" : "\n**Reviewed By:** <@" + (appeal.reviewedBy || "Unknown") + ">")));
+  container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
+  container.addTextDisplayComponents(new TextDisplayBuilder().setContent("**Why were you banned?**\n" + String(appeal.answers?.reason || "No response.")));
+  container.addSeparatorComponents(new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small));
+  container.addTextDisplayComponents(new TextDisplayBuilder().setContent("**Why should your ban be appealed?**\n" + String(appeal.answers?.why || "No response.")));
+  return container;
 }
 
 function buildBanAppealReviewButtons(appeal) {
@@ -1116,8 +1095,8 @@ async function submitBanAppeal(interaction) {
   writeJson(APPLICATIONS_FILE, applications);
 
   await channel.send({
-    embeds: [buildBanAppealReviewEmbed(appeal)],
-    components: buildBanAppealReviewButtons(appeal),
+    components: [buildBanAppealReviewContainer(appeal), ...buildBanAppealReviewButtons(appeal)],
+    flags: MessageFlags.IsComponentsV2,
     allowedMentions: { users: [appeal.userId], roles: [BAN_APPEAL_READER_ROLE_ID] },
   });
 
@@ -1164,11 +1143,12 @@ async function handleBanAppealDecision(interaction, action, appealId) {
   appeal.reviewedAt = new Date().toISOString();
   writeJson(APPLICATIONS_FILE, applications);
 
-  await interaction.update({
-    embeds: [buildBanAppealReviewEmbed(appeal)],
-    components: [],
+  await interaction.message.edit({
+    components: [buildBanAppealReviewContainer(appeal)],
+    flags: MessageFlags.IsComponentsV2,
     allowedMentions: { users: [appeal.userId, interaction.user.id] },
   });
+  if (!interaction.deferred && !interaction.replied) await interaction.deferUpdate();
 
   await safeDM(
     appeal.userId,
