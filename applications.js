@@ -1284,13 +1284,13 @@ function setup(client) {
     try {
       if (!message.guild || message.author.bot) return;
       const parts = message.content.trim().split(/\\s+/);
-      if (parts.slice(0, 4).join(" ").toLowerCase() !== "!clear application denials") return;
+      if (parts.slice(0, 3).join(" ").toLowerCase() !== "!clear application denials") return;
       const actor = await message.guild.members.fetch(message.author.id).catch(() => null);
       if (!actor || !isSeniorHR(actor)) {
         await message.reply("Only Senior HR can clear staff application denial history.");
         return;
       }
-      const targetId = message.mentions.users.first()?.id || parts[4]?.replace(/[<@!>]/g, "");
+      const targetId = message.mentions.users.first()?.id || parts[3]?.replace(/[<@!>]/g, "");
       if (!targetId || !/^\\d{17,20}$/.test(targetId)) {
         await message.reply("Usage: !clear application denials @user or !clear application denials USER_ID.");
         return;
