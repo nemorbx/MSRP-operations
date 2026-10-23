@@ -780,6 +780,14 @@ async function handleEscalate(interaction) {
 }
 
 async function handleClaim(interaction, ticket) {
+  if (interaction.user.id === ticket.userId) {
+    await interaction.reply({
+      content: "You cannot claim your own ticket. You can still close it when you're finished.",
+      ephemeral: true,
+    });
+    return;
+  }
+
   if (!canClaim(interaction.member, ticket)) {
     await interaction.reply({
       content: "You do not have permission to claim this ticket.",
@@ -837,8 +845,8 @@ async function finalizeClose(interaction, ticket, closedById = null) {
   tickets[ticket.threadId] = latest;
   saveTickets(tickets);
 
-  // Keep the ticket channel available for five seconds so the closure message can be seen.
-  await new Promise((resolve) => setTimeout(resolve, 5000));
+  // Keep the ticket channel available for 15 seconds so the closure message can be seen.
+  await new Promise((resolve) => setTimeout(resolve, 15000));
 
   const currentTickets = readTickets();
   const current = currentTickets[ticket.threadId];
@@ -855,7 +863,7 @@ async function finalizeClose(interaction, ticket, closedById = null) {
   currentTickets[ticket.threadId] = current;
   saveTickets(currentTickets);
 
-  // Delete the ticket channel after the five-second closing period.
+  // Delete the ticket channel after the 15-second closing period.
   const deleted = await thread.delete("Support ticket closed").then(() => true).catch(() => false);
 
   if (!deleted) {
@@ -971,16 +979,6 @@ async function handleClose(interaction, ticket) {
     canUseTeam(interaction.member, ticket.teamRoleId) ||
     ticket.claimedBy === interaction.user.id;
 
-  // Once staff claims a ticket, the opener cannot close it themselves.
-  // Authorized staff must initiate the closure request instead.
-  if (isCreator && ticket.claimedBy) {
-    await interaction.reply({
-      content: "A staff member has claimed this ticket. You cannot close it yourself now; please continue working with the assigned staff member. Authorized staff can request closure when support is complete.",
-      ephemeral: true,
-    });
-    return;
-  }
-
   if (!isCreator && !isAuthorizedStaff) {
     await interaction.reply({
       content: "Only the ticket creator or authorized support staff can request closure.",
@@ -995,7 +993,7 @@ async function handleClose(interaction, ticket) {
   }
 
   await interaction.deferUpdate();
-  await interaction.channel.send("The ticket opener requested closure. This ticket will close in 5 seconds.").catch(() => {});
+  await interaction.channel.send("The ticket opener requested closure. This ticket will be closed in a few seconds.").catch(() => {});
   const closed = await finalizeClose(interaction, ticket, interaction.user.id);
   if (!closed) {
     await interaction.followUp({
@@ -1082,7 +1080,7 @@ async function handleCloseConfirmation(interaction, ticket, confirm) {
   tickets[ticket.threadId] = latest;
   saveTickets(tickets);
   await interaction.deferUpdate();
-  await interaction.channel.send("The ticket opener confirmed closure. This support ticket will close in 5 seconds.").catch(() => {});
+  await interaction.channel.send("The ticket opener confirmed closure. This support ticket will be closed in a few seconds.").catch(() => {});
   const closed = await finalizeClose(interaction, latest, interaction.user.id);
 
   if (!closed) {
