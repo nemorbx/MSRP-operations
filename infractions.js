@@ -216,6 +216,7 @@ function canIssueInfraction(issuer, target) {
 // ==============================
 
     async function processPendingInfraction(interaction, originalInteractionId) {
+      const pending = client.pendingAppeals?.get(originalInteractionId);
       if (!pending) {
         await interaction.editReply({
           content:
