@@ -1307,12 +1307,12 @@ async function setup(client) {
       await message.reply("Only High Rank and Senior HR can use this command.");
       return;
     }
-    const targetUser = message.mentions.users.first() || null;
-    if (!targetUser) {
-      await message.reply("Usage: `!openticket @member`");
+    const targetId = message.mentions.users.first()?.id || message.content.trim().split(/\s+/)[1]?.replace(/[<@!>]/g, "");
+    if (!/^\d{17,20}$/.test(targetId || "")) {
+      await message.reply("Usage: `!openticket @member or !openticket USER_ID`");
       return;
     }
-    const targetMember = await message.guild.members.fetch(targetUser.id).catch(() => null);
+    const targetMember = await message.guild.members.fetch(targetId).catch(() => null);
     if (!targetMember) {
       await message.reply("That user must be a member of this server.");
       return;
