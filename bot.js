@@ -163,7 +163,7 @@ const GRANTABLE_PERK_ROLE_NAMES = new Set([
 
 client.on("messageCreate", async message => {
   if (message.author.bot || !message.guild) return;
-  const parts = message.content.trim().split(/\\s+/);
+  const parts = message.content.trim().split(/\s+/);
   if (parts[0]?.toLowerCase() !== "!giverole") return;
 
   if (!message.member?.roles.cache.has(SENIOR_HR_ROLE_ID)) {
@@ -171,10 +171,11 @@ client.on("messageCreate", async message => {
     return;
   }
 
-  const targetUser = message.mentions.users.first();
-  const role = message.mentions.roles.first();
+  const targetId = message.mentions.users.first()?.id || parts[1]?.replace(/[<@!>]/g, "");
+  const targetUser = /^\d{17,20}$/.test(targetId || "") ? await client.users.fetch(targetId).catch(() => null) : null;
+  const role = message.mentions.roles.first() || message.guild.roles.cache.get(parts[2]?.replace(/[<@&>]/g, ""));
   if (!targetUser || !role) {
-    await message.reply("Usage: `!giverole @member @role`\\nAllowed roles: PRC Staff, Media Team, VIP, Notable, Premium, Donor, Contributor, Developer, Former Staff, Content Creator, Partners, Melony Voter, Whitelisted Owner, Whitelisted Member.").catch(() => {});
+    await message.reply("Usage: `!giverole @member|USER_ID @role|ROLE_ID`\\nAllowed roles: PRC Staff, Media Team, VIP, Notable, Premium, Donor, Contributor, Developer, Former Staff, Content Creator, Partners, Melony Voter, Whitelisted Owner, Whitelisted Member.").catch(() => {});
     return;
   }
 
