@@ -775,67 +775,16 @@ client.on("interactionCreate", async (interaction) => {
       // ==========================================
 
       const container = new ContainerBuilder();
-
-      // Keep the existing infraction information, but render it as
-      // Components V2 instead of a legacy embed.
-      // Bot logo in the top-right, matching the Promotions layout.
-      const titleSection = new SectionBuilder()
-        .addTextDisplayComponents(
-          new TextDisplayBuilder().setContent(
-            `## Staff Infraction\n` +
-            `Infraction Issued by **${issuer.user.username}**\n\n` +
-            `Our high-ranking team has decided to issue an infraction due to your actions.`
-          )
-        )
-        .setThumbnailAccessory(
-          new ThumbnailBuilder()
-            .setURL(botAvatar)
-            .setDescription("MSRP Automations bot icon")
-        );
-
-      container.addSectionComponents(titleSection);
-
-      // Keep the two legacy inline fields together in V2.
-      container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(
-          `**Staff Member**  <@${target.id}>     **Punishment**  ${punishmentResult}`
-        )
-      );
-
-      container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(
-          `**Infraction Type**  ${pending.infractionType}\n` +
-          `**Reason**  ${pending.reason}`
-        )
-      );
-
-      container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(
-          `**Appeal Status**  ${appealStatus}     **Case ID**  ${caseId}`
-        )
-      );
-
-      container.addSeparatorComponents(
-        new (require("discord.js").SeparatorBuilder)().setSpacing(
-          require("discord.js").SeparatorSpacingSize.Small
-        )
-      );
-
-      container.addTextDisplayComponents(
-        new TextDisplayBuilder().setContent(
-          `**${proofId}** • ${new Date().toLocaleString()}`
-        )
-      );
-
-      // Keep the existing banner as the bottom image.
-      container.addMediaGalleryComponents(
-        new MediaGalleryBuilder().addItems(
-          new MediaGalleryItemBuilder().setURL(
-            `attachment://${BANNER_NAME}`
-          )
-        )
-      );
-
+      const tick = String.fromCharCode(96);
+      const appealLine = appealStatus === "Not Applicable" ? "" : "\n> **Appeal Status:** " + tick + appealStatus + tick;
+      container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
+        "## Staff Infraction\n\n" +
+        "> Unfortunately, <@" + target.id + ">, you have been " + tick + punishmentResult + tick + ". If you think that this infraction was false, please contact us through a support ticket immediately.\n\n" +
+        "> **Reason:** " + tick + pending.reason + tick + appealLine + "\n" +
+        "> **Infracted By:** <@" + issuer.id + ">"
+      ));
+      container.addSeparatorComponents(new (require("discord.js").SeparatorBuilder)().setSpacing(require("discord.js").SeparatorSpacingSize.Large));
+      container.addMediaGalleryComponents(new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL("attachment://" + BANNER_NAME)));
       // ==========================================
       // SEND INFRACTION
       // ==========================================
