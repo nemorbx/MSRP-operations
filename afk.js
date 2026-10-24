@@ -242,9 +242,14 @@ async function handlePrefixCommand(client, message, args, isOwner) {
   if (!isOwner || args[0]?.toLowerCase() !== "afk") return false;
   if (args[1]?.toLowerCase() !== "remove") return false;
 
-  const target = message.mentions.users.first();
+  const targetId = message.mentions.users.first()?.id || args[2]?.replace(/[<@!>]/g, "");
+  if (!/^\d{17,20}$/.test(targetId || "")) {
+    await message.reply("Usage: `!afk remove @member or !afk remove USER_ID`").catch(() => {});
+    return true;
+  }
+  const target = await client.users.fetch(targetId).catch(() => null);
   if (!target) {
-    await message.reply("Usage: `!afk remove @member`").catch(() => {});
+    await message.reply("That user could not be found.").catch(() => {});
     return true;
   }
 
