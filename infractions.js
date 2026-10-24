@@ -264,6 +264,10 @@ client.on("interactionCreate", async (interaction) => {
       const infractionType =
         interaction.options.getString("type");
       const appealStatus = infractionType === "Termination" ? (interaction.options.getString("appeal_status") || "Not Applicable") : interaction.options.getString("appeal_status");
+      if (infractionType !== "Termination" && !appealStatus) {
+        await interaction.reply({ content: "Please choose an appeal status for this infraction.", flags: MessageFlags.Ephemeral });
+        return;
+      }
 
       // ------------------------------------------
       // HR CHECK
