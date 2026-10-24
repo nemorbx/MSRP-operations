@@ -469,7 +469,8 @@ async function openSupportTicketForMember(guild, targetMember, openedBy) {
   if (!parent || !parent.isTextBased()) return { error: "The configured support channel could not be found." };
 
   const type = TYPES.general;
-  const safeName = targetMember.user.username.toLowerCase()
+  // Use the member's server display name (nickname if set), not their Discord username.
+  const safeName = (targetMember.displayName || targetMember.user.globalName || targetMember.user.username).toLowerCase()
     .replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || targetMember.id;
   const channel = await guild.channels.create({
     name: ("general-support-" + safeName).slice(0, 100),
@@ -621,8 +622,16 @@ async function submitTicket(interaction, typeKey) {
     },
   ];
 
+  // Channel names should use the member's server display name, not their Discord username.
+  const displayName = interaction.member?.displayName || interaction.user.globalName || interaction.user.username;
+  const safeDisplayName = displayName.toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80) || interaction.user.id;
+
   const channel = await interaction.guild.channels.create({
-    name: `${({ general: "general", ia: "internal-affairs", management: "management" }[typeKey] || "general")}-support-${interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || interaction.user.id}`.slice(0, 100),
+    name: `${({ general: "general", ia: "internal-affairs", management: "management" }[typeKey] || "general")}-support-${safeDisplayName}`.slice(0, 100),
     type: ChannelType.GuildText,
     permissionOverwrites: overwrites,
     position: 0,
