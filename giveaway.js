@@ -11,6 +11,7 @@ const {
 } = require("discord.js");
 
 const SENIOR_HR_ROLE_ID = "1551704056991318191";
+const GIVEAWAY_CHANNEL_ID = "1527187943142330408";
 const DATA_FILE = path.join(__dirname, "giveaways.json");
 let clearingGiveaways = false;
 
