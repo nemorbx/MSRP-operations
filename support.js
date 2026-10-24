@@ -1082,6 +1082,46 @@ async function handleClose(interaction, ticket) {
   }
 
   if (!isCreator) {
+    // If the opener has left the server, close the ticket directly instead of
+    // asking someone who can no longer respond to a closure request.
+    const opener = ticket.openerLeft
+      ? null
+      : await interaction.guild.members.fetch(ticket.userId).catch(() => null);
+    if (!opener) {
+      const latestTickets = readTickets();
+      const latest = latestTickets[ticket.threadId];
+      if (!latest || latest.closed || latest.closing) {
+        await interaction.reply({ content: "This ticket is already closed or closing.", ephemeral: true });
+        return;
+      }
+      latest.openerLeft = true;
+      const pendingRequestId = latest.closeRequestMessageId;
+      const pendingTimer = closureRequestTimers.get(ticket.threadId);
+      if (pendingTimer) clearTimeout(pendingTimer);
+      closureRequestTimers.delete(ticket.threadId);
+      latest.closeRequestMessageId = null;
+      latest.closeRequestedAt = null;
+      latest.closeRequestedBy = null;
+      latestTickets[ticket.threadId] = latest;
+      saveTickets(latestTickets);
+
+      if (pendingRequestId && pendingRequestId !== "pending") {
+        const pendingMessage = await interaction.channel.messages.fetch(pendingRequestId).catch(() => null);
+        if (pendingMessage) await pendingMessage.edit({ components: [] }).catch(() => {});
+      }
+
+      await interaction.deferUpdate();
+      await interaction.channel.send("The ticket opener has left the server. Authorized staff can close this ticket directly; no closure request is needed. This ticket will be deleted in a few seconds.").catch(() => {});
+      const closed = await finalizeClose(interaction, latest, interaction.user.id);
+      if (!closed) {
+        await interaction.followUp({
+          content: "I couldn't close this ticket. Please make sure I have permission to delete the support ticket channel.",
+          ephemeral: true,
+        }).catch(() => {});
+      }
+      return;
+    }
+
     await requestTicketClosure(interaction, ticket);
     return;
   }
