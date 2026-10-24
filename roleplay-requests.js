@@ -16,6 +16,7 @@ const {
 
 const REQUEST_CHANNEL_ID = "1563294757994635275";
 const ON_DUTY_ROLE_ID = "1529159979674636450";
+const STAFF_TEAM_ROLE_ID = "1528242210871447672";
 const COOLDOWN_MS = 6 * 60 * 60 * 1000;
 const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "roleplay-requests.json");
@@ -37,6 +38,10 @@ function readData() {
 function saveData(data) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+function isVerified(member) {
+  return member.roles.cache.some(role => /^(verified|verified member)$/i.test(role.name.trim()));
 }
 
 function divider() {
@@ -119,6 +124,15 @@ function setupRoleplayRequests(client) {
         return;
       }
 
+      const requester = await interaction.guild.members.fetch(interaction.user.id).catch(() => null);
+      if (!requester || !isVerified(requester)) {
+        await interaction.reply({
+          content: "You must have the Verified role to submit a role-play request.",
+          flags: MessageFlags.Ephemeral,
+        });
+        return;
+      }
+
       const now = Date.now();
       const data = readData();
       const cooldownUntil = Number(data.cooldowns[interaction.user.id] || 0);
@@ -194,8 +208,8 @@ function setupRoleplayRequests(client) {
     }
 
     const member = await interaction.guild?.members.fetch(interaction.user.id).catch(() => null);
-    if (!member?.roles?.cache?.has(ON_DUTY_ROLE_ID)) {
-      await interaction.reply({ content: "Only on-duty staff (managed through Melony) can accept or deny role-play requests.", flags: MessageFlags.Ephemeral });
+    if (!member?.roles?.cache?.has(STAFF_TEAM_ROLE_ID)) {
+      await interaction.reply({ content: "Only members of the Staff Team can accept or deny role-play requests.", flags: MessageFlags.Ephemeral });
       return;
     }
 
