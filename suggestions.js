@@ -16,6 +16,7 @@ const {
   TextDisplayBuilder,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
+  SeparatorBuilder,
   MessageFlags,
   AttachmentBuilder,
 } = require("discord.js");
@@ -104,40 +105,33 @@ function getVoteButtons(record) {
 function buildSuggestionContainer(client, record) {
   const container = new ContainerBuilder();
 
-  const section = new SectionBuilder()
-    .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `## Suggestion #${record.number}\n**User**\n<@${record.userId}>`
-      )
-    )
-    .setThumbnailAccessory(
-      new ThumbnailBuilder()
-        .setURL(record.avatarUrl)
-        .setDescription(`${record.username}'s avatar`)
-    );
-
-  container.addSectionComponents(section);
+  const statusLine = record.status === "pending"
+    ? ""
+    : "\n**" + (record.status === "accepted" ? "Accepted" : "Denied") + " by** <@" + record.reviewerId + ">";
 
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `**Suggestion**\n${record.text}`
+      "## New Suggestion\n\n" +
+      record.text + "\n\n" +
+      "**Suggested by** <@" + record.userId + ">" +
+      statusLine
     )
   );
 
-  if (record.status !== "pending") {
-    container.addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(
-        `${record.status === "accepted" ? "Accepted" : "Denied"} by <@${record.reviewerId}>`
-      )
-    );
-  }
+  container.addSeparatorComponents(
+    new SeparatorBuilder({ divider: true, spacing: 2 })
+  );
 
   container.addActionRowComponents(getVoteButtons(record));
+
+  container.addSeparatorComponents(
+    new SeparatorBuilder({ divider: true, spacing: 2 })
+  );
 
   if (fs.existsSync(BANNER_PATH)) {
     container.addMediaGalleryComponents(
       new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder().setURL(`attachment://${BANNER_NAME}`)
+        new MediaGalleryItemBuilder().setURL("attachment://" + BANNER_NAME)
       )
     );
   }
