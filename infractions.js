@@ -263,7 +263,9 @@ function canIssueInfraction(issuer, target) {
       let punishmentResult = punishment;
 
       // Existing stage determines progression; selected type can skip to a higher stage.
-      const currentStageIndex = INFRACTION_STAGES.findIndex(stage => target.roles.cache.has(stage.id));
+      const currentStageIndexes = INFRACTION_STAGES.map((stage, index) => target.roles.cache.has(stage.id) ? index : -1).filter(index => index >= 0);
+      // Use the highest active progressive stage if older roles have accidentally stacked.
+      const currentStageIndex = currentStageIndexes.length ? Math.max(...currentStageIndexes) : -1;
       const requestedStageIndex = {
         "Notice": 0,
         "Warning": 2,
