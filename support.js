@@ -162,6 +162,7 @@ function ticketPanelComponents(ticket) {
   const robloxId = ticket.robloxId || null;
   const robloxName = ticket.robloxUsername || "Not linked with Bloxlink";
   const robloxUrl = robloxId ? `https://www.roblox.com/users/${robloxId}/profile` : "Not available";
+  const assignedRoleId = TYPES[ticket.type]?.roleId || ticket.teamRoleId;
   const container = new ContainerBuilder();
   const banner = assetPath([ROOT_SUPPORT_BANNER, ASSET_SUPPORT_BANNER]);
   const footer = assetPath([ROOT_FOOTER, ASSET_FOOTER]);
@@ -189,7 +190,7 @@ function ticketPanelComponents(ticket) {
   );
   container.addTextDisplayComponents(
     new TextDisplayBuilder().setContent(
-      `> **Ping:** <@&${ticket.teamRoleId}> | <@${ticket.userId}>` +
+      `> **Ping:** <@&${assignedRoleId}> | <@${ticket.userId}>` +
       (ticket.claimedBy ? `\n> **Claimed By:** <@${ticket.claimedBy}>` : "")
     )
   );
@@ -1189,6 +1190,29 @@ async function handleCloseConfirmation(interaction, ticket, confirm) {
 
 async function setup(client) {
   ensureData();
+
+  // Repair saved Management Support tickets after role configuration changes.
+  try {
+    const savedTickets = readTickets();
+    let ticketsChanged = false;
+    for (const ticket of Object.values(savedTickets)) {
+      if (ticket.closed || ticket.type !== "management" || !ticket.isChannelTicket) continue;
+      const previousRoleId = ticket.teamRoleId;
+      ticket.teamRoleId = MANAGEMENT_TEAM_ROLE_ID;
+      if (previousRoleId !== MANAGEMENT_TEAM_ROLE_ID) ticketsChanged = true;
+      const channel = await client.channels.fetch(ticket.threadId).catch(() => null);
+      if (!channel || !channel.isTextBased() || !channel.permissionOverwrites) continue;
+      await channel.permissionOverwrites.edit(MANAGEMENT_TEAM_ROLE_ID, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true, AttachFiles: true }).catch(error => console.error("[Support] Could not restore Management role access:", error?.message || error));
+      if (previousRoleId && previousRoleId !== MANAGEMENT_TEAM_ROLE_ID) await channel.permissionOverwrites.delete(previousRoleId).catch(() => {});
+      if (ticket.panelMessageId && channel.messages) {
+        const panelMessage = await channel.messages.fetch(ticket.panelMessageId).catch(() => null);
+        if (panelMessage) await panelMessage.edit({ components: ticketPanelComponents(ticket), files: ticketPanelFiles(), flags: MessageFlags.IsComponentsV2 }).catch(error => console.error("[Support] Could not refresh Management ticket panel:", error?.message || error));
+      }
+    }
+    if (ticketsChanged) saveTickets(savedTickets);
+  } catch (error) {
+    console.error("[Support] Management ticket role repair failed:", error);
+  }
 
   client.on("guildMemberRemove", async (member) => {
     try {
