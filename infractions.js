@@ -59,8 +59,8 @@ const commands = [
     .addStringOption((option) =>
       option
         .setName("appeal_status")
-        .setDescription("Can this infraction be appealed?")
-        .setRequired(true)
+        .setDescription("Can this infraction be appealed? Not required for Termination.")
+        .setRequired(false)
         .addChoices(
           { name: "Yes — Appealable", value: "Appealable" },
           { name: "No — Unappealable", value: "Unappealable" }
