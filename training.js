@@ -167,7 +167,7 @@ function requestPanel(traineeId, traineeName, timezone, ageGroup, teamAccess, av
         : "> <@" + traineeId + ">, please await a trainer to accept your training. Once accepted, make your way to the briefing room inside the Sheriff's station.\n\n") +
       "**Trainee:** " + String(traineeName || "Unknown user").replace(/[`*_~|>]/g, "") + "\n" +
       "**Team Access:** ``" + teamAccess + "``\n" +
-      "**Time Zone:** ``" + timezone + "``\\n" +
+      "**Time Zone:** ``" + timezone + "``\n" +
       "**Roblox Age Group:** ``" + ageGroup + "``" +
       (accepted && acceptedBy ? "\n\n**Accepted By:** <@" + acceptedBy + ">" : "")
     ))
@@ -419,10 +419,9 @@ function setup(client) {
         if (trainee) {
           await trainee.send("Your training request has been accepted by <@" + interaction.user.id + ">. Please make your way to the briefing room inside the Sheriff's station.").catch(() => {});
         }
-        const acceptedAt = Math.floor(request.acceptedAt / 1000);
         const acceptedNotice = new ContainerBuilder()
           .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-            "<@" + interaction.user.id + "> has accepted this training request.\\n**Accepted:** <t:" + acceptedAt + ":F> (<t:" + acceptedAt + ":R>)"
+            "<@" + interaction.user.id + "> has accepted this training request."
           ));
         await interaction.channel.send({
           components: [acceptedNotice],
@@ -452,10 +451,12 @@ function setup(client) {
         const cancelledPanel = new ContainerBuilder()
           .setAccentColor(0x808080)
           .addTextDisplayComponents(new TextDisplayBuilder().setContent(
-            "## Training Request\n\n> This request has been cancelled and is no longer active.\n\n" +
+            "## Training Request Cancelled\n\n> This training request has been cancelled and is no longer active.\n\n" +
             "**Trainee:** " + traineeName + "\n" +
             "**Team Access:** ``" + request.teamAccess + "``\n" +
-            "**Time Zone:** ``" + request.timezone + "``\n\n" +
+            "**Time Zone:** ``" + request.timezone + "``\n" +
+            "**Roblox Age Group:** ``" + (request.ageGroup || "Not provided") + "``" +
+            (cancelledByStaff ? "\n**Cancelled By:** <@" + interaction.user.id + ">" : "") + "\n\n" +
             "~~Request Cancelled~~"
           ))
           .addSeparatorComponents(new SeparatorBuilder({ divider: true, spacing: 2 }))
