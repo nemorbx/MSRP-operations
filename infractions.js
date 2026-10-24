@@ -215,252 +215,7 @@ function canIssueInfraction(issuer, target) {
 // INTERACTIONS
 // ==============================
 
-client.on("interactionCreate", async (interaction) => {
-  try {
-    // ==========================================
-    // /PING
-    // ==========================================
-
-    if (
-      interaction.isChatInputCommand() &&
-      interaction.commandName === "ping"
-    ) {
-      await interaction.reply({
-        content: "MSRP Automations is online.",
-        flags: MessageFlags.Ephemeral,
-      });
-
-      return;
-    }
-
-    // ==========================================
-    // /INFRACT
-    // ==========================================
-
-    if (
-      interaction.isChatInputCommand() &&
-      interaction.commandName === "infract"
-    ) {
-      const issuer = await interaction.guild.members.fetch(
-        interaction.user.id
-      );
-
-      const targetUser = interaction.options.getUser("member");
-
-      const target = await interaction.guild.members.fetch(
-        targetUser.id
-      );
-
-      const infractionType = interaction.options.getString("type");
-      // All infractions are marked appealable; appeals must be submitted through a support ticket.
-      const appealStatus = "Appealable";
-
-      // ------------------------------------------
-      // HR CHECK
-      // ------------------------------------------
-
-      if (!hasInfractionAuthority(issuer)) {
-        await interaction.reply({
-          content:
-            "You don't have permission to use this command. Internal Affairs+ only.",
-          flags: MessageFlags.Ephemeral,
-        });
-
-        return;
-      }
-
-      // ------------------------------------------
-      // RANK CHECK
-      // ------------------------------------------
-
-      if (!canIssueInfraction(issuer, target)) {
-        await interaction.reply({
-          content:
-            "You don't have permission to infract this member. You must be above their rank. You cannot infract someone who is the same rank or higher than you.",
-          flags: MessageFlags.Ephemeral,
-        });
-
-        return;
-      }
-
-      // ------------------------------------------
-      // INFRACTION MODAL
-      // ------------------------------------------
-
-      const modal = new ModalBuilder()
-        .setCustomId(`infraction_modal_${interaction.id}`)
-        .setTitle("Staff Infraction");
-
-      const reasonInput = new TextInputBuilder()
-        .setCustomId("reason")
-        .setLabel("Reason")
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder(
-          "Enter the reason for this infraction."
-        )
-        .setRequired(true)
-        .setMaxLength(1000);
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(reasonInput)
-      );
-
-      // ------------------------------------------
-      // TEMPORARY DATA
-      // ------------------------------------------
-
-      if (!client.pendingInfractions) {
-        client.pendingInfractions = new Map();
-      }
-
-      client.pendingInfractions.set(interaction.id, {
-        issuerId: issuer.id,
-        targetId: target.id,
-        infractionType,
-        appealStatus,
-        guildId: interaction.guild.id,
-      });
-
-      await interaction.showModal(modal);
-
-      return;
-    }
-
-    // ==========================================
-    // MODAL SUBMISSION
-    // ==========================================
-
-    if (
-      interaction.isModalSubmit() &&
-      interaction.customId.startsWith("infraction_modal_")
-    ) {
-      // Respond immediately so Discord does not expire
-      // the interaction.
-      await interaction.deferReply({
-        flags: MessageFlags.Ephemeral,
-      });
-
-      const originalInteractionId =
-        interaction.customId.replace(
-          "infraction_modal_",
-          ""
-        );
-
-      const pending =
-        client.pendingInfractions?.get(
-          originalInteractionId
-        );
-
-      if (!pending) {
-        await interaction.editReply({
-          content:
-            "This infraction session expired. Please run `/infract` again.",
-        });
-
-        return;
-      }
-
-      client.pendingInfractions.delete(
-        originalInteractionId
-      );
-
-      const reason =
-        interaction.fields.getTextInputValue("reason");
-
-      // Resolve the target again from the saved interaction data.
-      // Modal submissions do not have the original /infract target in scope.
-      const guild = await client.guilds.fetch(pending.guildId);
-      const target = await guild.members.fetch(pending.targetId);
-
-      // Appeal status was selected in /infract; do not ask for it again.
-      const components = [];
-      if (pending.infractionType === "Demotion") {
-        const currentRank = RANKS.map(rank => ({ rank, role: interaction.guild.roles.cache.get(rank.id) }))
-          .filter(x => x.role && target.roles.cache.has(x.role.id)).sort((a, b) => b.role.position - a.role.position)[0];
-        if (!currentRank) { await interaction.editReply({ content: "That member does not have a recognized staff rank, so a demotion cannot be selected.", components: [] }); return; }
-        const currentIndex = RANKS.findIndex(rank => rank.id === currentRank.rank.id);
-        const lowerRanks = RANKS.slice(0, currentIndex).map(rank => ({ rank, role: interaction.guild.roles.cache.get(rank.id) })).filter(x => x.role);
-        if (!lowerRanks.length) { await interaction.editReply({ content: "That staff member is already at the lowest staff rank and cannot be demoted.", components: [] }); return; }
-        const demotionMenu = new StringSelectMenuBuilder().setCustomId(`infraction_demotion_role_${interaction.id}`).setPlaceholder("Select the new staff rank").addOptions(lowerRanks.map(({ rank }) => ({ label: rank.name, description: `Demote to ${rank.name}.`, value: rank.id })));
-        components.push(new ActionRowBuilder().addComponents(demotionMenu));
-      }
-      components.push(new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`infraction_issue_${interaction.id}`).setLabel("Issue Infraction").setStyle(ButtonStyle.Danger)));
-      if (!client.pendingAppeals) client.pendingAppeals = new Map();
-      client.pendingAppeals.set(interaction.id, { issuerId: pending.issuerId, targetId: pending.targetId, infractionType: pending.infractionType, appealStatus: pending.appealStatus, guildId: pending.guildId, reason, punishment: pending.infractionType, demotionRoleId: null });
-      await interaction.editReply({ content: pending.infractionType === "Demotion" ? "Select the new staff rank, then click Issue Infraction. Appeal status is already saved." : "Click Issue Infraction to finish. Appeal status is already saved.", components });
-      return;
-    }
-
-    // ==========================================
-    // DEMOTION ROLE SELECTED
-    // ==========================================
-
-    if (
-      interaction.isStringSelectMenu() &&
-      interaction.customId.startsWith("infraction_demotion_role_")
-    ) {
-      await interaction.deferUpdate();
-
-      const originalInteractionId = interaction.customId.replace(
-        "infraction_demotion_role_",
-        ""
-      );
-      const pending = client.pendingAppeals?.get(originalInteractionId);
-
-      if (!pending) return;
-
-      const selectedRoleId = interaction.values[0];
-      const target = await interaction.guild.members
-        .fetch(pending.targetId)
-        .catch(() => null);
-
-      if (!target) return;
-
-      const currentRank = RANKS
-        .map(rank => ({ rank, role: interaction.guild.roles.cache.get(rank.id) }))
-        .filter(x => x.role && target.roles.cache.has(x.role.id))
-        .sort((a, b) => b.role.position - a.role.position)[0];
-
-      const currentIndex = currentRank
-        ? RANKS.findIndex(rank => rank.id === currentRank.rank.id)
-        : -1;
-      const selectedIndex = RANKS.findIndex(rank => rank.id === selectedRoleId);
-
-      if (
-        currentIndex < 0 ||
-        selectedIndex < 0 ||
-        selectedIndex >= currentIndex
-      ) {
-        await interaction.followUp({
-          content:
-            "You can only select a staff rank below the member's current rank.",
-          flags: MessageFlags.Ephemeral,
-        }).catch(() => {});
-        return;
-      }
-
-      pending.demotionRoleId = selectedRoleId;
-
-      await interaction.followUp({
-        content: `Demotion target selected: <@&${selectedRoleId}>.`,
-        flags: MessageFlags.Ephemeral,
-      }).catch(() => {});
-
-      return;
-    }
-
-    // APPEAL STATUS
-    // ==========================================
-
-    if (interaction.isButton() && interaction.customId.startsWith("infraction_issue_")) {
-      await interaction.deferUpdate();
-      const originalInteractionId = interaction.customId.replace("infraction_issue_", "");
-
-      const pending =
-        client.pendingAppeals?.get(
-          originalInteractionId
-        );
-
+    async function processPendingInfraction(interaction, originalInteractionId) {
       if (!pending) {
         await interaction.editReply({
           content:
@@ -901,6 +656,248 @@ client.on("interactionCreate", async (interaction) => {
         `Infraction ${caseId} created successfully.`
       );
 
+      return;
+    }
+
+client.on("interactionCreate", async (interaction) => {
+  try {
+    // ==========================================
+    // /PING
+    // ==========================================
+
+    if (
+      interaction.isChatInputCommand() &&
+      interaction.commandName === "ping"
+    ) {
+      await interaction.reply({
+        content: "MSRP Automations is online.",
+        flags: MessageFlags.Ephemeral,
+      });
+
+      return;
+    }
+
+    // ==========================================
+    // /INFRACT
+    // ==========================================
+
+    if (
+      interaction.isChatInputCommand() &&
+      interaction.commandName === "infract"
+    ) {
+      const issuer = await interaction.guild.members.fetch(
+        interaction.user.id
+      );
+
+      const targetUser = interaction.options.getUser("member");
+
+      const target = await interaction.guild.members.fetch(
+        targetUser.id
+      );
+
+      const infractionType = interaction.options.getString("type");
+      // All infractions are marked appealable; appeals must be submitted through a support ticket.
+      const appealStatus = "Appealable";
+
+      // ------------------------------------------
+      // HR CHECK
+      // ------------------------------------------
+
+      if (!hasInfractionAuthority(issuer)) {
+        await interaction.reply({
+          content:
+            "You don't have permission to use this command. Internal Affairs+ only.",
+          flags: MessageFlags.Ephemeral,
+        });
+
+        return;
+      }
+
+      // ------------------------------------------
+      // RANK CHECK
+      // ------------------------------------------
+
+      if (!canIssueInfraction(issuer, target)) {
+        await interaction.reply({
+          content:
+            "You don't have permission to infract this member. You must be above their rank. You cannot infract someone who is the same rank or higher than you.",
+          flags: MessageFlags.Ephemeral,
+        });
+
+        return;
+      }
+
+      // ------------------------------------------
+      // INFRACTION MODAL
+      // ------------------------------------------
+
+      const modal = new ModalBuilder()
+        .setCustomId(`infraction_modal_${interaction.id}`)
+        .setTitle("Staff Infraction");
+
+      const reasonInput = new TextInputBuilder()
+        .setCustomId("reason")
+        .setLabel("Reason")
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder(
+          "Enter the reason for this infraction."
+        )
+        .setRequired(true)
+        .setMaxLength(1000);
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(reasonInput)
+      );
+
+      // ------------------------------------------
+      // TEMPORARY DATA
+      // ------------------------------------------
+
+      if (!client.pendingInfractions) {
+        client.pendingInfractions = new Map();
+      }
+
+      client.pendingInfractions.set(interaction.id, {
+        issuerId: issuer.id,
+        targetId: target.id,
+        infractionType,
+        appealStatus,
+        guildId: interaction.guild.id,
+      });
+
+      await interaction.showModal(modal);
+
+      return;
+    }
+
+    // ==========================================
+    // MODAL SUBMISSION
+    // ==========================================
+
+    if (
+      interaction.isModalSubmit() &&
+      interaction.customId.startsWith("infraction_modal_")
+    ) {
+      // Respond immediately so Discord does not expire
+      // the interaction.
+      await interaction.deferReply({
+        flags: MessageFlags.Ephemeral,
+      });
+
+      const originalInteractionId =
+        interaction.customId.replace(
+          "infraction_modal_",
+          ""
+        );
+
+      const pending =
+        client.pendingInfractions?.get(
+          originalInteractionId
+        );
+
+      if (!pending) {
+        await interaction.editReply({
+          content:
+            "This infraction session expired. Please run `/infract` again.",
+        });
+
+        return;
+      }
+
+      client.pendingInfractions.delete(
+        originalInteractionId
+      );
+
+      const reason =
+        interaction.fields.getTextInputValue("reason");
+
+      // Resolve the target again from the saved interaction data.
+      // Modal submissions do not have the original /infract target in scope.
+      const guild = await client.guilds.fetch(pending.guildId);
+      const target = await guild.members.fetch(pending.targetId);
+
+      // Appeal status was selected in /infract; do not ask for it again.
+      const components = [];
+      if (pending.infractionType === "Demotion") {
+        const currentRank = RANKS.map(rank => ({ rank, role: interaction.guild.roles.cache.get(rank.id) }))
+          .filter(x => x.role && target.roles.cache.has(x.role.id)).sort((a, b) => b.role.position - a.role.position)[0];
+        if (!currentRank) { await interaction.editReply({ content: "That member does not have a recognized staff rank, so a demotion cannot be selected.", components: [] }); return; }
+        const currentIndex = RANKS.findIndex(rank => rank.id === currentRank.rank.id);
+        const lowerRanks = RANKS.slice(0, currentIndex).map(rank => ({ rank, role: interaction.guild.roles.cache.get(rank.id) })).filter(x => x.role);
+        if (!lowerRanks.length) { await interaction.editReply({ content: "That staff member is already at the lowest staff rank and cannot be demoted.", components: [] }); return; }
+        const demotionMenu = new StringSelectMenuBuilder().setCustomId(`infraction_demotion_role_${interaction.id}`).setPlaceholder("Select the new staff rank").addOptions(lowerRanks.map(({ rank }) => ({ label: rank.name, description: `Demote to ${rank.name}.`, value: rank.id })));
+        components.push(new ActionRowBuilder().addComponents(demotionMenu));
+      }
+      if (!client.pendingAppeals) client.pendingAppeals = new Map();
+      client.pendingAppeals.set(interaction.id, { issuerId: pending.issuerId, targetId: pending.targetId, infractionType: pending.infractionType, appealStatus: pending.appealStatus, guildId: pending.guildId, reason, punishment: pending.infractionType, demotionRoleId: null });
+      if (pending.infractionType === "Demotion") {
+        await interaction.editReply({ content: "Select the new staff rank to complete the demotion.", components });
+        return;
+      }
+      await processPendingInfraction(interaction, interaction.id);
+      return;
+    }
+
+    // ==========================================
+    // DEMOTION ROLE SELECTED
+    // ==========================================
+
+    if (
+      interaction.isStringSelectMenu() &&
+      interaction.customId.startsWith("infraction_demotion_role_")
+    ) {
+      await interaction.deferUpdate();
+
+      const originalInteractionId = interaction.customId.replace(
+        "infraction_demotion_role_",
+        ""
+      );
+      const pending = client.pendingAppeals?.get(originalInteractionId);
+
+      if (!pending) return;
+
+      const selectedRoleId = interaction.values[0];
+      const target = await interaction.guild.members
+        .fetch(pending.targetId)
+        .catch(() => null);
+
+      if (!target) return;
+
+      const currentRank = RANKS
+        .map(rank => ({ rank, role: interaction.guild.roles.cache.get(rank.id) }))
+        .filter(x => x.role && target.roles.cache.has(x.role.id))
+        .sort((a, b) => b.role.position - a.role.position)[0];
+
+      const currentIndex = currentRank
+        ? RANKS.findIndex(rank => rank.id === currentRank.rank.id)
+        : -1;
+      const selectedIndex = RANKS.findIndex(rank => rank.id === selectedRoleId);
+
+      if (
+        currentIndex < 0 ||
+        selectedIndex < 0 ||
+        selectedIndex >= currentIndex
+      ) {
+        await interaction.followUp({
+          content:
+            "You can only select a staff rank below the member's current rank.",
+          flags: MessageFlags.Ephemeral,
+        }).catch(() => {});
+        return;
+      }
+
+      pending.demotionRoleId = selectedRoleId;
+      await processPendingInfraction(interaction, originalInteractionId);
+      return;
+    }
+
+    // APPEAL STATUS
+    // ==========================================
+
+    if (interaction.isButton() && interaction.customId.startsWith("infraction_issue_")) {
+      await interaction.deferUpdate();
+      const originalInteractionId = interaction.customId.replace("infraction_issue_", "");
+      await processPendingInfraction(interaction, originalInteractionId);
       return;
     }
 
