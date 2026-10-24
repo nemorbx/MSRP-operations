@@ -402,6 +402,9 @@ client.on("interactionCreate", async (interaction) => {
       if (!client.pendingAppeals) client.pendingAppeals = new Map();
       client.pendingAppeals.set(interaction.id, { issuerId: pending.issuerId, targetId: pending.targetId, infractionType: pending.infractionType, appealStatus: pending.appealStatus, guildId: pending.guildId, reason, punishment: pending.infractionType, demotionRoleId: null });
       await interaction.editReply({ content: pending.infractionType === "Demotion" ? "Select the new staff rank, then click Issue Infraction. Appeal status is already saved." : "Click Issue Infraction to finish. Appeal status is already saved.", components });
+      return;
+    }
+
     // ==========================================
     // DEMOTION ROLE SELECTED
     // ==========================================
@@ -488,7 +491,7 @@ client.on("interactionCreate", async (interaction) => {
       if (punishment === "Demotion" && !pending.demotionRoleId) {
         await interaction.followUp({
           content:
-            "Select the staff rank to demote the member to before selecting the appeal status.",
+            "Select the staff rank to demote the member to before issuing the infraction.",
           flags: MessageFlags.Ephemeral,
         }).catch(() => {});
         return;
