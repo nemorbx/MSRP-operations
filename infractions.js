@@ -58,16 +58,6 @@ const commands = [
           { name: "Under Investigation", value: "Under Investigation" }
         )
     )
-    .addStringOption((option) =>
-      option
-        .setName("appeal_status")
-        .setDescription("Can this infraction be appealed? Not required for Termination.")
-        .setRequired(false)
-        .addChoices(
-          { name: "Yes — Appealable", value: "Appealable" },
-          { name: "No — Unappealable", value: "Unappealable" }
-        )
-    ),
 ].map((command) => command.toJSON());
 
 
@@ -261,13 +251,9 @@ client.on("interactionCreate", async (interaction) => {
         targetUser.id
       );
 
-      const infractionType =
-        interaction.options.getString("type");
-      const appealStatus = infractionType === "Termination" ? (interaction.options.getString("appeal_status") || "Not Applicable") : interaction.options.getString("appeal_status");
-      if (infractionType !== "Termination" && !appealStatus) {
-        await interaction.reply({ content: "Please choose an appeal status for this infraction.", flags: MessageFlags.Ephemeral });
-        return;
-      }
+      const infractionType = interaction.options.getString("type");
+      // All infractions are marked appealable; appeals must be submitted through a support ticket.
+      const appealStatus = "Appealable";
 
       // ------------------------------------------
       // HR CHECK
@@ -783,11 +769,11 @@ client.on("interactionCreate", async (interaction) => {
 
       const container = new ContainerBuilder();
       const tick = String.fromCharCode(96);
-      const appealLine = appealStatus === "Not Applicable" ? "" : "\n> **Appeal Status:** " + tick + appealStatus + tick;
       container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
         "## Staff Infraction\n\n" +
-        "> Unfortunately, <@" + target.id + ">, you have been " + tick + punishmentResult + tick + ". If you think that this infraction was false, please contact us through a support ticket immediately.\n\n" +
-        "> **Reason:** " + tick + pending.reason + tick + appealLine + "\n" +
+        "> <@" + target.id + "> has received a " + tick + punishmentResult + tick + " infraction. If you believe this infraction was issued in error, submit a support ticket. Do not appeal in the proof thread.\n\n" +
+        "> **Reason:** " + tick + pending.reason + tick + "\n" +
+        "> **Appeal Status:** " + tick + "Appealable" + tick + "\n" +
         "> **Infracted By:** <@" + issuer.id + ">"
       ));
       container.addSeparatorComponents(new (require("discord.js").SeparatorBuilder)().setSpacing(require("discord.js").SeparatorSpacingSize.Large));
@@ -805,6 +791,27 @@ client.on("interactionCreate", async (interaction) => {
           // every person who holds a mentioned role.
           allowedMentions: { parse: [] },
         });
+
+      // ==========================================
+      // AUTOMATIC ESCALATION ANNOUNCEMENT
+      // ==========================================
+      // Publish a separate channel message when an existing warning advances to a Strike or higher.
+      // This announcement does not create a thread.
+      const priorStageIndex = currentStageIndex;
+      const appliedStageIndex = stageToApply ? INFRACTION_STAGES.findIndex(stage => stage.id === stageToApply.id) : -1;
+      const isEscalation = priorStageIndex >= 0 && appliedStageIndex > priorStageIndex &&
+        appliedStageIndex >= 4 && !["Under Investigation", "Staff Blacklisted"].includes(stageToApply?.category);
+      if (isEscalation) {
+        await infractionChannel.send({
+          content:
+            "**Staff Infraction Escalation**\n" +
+            "<@" + target.id + "> has reached the next progressive infraction stage.\n" +
+            "**Previous stage:** " + INFRACTION_STAGES[priorStageIndex].name + "\n" +
+            "**New stage:** " + stageToApply.name + "\n" +
+            "**Case ID:** " + caseId,
+          allowedMentions: { parse: [] },
+        });
+      }
 
       // ==========================================
       // CREATE PROOF THREAD
@@ -1080,27 +1087,12 @@ client.on(
         message.author.id ===
         infraction.issuerId;
 
-      const affectedStaff =
-        message.author.id ===
-        infraction.targetId;
-
-      // High Rank and Senior HR can speak.
+      // Only the original issuer and High Rank / Senior HR may write in proof threads.
+      // The affected staff member must appeal through a support ticket instead.
       if (senior) return;
-
-      // Original issuer can speak.
       if (issuer) return;
 
-      // Affected staff can speak only
-      // when appealable.
-      if (
-        affectedStaff &&
-        infraction.appealStatus ===
-          "Appealable"
-      ) {
-        return;
-      }
-
-      // Everyone else gets deleted.
+      // Everyone else, including the affected staff member, gets deleted.
       await message.delete().catch(
         () => {}
       );
