@@ -126,7 +126,7 @@ client.on("interactionCreate", async interaction => {
         if (!target) {
             return interaction.reply({
                 content: "That member could not be found.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -138,7 +138,7 @@ client.on("interactionCreate", async interaction => {
         if (!hrRole) {
             return interaction.reply({
                 content: "The HR role could not be found.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -150,7 +150,7 @@ client.on("interactionCreate", async interaction => {
             return interaction.reply({
                 content:
                     "You don't have permission to use this command. High Rank (Internal Affairs Supervisor+) or Senior HR only.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -195,7 +195,7 @@ client.on("interactionCreate", async interaction => {
             return interaction.reply({
                 content:
                     "You don't have permission to promote this member. You must be above their rank. You cannot promote someone who is the same rank or higher than you.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -238,7 +238,7 @@ client.on("interactionCreate", async interaction => {
             return interaction.reply({
                 content:
                     "There are no ranks you can promote this member to.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -271,7 +271,7 @@ client.on("interactionCreate", async interaction => {
             content:
                 `Select the new rank for ${target}.`,
             components: [row],
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 
@@ -328,7 +328,7 @@ client.on("interactionCreate", async interaction => {
     ) {
 
         await interaction.deferReply({
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
 
         const parts =
