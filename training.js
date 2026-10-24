@@ -36,9 +36,10 @@ function loadData() {
       activeRequests: parsed.activeRequests || {},
       results: parsed.results || {},
       claimed: parsed.claimed || {},
+      cooldowns: parsed.cooldowns || {},
     };
   } catch {
-    return { requests: {}, activeRequests: {}, results: {}, claimed: {} };
+    return { requests: {}, activeRequests: {}, results: {}, claimed: {}, cooldowns: {} };
   }
 }
 function saveData() {
@@ -285,6 +286,11 @@ function setup(client) {
           if (data.activeRequests[member.id]) {
             return interaction.reply({ content: "You already have a pending or accepted training request. Cancel the pending request or complete your session first.", flags: MessageFlags.Ephemeral });
           }
+          const cooldownUntil = Number(data.cooldowns[member.id] || 0);
+          if (cooldownUntil > now) {
+            return interaction.reply({ content: "You failed your previous training and must wait 12 hours before requesting another session. You can request again <t:" + Math.floor(cooldownUntil / 1000) + ":R>.", flags: MessageFlags.Ephemeral });
+          }
+          if (cooldownUntil) { delete data.cooldowns[member.id]; saveData(); }
           const timezone = interaction.options.getString("timezone", true).trim();
           const ageGroup = interaction.options.getString("age_group", true);
           const availability = "Now";
@@ -354,6 +360,8 @@ function setup(client) {
           };
           data.results[resultId] = record;
           delete data.activeRequests[trainee.id];
+          if (!passed) data.cooldowns[trainee.id] = now + 12 * 60 * 60 * 1000;
+          else delete data.cooldowns[trainee.id];
           saveData();
 
           const message = await resultsChannel.send({
@@ -430,9 +438,10 @@ function setup(client) {
         if (!request || !["pending", "accepted"].includes(request.status) || request.guildId !== interaction.guild.id) {
           return interaction.reply({ content: "This request has already been completed or cancelled.", flags: MessageFlags.Ephemeral });
         }
-        if (interaction.user.id !== request.traineeId) {
-          return interaction.reply({ content: "Only the person who submitted this training request can cancel it.", flags: MessageFlags.Ephemeral });
+        if (interaction.user.id !== request.traineeId && !isSeniorHR(member)) {
+          return interaction.reply({ content: "Only the trainee who submitted this request or Senior HR can cancel it.", flags: MessageFlags.Ephemeral });
         }
+        const cancelledByStaff = interaction.user.id !== request.traineeId;
         delete data.activeRequests[traineeId];
         saveData();
         if (request.pingMessageId) {
