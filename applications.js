@@ -1312,7 +1312,7 @@ function setup(client) {
   client.on("messageCreate", async message => {
     try {
       if (!message.guild || message.author.bot) return;
-      const parts = message.content.trim().split(/\\s+/);
+      const parts = message.content.trim().split(/\s+/);
       if (parts.slice(0, 3).join(" ").toLowerCase() !== "!clear application denials") return;
       const actor = await message.guild.members.fetch(message.author.id).catch(() => null);
       if (!actor || !isSeniorHR(actor)) {
@@ -1320,7 +1320,7 @@ function setup(client) {
         return;
       }
       const targetId = message.mentions.users.first()?.id || parts[3]?.replace(/[<@!>]/g, "");
-      if (!targetId || !/^\\d{17,20}$/.test(targetId)) {
+      if (!targetId || !/^\d{17,20}$/.test(targetId)) {
         await message.reply("Usage: !clear application denials @user or !clear application denials USER_ID.");
         return;
       }
