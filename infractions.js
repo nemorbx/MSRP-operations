@@ -215,8 +215,8 @@ function canIssueInfraction(issuer, target) {
 // INTERACTIONS
 // ==============================
 
-    async function processPendingInfraction(interaction, originalInteractionId) {
-      const pending = client.pendingAppeals?.get(originalInteractionId);
+    async function processPendingInfraction(interaction, originalInteractionId, pendingOverride = null) {
+      const pending = pendingOverride || client.pendingAppeals?.get(originalInteractionId);
       if (!pending) {
         await interaction.editReply({
           content:
@@ -835,7 +835,7 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.editReply({ content: "Select the new staff rank to complete the demotion.", components });
         return;
       }
-      await processPendingInfraction(interaction, interaction.id);
+      await processPendingInfraction(interaction, interaction.id, client.pendingAppeals.get(interaction.id));
       return;
     }
 
@@ -916,7 +916,7 @@ client.on("interactionCreate", async (interaction) => {
       ) {
         await interaction.reply({
           content:
-            "Something went wrong while processing this request. Check the bot console for the error.",
+            "Something went wrong while processing this request. Please contact the server owner for assistance.",
           flags: MessageFlags.Ephemeral,
         });
       } else if (
