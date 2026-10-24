@@ -459,20 +459,9 @@ client.on("interactionCreate", async (interaction) => {
     // APPEAL STATUS
     // ==========================================
 
-    if (
-      interaction.isStringSelectMenu() &&
-      interaction.customId.startsWith(
-        "appeal_status_"
-      )
-    ) {
-      // Respond immediately.
+    if (interaction.isButton() && interaction.customId.startsWith("infraction_issue_")) {
       await interaction.deferUpdate();
-
-      const originalInteractionId =
-        interaction.customId.replace(
-          "appeal_status_",
-          ""
-        );
+      const originalInteractionId = interaction.customId.replace("infraction_issue_", "");
 
       const pending =
         client.pendingAppeals?.get(
@@ -489,7 +478,7 @@ client.on("interactionCreate", async (interaction) => {
         return;
       }
 
-      const appealStatus = pending.appealStatus;
+      const appealStatus = pending.appealStatus || "Not Applicable";
       let punishment = pending.punishment;
 
       if (punishment === "Demotion" && !pending.demotionRoleId) {
