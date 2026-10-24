@@ -587,9 +587,11 @@ function canIssueInfraction(issuer, target) {
       // INITIAL PROOF MESSAGE
       // ==========================================
 
-      await proofThread.send(
-        `<@${issuer.id}> — no proof was attached to this infraction. Please add any available evidence here.`
-      );
+      await proofThread.send({
+        content: `<@${issuer.id}> — no proof was attached to this infraction. Please add any available evidence here.`,
+        // This is a record/reminder only; do not trigger a Discord notification.
+        allowedMentions: { parse: [] },
+      });
 
       // ==========================================
       // SAVE INFRACTION
