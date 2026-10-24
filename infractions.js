@@ -3,6 +3,8 @@ const path = require("path");
 
 const {
   SlashCommandBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -261,7 +263,7 @@ client.on("interactionCreate", async (interaction) => {
 
       const infractionType =
         interaction.options.getString("type");
-      const appealStatus = interaction.options.getString("appeal_status");
+      const appealStatus = infractionType === "Termination" ? (interaction.options.getString("appeal_status") || "Not Applicable") : interaction.options.getString("appeal_status");
 
       // ------------------------------------------
       // HR CHECK
@@ -380,102 +382,22 @@ client.on("interactionCreate", async (interaction) => {
       const guild = await client.guilds.fetch(pending.guildId);
       const target = await guild.members.fetch(pending.targetId);
 
-      // ==========================================
-      // APPEAL + DEMOTION ROLE DROPDOWNS
-      // ==========================================
-
-      const appealMenu =
-        new StringSelectMenuBuilder()
-          .setCustomId(`appeal_status_${interaction.id}`)
-          .setPlaceholder("Select appeal status")
-          .addOptions(
-            {
-              label: "Appealable",
-              description: "The affected staff member may appeal.",
-              value: "Appealable",
-            },
-            {
-              label: "Unappealable",
-              description: "The affected staff member may not appeal.",
-              value: "Unappealable",
-            }
-          );
-
-      const components = [
-        new ActionRowBuilder().addComponents(appealMenu),
-      ];
-
-      // If Demotion was selected as the /infract type, let the issuer
-      // choose the exact lower staff rank to assign.
+      // Appeal status was selected in /infract; do not ask for it again.
+      const components = [];
       if (pending.infractionType === "Demotion") {
-        const currentRank = RANKS
-          .map(rank => ({ rank, role: interaction.guild.roles.cache.get(rank.id) }))
-          .filter(x => x.role && target.roles.cache.has(x.role.id))
-          .sort((a, b) => b.role.position - a.role.position)[0];
-
-        if (!currentRank) {
-          await interaction.editReply({
-            content: "That member does not have a recognized staff rank, so a demotion cannot be selected.",
-            components: [],
-          });
-          return;
-        }
-
+        const currentRank = RANKS.map(rank => ({ rank, role: interaction.guild.roles.cache.get(rank.id) }))
+          .filter(x => x.role && target.roles.cache.has(x.role.id)).sort((a, b) => b.role.position - a.role.position)[0];
+        if (!currentRank) { await interaction.editReply({ content: "That member does not have a recognized staff rank, so a demotion cannot be selected.", components: [] }); return; }
         const currentIndex = RANKS.findIndex(rank => rank.id === currentRank.rank.id);
-        const lowerRanks = RANKS
-          .slice(0, currentIndex)
-          .map(rank => ({ rank, role: interaction.guild.roles.cache.get(rank.id) }))
-          .filter(x => x.role);
-
-        if (!lowerRanks.length) {
-          await interaction.editReply({
-            content: "That staff member is already at the lowest staff rank and cannot be demoted.",
-            components: [],
-          });
-          return;
-        }
-
-        const demotionMenu = new StringSelectMenuBuilder()
-          .setCustomId(`infraction_demotion_role_${interaction.id}`)
-          .setPlaceholder("Select the new staff rank")
-          .addOptions(
-            lowerRanks.map(({ rank }) => ({
-              label: rank.name,
-              description: `Demote to ${rank.name}.`,
-              value: rank.id,
-            }))
-          );
-
-        components.unshift(
-          new ActionRowBuilder().addComponents(demotionMenu)
-        );
+        const lowerRanks = RANKS.slice(0, currentIndex).map(rank => ({ rank, role: interaction.guild.roles.cache.get(rank.id) })).filter(x => x.role);
+        if (!lowerRanks.length) { await interaction.editReply({ content: "That staff member is already at the lowest staff rank and cannot be demoted.", components: [] }); return; }
+        const demotionMenu = new StringSelectMenuBuilder().setCustomId(`infraction_demotion_role_${interaction.id}`).setPlaceholder("Select the new staff rank").addOptions(lowerRanks.map(({ rank }) => ({ label: rank.name, description: `Demote to ${rank.name}.`, value: rank.id })));
+        components.push(new ActionRowBuilder().addComponents(demotionMenu));
       }
-
-      if (!client.pendingAppeals) {
-        client.pendingAppeals = new Map();
-      }
-
-      client.pendingAppeals.set(interaction.id, {
-        issuerId: pending.issuerId,
-        targetId: pending.targetId,
-        infractionType: pending.infractionType,
-        guildId: pending.guildId,
-        reason,
-        punishment: pending.infractionType,
-        demotionRoleId: null,
-      });
-
-      await interaction.editReply({
-        content:
-          pending.infractionType === "Demotion"
-            ? "Select the staff rank to demote this member to, then select the appeal status:"
-            : "Select the appeal status for this infraction:",
-        components,
-      });
-
-      return;
-    }
-
+      components.push(new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId(`infraction_issue_${interaction.id}`).setLabel("Issue Infraction").setStyle(ButtonStyle.Danger)));
+      if (!client.pendingAppeals) client.pendingAppeals = new Map();
+      client.pendingAppeals.set(interaction.id, { issuerId: pending.issuerId, targetId: pending.targetId, infractionType: pending.infractionType, appealStatus: pending.appealStatus, guildId: pending.guildId, reason, punishment: pending.infractionType, demotionRoleId: null });
+      await interaction.editReply({ content: pending.infractionType === "Demotion" ? "Select the new staff rank, then click Issue Infraction. Appeal status is already saved." : "Click Issue Infraction to finish. Appeal status is already saved.", components });
     // ==========================================
     // DEMOTION ROLE SELECTED
     // ==========================================
